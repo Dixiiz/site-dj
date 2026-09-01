@@ -95,7 +95,7 @@ export async function GoogleReviews() {
         </div>
       </FadeIn>
       <div className="mt-10 grid gap-4 md:grid-cols-3">
-        {data.reviews.slice(0, 6).map((review, index) => {
+        {data.reviews.slice(0, 5).map((review, index) => {
           const name = review.authorAttribution?.displayName ?? "Client Google";
           const text = review.text?.text ?? review.originalText?.text ?? "";
           return (
@@ -117,6 +117,28 @@ export async function GoogleReviews() {
             </FadeIn>
           );
         })}
+        <FadeIn delay={5 * 0.05}>
+          <a
+            href={`https://www.google.com/maps/place/?q=place_id:${process.env.GOOGLE_PLACE_ID ?? ""}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex h-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card/40 p-5 text-center transition-colors hover:border-accent/60 hover:bg-card/70"
+          >
+            <span className="text-3xl font-semibold text-accent">
+              {data.rating?.toFixed(1) ?? "★"}
+            </span>
+            <span className="text-sm font-medium">
+              {data.count != null ? `${data.count} avis sur Google` : "Tous les avis sur Google"}
+            </span>
+            <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+              Lire tous les avis
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M7 17 17 7" />
+                <path d="M7 7h10v10" />
+              </svg>
+            </span>
+          </a>
+        </FadeIn>
       </div>
     </section>
   );

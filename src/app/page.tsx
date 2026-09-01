@@ -1,11 +1,15 @@
+import { existsSync } from "node:fs";
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
+
 import { SiteHeader } from "@/components/site-header";
 import { FadeIn } from "@/components/fade-in";
 import { GoogleReviews } from "@/components/google-reviews";
 import { Gallery } from "@/components/gallery";
 import { HeroVideo } from "@/components/hero-video";
+import { VideoShowcase } from "@/components/video-showcase";
 import Link from "next/link";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+
 
 export const metadata = {
   title: "Propul'Sound DJ — DJ & animations événementielles",
@@ -38,6 +42,13 @@ const services = [
 
 export default function Home() {
   const hasHeroVideo = existsSync(join(process.cwd(), "public", "videos", "hero.mp4"));
+  const showcaseDir = join(process.cwd(), "public", "videos", "showcase");
+  const showcaseVideos = existsSync(showcaseDir)
+    ? readdirSync(showcaseDir)
+        .filter((f) => /\.(mp4|webm|mov)$/i.test(f))
+        .sort()
+        .map((f) => `/videos/showcase/${encodeURIComponent(f)}`)
+    : [];
 
   return (
     <>
@@ -77,6 +88,23 @@ export default function Home() {
 
         {/* Galerie photos */}
         <Gallery />
+
+        {/* Vidéos "En action" : déposées dans public/videos/showcase/ */}
+        {showcaseVideos.length > 0 && (
+          <section className="mx-auto w-full max-w-5xl px-4 pb-4 text-center">
+            <FadeIn>
+              <h2 className="text-3xl font-medium tracking-tight sm:text-4xl">
+                Propul&apos;Sound <span className="text-accent">en action</span>
+              </h2>
+              <p className="mt-3 text-muted-foreground">
+                Quelques extraits de nos soirées — survolez une vidéo pour la lancer.
+              </p>
+            </FadeIn>
+            <FadeIn delay={0.1}>
+              <VideoShowcase videos={showcaseVideos} />
+            </FadeIn>
+          </section>
+        )}
 
         {/* Présentation + services */}
         <section className="mx-auto w-full max-w-5xl px-4 py-20">
