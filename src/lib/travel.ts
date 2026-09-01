@@ -1,6 +1,7 @@
 // Calcul des frais de déplacement depuis Huisseau-sur-Cosson (41350).
 // Utilise des services publics et gratuits (OpenStreetMap Nominatim + OSRM)
 // pour géocoder l'adresse et estimer la distance routière.
+// Les frais sont calculés sur l'aller-RETOUR (distance x2).
 
 const ORIGIN = { lat: 47.5920919, lon: 1.4540356 }; // Huisseau-sur-Cosson
 export const FREE_KM = 30;
@@ -48,7 +49,8 @@ async function routeDistanceKm(dest: { lat: number; lon: number }): Promise<numb
 }
 
 export function computeTravelFee(distanceKm: number): TravelEstimate {
-  const billableKm = Math.max(0, distanceKm - FREE_KM);
+  const roundTripKm = distanceKm * 2; // aller-retour
+  const billableKm = Math.max(0, roundTripKm - FREE_KM);
   const feeCents = Math.round(billableKm * RATE_PER_KM_CENTS);
   return { distanceKm: Math.round(distanceKm * 10) / 10, billableKm: Math.round(billableKm * 10) / 10, feeCents };
 }
