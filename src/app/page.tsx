@@ -2,6 +2,7 @@ import { SiteHeader } from "@/components/site-header";
 import { FadeIn } from "@/components/fade-in";
 import { GoogleReviews } from "@/components/google-reviews";
 import { Gallery } from "@/components/gallery";
+import { HeroVideo } from "@/components/hero-video";
 import Link from "next/link";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -53,25 +54,7 @@ export default function Home() {
 
         {/* Héro — avec vidéo de fond si public/videos/hero.mp4 existe */}
         <section className="relative mx-auto w-full max-w-5xl overflow-hidden px-4 pt-20 pb-16 text-center sm:pt-28">
-          {hasHeroVideo && (
-            <>
-              <video
-                aria-hidden
-                autoPlay
-                muted
-                loop
-                playsInline
-                className="absolute inset-0 -z-10 h-full w-full object-cover opacity-60"
-              >
-                <source src="/videos/hero.mp4" type="video/mp4" />
-              </video>
-              {/* Voile dégradé pour garder le texte lisible */}
-              <div
-                aria-hidden
-                className="absolute inset-0 -z-10 bg-gradient-to-b from-background/80 via-background/60 to-background"
-              />
-            </>
-          )}
+          {hasHeroVideo && <HeroVideo />}
           <FadeIn>
             <p className="text-sm tracking-[0.3em] text-accent uppercase">
               DJ &amp; animations — Loir-et-Cher

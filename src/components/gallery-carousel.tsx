@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FadeIn } from "@/components/fade-in";
 
-const AUTOPLAY_MS = 3000;
+const AUTOPLAY_MS = 5000;
 const VISIBLE = 3; // photos visibles simultanément
 
 export function GalleryCarousel({ photos }: { photos: string[] }) {
@@ -49,8 +49,11 @@ export function GalleryCarousel({ photos }: { photos: string[] }) {
           onMouseLeave={() => setPaused(false)}
         >
           <div
-            className="flex transition-transform duration-700 ease-out"
-            style={{ transform: `translateX(-${(index * 100) / VISIBLE}%)` }}
+            className="flex transition-transform ease-in-out"
+            style={{
+              transform: `translateX(-${(index * 100) / VISIBLE}%)`,
+              transitionDuration: "1200ms",
+            }}
           >
             {extended.map((src, i) => (
               <div key={`${src}-${i}`} className="w-full shrink-0 sm:w-1/3">
