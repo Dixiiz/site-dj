@@ -4,9 +4,12 @@ import { useRef, useState } from "react";
 
 type VideoShowcaseProps = {
   videos: string[];
+  /** "landscape" (16:9) ou "portrait" (9:16) selon vos clips */
+  orientation?: "landscape" | "portrait";
 };
 
-export function VideoShowcase({ videos }: VideoShowcaseProps) {
+export function VideoShowcase({ videos, orientation = "landscape" }: VideoShowcaseProps) {
+  const portrait = orientation === "portrait";
   const [mutedStates, setMutedStates] = useState<Record<string, boolean>>(
     Object.fromEntries(videos.map((v) => [v, true]))
   );
@@ -24,11 +27,21 @@ export function VideoShowcase({ videos }: VideoShowcaseProps) {
   };
 
   return (
-    <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div
+      className={
+        portrait
+          ? "mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
+          : "mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      }
+    >
       {videos.map((src) => (
         <div
           key={src}
-          className="group relative overflow-hidden rounded-xl border border-border bg-card/60"
+          className={
+            portrait
+              ? "group relative overflow-hidden rounded-xl border border-border bg-card/60"
+              : "group relative overflow-hidden rounded-xl border border-border bg-card/60"
+          }
           onMouseEnter={(e) => {
             const v = e.currentTarget.querySelector("video");
             v?.play().catch(() => {});
@@ -50,7 +63,7 @@ export function VideoShowcase({ videos }: VideoShowcaseProps) {
             loop
             playsInline
             preload="metadata"
-            className="aspect-video w-full object-cover"
+            className={portrait ? "aspect-[9/16] w-full object-cover" : "aspect-video w-full object-cover"}
           />
           <button
             type="button"

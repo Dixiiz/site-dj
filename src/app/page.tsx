@@ -8,6 +8,8 @@ import { GoogleReviews } from "@/components/google-reviews";
 import { Gallery } from "@/components/gallery";
 import { HeroVideo } from "@/components/hero-video";
 import { VideoShowcase } from "@/components/video-showcase";
+import { TikTokSection } from "@/components/tiktok-section";
+import Script from "next/script";
 import Link from "next/link";
 
 
@@ -52,6 +54,7 @@ export default function Home() {
 
   return (
     <>
+      <Script src="https://www.tiktok.com/embed.js" strategy="lazyOnload" />
       <SiteHeader />
       <main className="relative">
         {/* Héro — avec vidéo de fond si public/videos/hero.mp4 existe */}
@@ -101,10 +104,13 @@ export default function Home() {
               </p>
             </FadeIn>
             <FadeIn delay={0.1}>
-              <VideoShowcase videos={showcaseVideos} />
+              <VideoShowcase videos={showcaseVideos} orientation="portrait" />
             </FadeIn>
           </section>
         )}
+
+        {/* TikTok : vidéos configurées dans src/config/tiktok.ts */}
+        <TikTokSection />
 
         {/* Présentation + services */}
         <section className="mx-auto w-full max-w-5xl px-4 py-20">
