@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 const FADE_MS = 700; // durée du fondu de boucle
-const PARALLAX = 0.35; // la vidéo descend à 35% de la vitesse du scroll
+const PARALLAX = 0.55; // la vidéo descend à 55% de la vitesse du scroll
 
 // Vidéo de fond du héro : boucle avec fondu enchaîné, bords estompés
 // (masque dégradé) et léger décalage au scroll (parallaxe).
@@ -55,32 +55,46 @@ export function HeroVideo() {
     };
   }, []);
 
-  // Masque : bords de la vidéo fondus dans le fond du site
-  const edgeFade = {
+  // Masques : les 4 côtés de la vidéo fondus progressivement.
+  // Deux éléments imbriqués (un dégradé chacun) pour une compatibilité
+  // parfaite entre navigateurs, sans mask-composite.
+  const fadeX = {
     WebkitMaskImage:
-      "radial-gradient(120% 120% at 50% 50%, black 55%, transparent 92%)",
+      "linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%)",
     maskImage:
-      "radial-gradient(120% 120% at 50% 50%, black 55%, transparent 92%)",
+      "linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%)",
+  };
+  const fadeY = {
+    WebkitMaskImage:
+      "linear-gradient(to bottom, transparent 0%, black 30%, black 65%, transparent 100%)",
+    maskImage:
+      "linear-gradient(to bottom, transparent 0%, black 30%, black 65%, transparent 100%)",
   };
 
   return (
     <>
-      <div ref={wrapperRef} className="absolute inset-0 -z-10 will-change-transform">
-        <video
-          ref={videoRef}
-          aria-hidden
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          style={{ ...edgeFade, transitionDuration: `${FADE_MS}ms` }}
-          className={`absolute inset-0 h-full w-full scale-110 object-cover transition-opacity ease-in-out ${
-            fading ? "opacity-0" : "opacity-60"
-          }`}
-        >
-          <source src="/videos/hero.mp4" type="video/mp4" />
-        </video>
+      <div
+        ref={wrapperRef}
+        className="absolute inset-0 -z-10 will-change-transform"
+        style={fadeX}
+      >
+        <div className="absolute inset-0" style={fadeY}>
+          <video
+            ref={videoRef}
+            aria-hidden
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            style={{ transitionDuration: `${FADE_MS}ms` }}
+            className={`absolute inset-0 h-full w-full scale-125 object-cover transition-opacity ease-in-out ${
+              fading ? "opacity-0" : "opacity-60"
+            }`}
+          >
+            <source src="/videos/hero.mp4" type="video/mp4" />
+          </video>
+        </div>
       </div>
       {/* Voile dégradé pour garder le texte lisible */}
       <div

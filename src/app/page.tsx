@@ -64,8 +64,8 @@ export default function Home() {
               <span className="text-accent">Propul&apos;Sound DJ</span>
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-              Basé à Huisseau-sur-Cosson, je transforme vos mariages, anniversaires et soirées
-              en moments inoubliables : musique au millimètre, matériel pro et ambiance garantie.
+              DJ &amp; Show Lumière à proximité de Blois. Une ambiance électro moderne et du
+              matériel professionnel pour illuminer et faire vibrer vos événements.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <Link
