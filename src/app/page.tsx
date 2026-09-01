@@ -90,39 +90,6 @@ export default function Home() {
         {/* Galerie photos */}
         <Gallery />
 
-        {/* Vidéos "En action" : déposées dans public/videos/showcase/ */}
-        {showcaseVideos.length > 0 && (
-          <section className="mx-auto w-full max-w-5xl px-4 pb-4 text-center">
-            <FadeIn>
-              <h2 className="text-3xl font-medium tracking-tight sm:text-4xl">
-                Propul&apos;Sound <span className="text-accent">en action</span>
-              </h2>
-              <p className="mt-3 text-muted-foreground">
-                Quelques extraits de nos soirées — survolez une vidéo pour la lancer.
-              </p>
-            </FadeIn>
-            <FadeIn delay={0.1}>
-              <VideoShowcase videos={showcaseVideos} orientation="portrait" />
-            </FadeIn>
-            {TIKTOK_PROFILE_URL && (
-              <FadeIn delay={0.2}>
-                <a
-                  href={TIKTOK_PROFILE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-8 inline-flex items-center gap-2 rounded-lg border border-border px-6 py-3 font-medium transition hover:border-accent hover:text-accent"
-                >
-                  Plus de vidéos sur TikTok
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M7 17 17 7" />
-                    <path d="M7 7h10v10" />
-                  </svg>
-                </a>
-              </FadeIn>
-            )}
-          </section>
-        )}
-
         {/* Présentation + services */}
         <section className="mx-auto w-full max-w-5xl px-4 py-20">
           <FadeIn as="section" className="relative overflow-hidden rounded-3xl border border-border">
@@ -203,6 +170,39 @@ export default function Home() {
         </section>
 
         {/* Avis clients Google */}
+        {/* Vidéos "En action" (clips TikTok auto-hébergés) — juste avant les avis */}
+        {showcaseVideos.length > 0 && (
+          <section className="mx-auto w-full max-w-5xl px-4 pb-4 text-center">
+            <FadeIn>
+              <h2 className="text-3xl font-medium tracking-tight sm:text-4xl">
+                Propul&apos;Sound <span className="text-accent">en action</span>
+              </h2>
+              <p className="mt-3 text-muted-foreground">
+                Quelques extraits de nos soirées — survolez une vidéo pour la lancer.
+              </p>
+            </FadeIn>
+            <FadeIn delay={0.1}>
+              <VideoShowcase videos={showcaseVideos} orientation="portrait" />
+            </FadeIn>
+            {TIKTOK_PROFILE_URL && (
+              <FadeIn delay={0.2}>
+                <a
+                  href={TIKTOK_PROFILE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-8 inline-flex items-center gap-2 rounded-lg border border-border px-6 py-3 font-medium transition hover:border-accent hover:text-accent"
+                >
+                  Plus de vidéos sur TikTok
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M7 17 17 7" />
+                    <path d="M7 7h10v10" />
+                  </svg>
+                </a>
+              </FadeIn>
+            )}
+          </section>
+        )}
+
         <GoogleReviews />
       </main>
       <footer className="border-t border-white/10 py-8 text-center text-sm text-muted-foreground">
