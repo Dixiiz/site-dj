@@ -43,15 +43,6 @@ export default function Home() {
     <>
       <SiteHeader />
       <main className="relative">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute top-0 right-0 -z-10 h-96 w-96 rounded-full bg-accent/20 blur-3xl"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute top-[40rem] -left-20 -z-10 h-72 w-72 rounded-full bg-primary/25 blur-3xl"
-        />
-
         {/* Héro — avec vidéo de fond si public/videos/hero.mp4 existe */}
         <section className="relative mx-auto w-full max-w-5xl px-4 pt-20 pb-16 text-center sm:pt-28">
           {hasHeroVideo && <HeroVideo />}
@@ -90,6 +81,16 @@ export default function Home() {
         {/* Présentation + services */}
         <section className="mx-auto w-full max-w-5xl px-4 py-20">
           <FadeIn as="section" className="relative overflow-hidden rounded-3xl border border-border">
+            {/* Halos décoratifs : confinés dans la carte pour ne jamais
+                interférer avec les fondus de la vidéo du héro */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -top-20 -right-20 h-72 w-72 rounded-full bg-accent/20 blur-3xl"
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-primary/25 blur-3xl"
+            />
             {/* Photo de fond : se fond dans le bleu du site par un dégradé */}
             <div
               aria-hidden
