@@ -53,7 +53,7 @@ export default function Home() {
         />
 
         {/* Héro — avec vidéo de fond si public/videos/hero.mp4 existe */}
-        <section className="relative mx-auto w-full max-w-5xl overflow-hidden px-4 pt-20 pb-16 text-center sm:pt-28">
+        <section className="relative mx-auto w-full max-w-5xl px-4 pt-20 pb-16 text-center sm:pt-28">
           {hasHeroVideo && <HeroVideo />}
           <FadeIn>
             <p className="text-sm tracking-[0.3em] text-accent uppercase">

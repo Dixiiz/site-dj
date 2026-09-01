@@ -2,14 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const FADE_MS = 700; // durée du fondu
+const FADE_MS = 700; // durée du fondu de boucle
+const PARALLAX = 0.35; // la vidéo descend à 35% de la vitesse du scroll
 
-// Vidéo de fond du héro : lecture en boucle avec fondu enchaîné
-// (la vidéo s'estompe vers le fond bleu à la fin et réapparaît au début).
+// Vidéo de fond du héro : boucle avec fondu enchaîné, bords estompés
+// (masque dégradé) et léger décalage au scroll (parallaxe).
 export function HeroVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const [fading, setFading] = useState(false);
 
+  // Fondu à la boucle
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -30,23 +33,55 @@ export function HeroVideo() {
     };
   }, []);
 
+  // Parallaxe : la vidéo suit le scroll plus lentement que la page
+  useEffect(() => {
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const wrapper = wrapperRef.current;
+        if (!wrapper) return;
+        const hero = wrapper.parentElement;
+        const maxY = hero ? hero.offsetHeight : 600;
+        const shift = Math.min(window.scrollY * PARALLAX, maxY);
+        wrapper.style.transform = `translateY(${shift}px)`;
+      });
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  // Masque : bords de la vidéo fondus dans le fond du site
+  const edgeFade = {
+    WebkitMaskImage:
+      "radial-gradient(120% 120% at 50% 50%, black 55%, transparent 92%)",
+    maskImage:
+      "radial-gradient(120% 120% at 50% 50%, black 55%, transparent 92%)",
+  };
+
   return (
     <>
-      <video
-        ref={videoRef}
-        aria-hidden
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="auto"
-        className={`absolute inset-0 -z-10 h-full w-full object-cover transition-opacity ease-in-out ${
-          fading ? "opacity-0" : "opacity-60"
-        }`}
-        style={{ transitionDuration: `${FADE_MS}ms` }}
-      >
-        <source src="/videos/hero.mp4" type="video/mp4" />
-      </video>
+      <div ref={wrapperRef} className="absolute inset-0 -z-10 will-change-transform">
+        <video
+          ref={videoRef}
+          aria-hidden
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          style={{ ...edgeFade, transitionDuration: `${FADE_MS}ms` }}
+          className={`absolute inset-0 h-full w-full scale-110 object-cover transition-opacity ease-in-out ${
+            fading ? "opacity-0" : "opacity-60"
+          }`}
+        >
+          <source src="/videos/hero.mp4" type="video/mp4" />
+        </video>
+      </div>
       {/* Voile dégradé pour garder le texte lisible */}
       <div
         aria-hidden
@@ -55,3 +90,4 @@ export function HeroVideo() {
     </>
   );
 }
+
