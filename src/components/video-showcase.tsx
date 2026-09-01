@@ -80,6 +80,7 @@ export function VideoShowcase({ videos, orientation = "landscape" }: VideoShowca
                     refs.current[src] = el;
                   }}
                   src={src}
+                  poster={src.replace(/\.mp4$/, ".jpg")}
                   muted={mutedStates[src]}
                   playsInline
                   preload="metadata"
@@ -87,6 +88,20 @@ export function VideoShowcase({ videos, orientation = "landscape" }: VideoShowca
                   onEnded={advance}
                 />
                 <SoundButton muted={mutedStates[src]} onToggle={() => toggleSound(src)} />
+                <div
+                  className="absolute inset-0"
+                  onMouseEnter={() => {
+                    const v = refs.current?.[src];
+                    v?.play().catch(() => {});
+                  }}
+                  onMouseLeave={() => {
+                    const v = refs.current?.[src];
+                    if (v) {
+                      v.pause();
+                      v.currentTime = 0;
+                    }
+                  }}
+                />
               </div>
             </div>
           ))}
