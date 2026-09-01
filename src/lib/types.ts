@@ -27,3 +27,8 @@ export type SelectedOption = {
   name: string;
   price_cents: number;
 };
+
+export type TravelInfo = {
+  distanceKm: number;
+  feeCents: number;
+};

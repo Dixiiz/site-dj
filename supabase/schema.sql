@@ -44,10 +44,29 @@ create table if not exists quotes (
   formula_name text not null,
   formula_price_cents integer not null,
   selected_options jsonb not null default '[]'::jsonb,
+  travel_distance_km numeric,
+  travel_fee_cents integer not null default 0,
   total_cents integer not null,
   status text not null default 'nouveau',
   created_at timestamptz not null default now()
 );
+
+alter table quotes add column if not exists travel_distance_km numeric;
+alter table quotes add column if not exists travel_fee_cents integer not null default 0;
+
+create table if not exists custom_requests (
+  id uuid primary key default gen_random_uuid(),
+  customer_name text not null,
+  customer_email text not null,
+  customer_phone text,
+  event_date date,
+  event_location text not null,
+  notes text,
+  status text not null default 'nouveau',
+  created_at timestamptz not null default now()
+);
+
+alter table custom_requests enable row level security;
 
 create table if not exists bookings (
   id uuid primary key default gen_random_uuid(),

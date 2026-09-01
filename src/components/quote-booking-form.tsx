@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { fr } from "react-day-picker/locale";
 import { toast } from "sonner";
 import { submitQuoteAndBooking } from "@/app/actions";
+import { FadeIn } from "@/components/fade-in";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -97,7 +98,7 @@ export function QuoteBookingForm({
       ))}
 
       <div className="space-y-6">
-        <section>
+        <FadeIn>
           <h2 className="mb-3 text-xl font-medium">1. Choisis ta formule</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {formulas.map((item) => {
@@ -110,10 +111,10 @@ export function QuoteBookingForm({
                     setFormulaId(item.id);
                     setOptionIds([]);
                   }}
-                  className={`rounded-xl border p-4 text-left transition ${
+                  className={`glow-hover rounded-xl border p-4 text-left transition-colors ${
                     selected
-                      ? "border-primary bg-primary/10"
-                      : "border-white/10 hover:border-white/25"
+                      ? "border-accent bg-primary/10"
+                      : "border-white/10 hover:border-accent/50"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -132,9 +133,9 @@ export function QuoteBookingForm({
               );
             })}
           </div>
-        </section>
+        </FadeIn>
 
-        <section>
+        <FadeIn delay={0.05}>
           <h2 className="mb-3 text-xl font-medium">2. Options</h2>
           <div className="space-y-3">
             {visibleOptions.map((option) => {
@@ -142,7 +143,7 @@ export function QuoteBookingForm({
               return (
                 <label
                   key={option.id}
-                  className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 p-3"
+                  className="glow-hover flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 p-3"
                 >
                   <Checkbox
                     checked={checked}
@@ -164,9 +165,9 @@ export function QuoteBookingForm({
               );
             })}
           </div>
-        </section>
+        </FadeIn>
 
-        <section>
+        <FadeIn delay={0.1}>
           <h2 className="mb-3 text-xl font-medium">3. Date et créneau</h2>
           <Card>
             <CardContent className="flex flex-col gap-4 pt-1 sm:flex-row">
@@ -204,9 +205,9 @@ export function QuoteBookingForm({
               </div>
             </CardContent>
           </Card>
-        </section>
+        </FadeIn>
 
-        <section className="grid gap-3 sm:grid-cols-2">
+        <FadeIn delay={0.15} className="grid gap-3 sm:grid-cols-2">
           <h2 className="sm:col-span-2 text-xl font-medium">4. Tes coordonnées</h2>
           <div className="space-y-1.5">
             <Label htmlFor="customer_name">Nom</Label>
@@ -232,11 +233,11 @@ export function QuoteBookingForm({
             <Label htmlFor="notes">Message</Label>
             <Textarea id="notes" name="notes" placeholder="Ambiance souhaitée, horaires, contraintes…" />
           </div>
-        </section>
+        </FadeIn>
       </div>
 
-      <aside className="lg:sticky lg:top-6 h-fit">
-        <Card>
+      <FadeIn as="aside" delay={0.2} className="lg:sticky lg:top-6 h-fit">
+        <Card className="border border-accent/20 shadow-[0_0_40px_-15px_var(--accent)]">
           <CardHeader>
             <CardTitle>Récapitulatif</CardTitle>
             <CardDescription>Le devis et le rendez-vous sont enregistrés ensemble.</CardDescription>
@@ -264,7 +265,7 @@ export function QuoteBookingForm({
             </p>
           </CardContent>
         </Card>
-      </aside>
+      </FadeIn>
     </form>
   );
 }

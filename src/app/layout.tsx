@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DJ Studio — Devis & réservation",
-  description: "Configure ton devis DJ et réserve un créneau en ligne.",
+  title: "Propul'Sound DJ — Devis & réservation",
+  description: "Configurateur de devis et de créneaux en ligne.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

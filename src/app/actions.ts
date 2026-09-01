@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { clearAdminSession, isAdmin, setAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { estimateTravelFromAddress } from "@/lib/travel";
 import type { SelectedOption } from "@/lib/types";
+
+export async function estimateTravelFee(formData: FormData) {
+  const address = String(formData.get("event_location") ?? "").trim();
+  return estimateTravelFromAddress(address);
+}
 
 export async function submitQuoteAndBooking(formData: FormData) {
   const customer_name = String(formData.get("customer_name") ?? "").trim();
@@ -16,9 +22,18 @@ export async function submitQuoteAndBooking(formData: FormData) {
   const formula_id = String(formData.get("formula_id") ?? "");
   const slot_id = String(formData.get("slot_id") ?? "");
   const optionIds = formData.getAll("option_ids").map(String);
+  const travel_distance_km = formData.get("travel_distance_km")
+    ? Number(formData.get("travel_distance_km"))
+    : null;
+  const travel_fee_cents = formData.get("travel_fee_cents")
+    ? Number(formData.get("travel_fee_cents"))
+    : 0;
 
-  if (!customer_name || !customer_email || !formula_id || !slot_id) {
-    return { ok: false as const, error: "Merci de remplir le nom, l’e-mail, une formule et un créneau." };
+  if (!customer_name || !customer_email || !formula_id || !slot_id || !event_location) {
+    return {
+      ok: false as const,
+      error: "Merci de remplir le nom, l’e-mail, le lieu, une formule et un créneau.",
+    };
   }
 
   const supabase = createAdminClient();
@@ -51,8 +66,16 @@ export async function submitQuoteAndBooking(formData: FormData) {
       price_cents: option.price_cents,
     }));
 
+  const travelResult = await estimateTravelFromAddress(event_location);
+  const confirmedTravelFeeCents = travelResult.ok ? travelResult.estimate.feeCents : travel_fee_cents || 0;
+  const confirmedTravelDistanceKm = travelResult.ok
+    ? travelResult.estimate.distanceKm
+    : travel_distance_km;
+
   const total_cents =
-    formula.price_cents + selected.reduce((sum, option) => sum + option.price_cents, 0);
+    formula.price_cents +
+    selected.reduce((sum, option) => sum + option.price_cents, 0) +
+    confirmedTravelFeeCents;
 
   const { data: slot, error: slotError } = await supabase
     .from("slots")
@@ -89,6 +112,8 @@ export async function submitQuoteAndBooking(formData: FormData) {
       formula_name: formula.name,
       formula_price_cents: formula.price_cents,
       selected_options: selected,
+      travel_distance_km: confirmedTravelDistanceKm,
+      travel_fee_cents: confirmedTravelFeeCents,
       total_cents,
       status: "nouveau",
     })
@@ -114,6 +139,39 @@ export async function submitQuoteAndBooking(formData: FormData) {
   }
 
   await supabase.from("slots").update({ is_open: false }).eq("id", slot_id);
+
+  redirect(`/merci?nom=${encodeURIComponent(customer_name)}`);
+}
+
+export async function submitCustomRequest(formData: FormData) {
+  const customer_name = String(formData.get("customer_name") ?? "").trim();
+  const customer_email = String(formData.get("customer_email") ?? "").trim();
+  const customer_phone = String(formData.get("customer_phone") ?? "").trim();
+  const event_date = String(formData.get("event_date") ?? "").trim();
+  const event_location = String(formData.get("event_location") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+
+  if (!customer_name || !customer_email || !event_location) {
+    return {
+      ok: false as const,
+      error: "Merci de remplir le nom, l’e-mail et le lieu de l’événement.",
+    };
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("custom_requests").insert({
+    customer_name,
+    customer_email,
+    customer_phone: customer_phone || null,
+    event_date: event_date || null,
+    event_location,
+    notes: notes || null,
+    status: "nouveau",
+  });
+
+  if (error) {
+    return { ok: false as const, error: "Impossible d’enregistrer la demande. Réessaie dans un instant." };
+  }
 
   redirect(`/merci?nom=${encodeURIComponent(customer_name)}`);
 }

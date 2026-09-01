@@ -4,7 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/admin";
 import type { Formula, QuoteOption, Slot } from "@/lib/types";
 
-export default async function Home() {
+export default async function FormulesPage() {
   if (!isSupabaseConfigured()) {
     return (
       <>
