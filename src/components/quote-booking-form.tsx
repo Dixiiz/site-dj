@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { fr } from "react-day-picker/locale";
 import { toast } from "sonner";
-import { estimateTravelFee, submitQuoteAndBooking } from "@/app/actions";
+import { estimateTravelFee, searchAddresses, submitQuoteAndBooking } from "@/app/actions";
 import { FadeIn } from "@/components/fade-in";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ function toMinutes(time: string) {
   return h * 60 + m;
 }
 
-const START_TIMES = ["20:00", "20:30", "21:00", "21:30", "22:00"];
+const START_TIMES = ["18:00", "18:30", "19:00", "19:30", "20:00"];
 const END_TIMES = [
   "23:00", "23:30", "00:00", "00:30", "01:00", "01:30",
   "02:00", "02:30", "03:00", "03:30", "04:00", "04:30", "05:00",
@@ -53,8 +53,11 @@ export function QuoteBookingForm({
   const [formulaId, setFormulaId] = useState(formulas[0]?.id ?? "");
   const [optionIds, setOptionIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [startTime, setStartTime] = useState("20:00");
+  const [startTime, setStartTime] = useState("18:00");
   const [endTime, setEndTime] = useState("");
+  const [eventLocation, setEventLocation] = useState("");
+  const [suggestions, setSuggestions] = useState<{ label: string }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [travel, setTravel] = useState<TravelState>(null);
   const [travelPending, startTravelTransition] = useTransition();
   const [pending, startTransition] = useTransition();
@@ -73,8 +76,9 @@ export function QuoteBookingForm({
   );
 
   // Heure de fin incluse dans le forfait : 03:00 (anniversaire) ou 04:00 (mariage).
+  // Le seuil est toujours après minuit : on le ramène lui aussi après 20 h (jour suivant).
   const cutoffLabel = formula?.name.toLowerCase().includes("mariage") ? "04:00" : "03:00";
-  const cutoffMinutes = toMinutes(cutoffLabel);
+  const cutoffMinutes = toMinutes(cutoffLabel) + 24 * 60;
 
   const startMinutes = toMinutes(startTime);
   const endMinutes = endTime ? toMinutes(endTime) : null;
@@ -89,6 +93,7 @@ export function QuoteBookingForm({
     const past = normalizedEndMinutes - cutoffMinutes;
     return past > 0 ? Math.ceil(past / 60) : 0;
   }, [normalizedEndMinutes, cutoffMinutes, invalidOrder]);
+
   const extraFeeCents = extraHours * EXTRA_HOUR_RATE_CENTS;
 
   const total =
@@ -107,9 +112,42 @@ export function QuoteBookingForm({
     setSelectedDate(date);
   }
 
+  // Suggestions d'adresses via action serveur (Nominatim), avec debouncing.
+  useEffect(() => {
+    if (eventLocation.trim().length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const result = await searchAddresses(eventLocation);
+      if (result.ok) {
+        setSuggestions(result.results.map((label) => ({ label })));
+        setShowSuggestions(result.results.length > 0);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [eventLocation]);
+
+  function chooseSuggestion(label: string) {
+    setEventLocation(label);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    // Estimation automatique des frais de déplacement, sans clic.
+    startTravelTransition(async () => {
+      const fd = new FormData();
+      fd.set("event_location", label);
+      const result = await estimateTravelFee(fd);
+      if (result && result.ok) {
+        setTravel({ distanceKm: result.estimate.distanceKm, feeCents: result.estimate.feeCents });
+      } else if (result && !result.ok) {
+        setTravel(null);
+        toast.error(result.error);
+      }
+    });
+  }
+
   function onEstimateTravel() {
-    const input = document.getElementById("event_location") as HTMLInputElement | null;
-    const address = input?.value.trim() ?? "";
+    const address = eventLocation.trim();
     if (!address) {
       toast.error("Indique d'abord le lieu de l'événement.");
       return;
@@ -226,9 +264,10 @@ export function QuoteBookingForm({
           <Card>
             <CardContent className="space-y-4 pt-1">
               <p className="text-sm text-muted-foreground">
-                Disponible 7 jours sur 7, week-end inclus. Départ à partir de 20 h.
-                Jusqu&apos;à {cutoffLabel} inclus dans la formule choisie — au-delà, chaque heure
-                supplémentaire est facturée {formatEuros(EXTRA_HOUR_RATE_CENTS)}.
+                Disponible 7 jours sur 7, week-end inclus. Départ entre 18 h et 20 h
+                (20 h dernier départ). Jusqu&apos;à {cutoffLabel} inclus dans la formule
+                choisie — au-delà, chaque heure supplémentaire est facturée{" "}
+                {formatEuros(EXTRA_HOUR_RATE_CENTS)}.
               </p>
               <Calendar
                 mode="single"
@@ -240,7 +279,7 @@ export function QuoteBookingForm({
               />
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="start_time_select">Heure de début (20 h minimum)</Label>
+                  <Label htmlFor="start_time_select">Heure de début (entre 18 h et 20 h)</Label>
                   <select
                     id="start_time_select"
                     value={startTime}
@@ -311,15 +350,30 @@ export function QuoteBookingForm({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="event_type">Type d&apos;événement</Label>
-            <Input id="event_type" name="event_type" placeholder="Mariage, anniversaire…" />
+            <Input
+              id="event_type"
+              name="event_type"
+              placeholder="Mariage, anniversaire…"
+              list="event-type-suggestions"
+            />
+            <datalist id="event-type-suggestions">
+              <option value="Mariage" />
+              <option value="Anniversaire" />
+              <option value="Entreprise / Afterwork" />
+              <option value="Autre" />
+            </datalist>
           </div>
-          <div className="sm:col-span-2 space-y-1.5">
+          <div className="sm:col-span-2 space-y-1.5 relative">
             <Label htmlFor="event_location">Lieu de réception</Label>
             <div className="flex gap-2">
               <Input
                 id="event_location"
                 name="event_location"
                 placeholder="Adresse ou ville"
+                autoComplete="off"
+                value={eventLocation}
+                onChange={(event) => setEventLocation(event.target.value)}
+                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                 required
               />
               <Button
@@ -328,9 +382,24 @@ export function QuoteBookingForm({
                 onClick={onEstimateTravel}
                 disabled={travelPending}
               >
-                {travelPending ? "Calcul…" : "Frais de déplacement"}
+                {travelPending ? "Calcul…" : "Recalculer"}
               </Button>
             </div>
+            {showSuggestions && suggestions.length > 0 ? (
+              <ul className="absolute z-20 w-full overflow-hidden rounded-lg border border-white/10 bg-card shadow-xl">
+                {suggestions.map((suggestion) => (
+                  <li key={suggestion.label}>
+                    <button
+                      type="button"
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-accent/10"
+                      onClick={() => chooseSuggestion(suggestion.label)}
+                    >
+                      📍 {suggestion.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             {travel ? (
               <p className="text-sm text-muted-foreground">
                 🚗 {travel.distanceKm} km depuis Huisseau-sur-Cosson —{" "}
@@ -340,7 +409,8 @@ export function QuoteBookingForm({
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">
-                30 km offerts autour de Huisseau-sur-Cosson, puis 0,80 €/km.
+                30 km offerts autour de Huisseau-sur-Cosson, puis 0,80 €/km. Les frais se
+                calculent automatiquement dès que vous choisissez un lieu suggéré.
               </p>
             )}
           </div>

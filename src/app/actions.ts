@@ -13,6 +13,33 @@ export async function estimateTravelFee(formData: FormData) {
   return estimateTravelFromAddress(address);
 }
 
+// Suggestions d'adresses françaises pour le formulaire (OpenStreetMap Nominatim).
+export async function searchAddresses(query: string) {
+  const q = query.trim();
+  if (q.length < 3) return { ok: true as const, results: [] as string[] };
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=fr&addressdetails=1&q=${encodeURIComponent(q)}`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "propulsounddj-site/1.0 (contact@propulsounddj.fr)",
+        "Accept-Language": "fr",
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) return { ok: true as const, results: [] as string[] };
+    const data = (await res.json()) as { display_name?: string }[];
+    return {
+      ok: true as const,
+      results: data
+        .map((item) => item.display_name ?? "")
+        .filter((label) => label.length > 0)
+        .slice(0, 5),
+    };
+  } catch {
+    return { ok: true as const, results: [] as string[] };
+  }
+}
+
 export async function submitQuoteAndBooking(formData: FormData) {
   const customer_name = String(formData.get("customer_name") ?? "").trim();
   const customer_email = String(formData.get("customer_email") ?? "").trim();
