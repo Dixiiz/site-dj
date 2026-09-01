@@ -8,7 +8,6 @@ const links = [
   { href: "/", label: "Accueil" },
   { href: "/formules", label: "Formules" },
   { href: "/sur-mesure", label: "Sur-mesure" },
-  { href: "/devis", label: "Devis" },
 ];
 
 export function MainNav() {

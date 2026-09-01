@@ -72,7 +72,7 @@ export default function Home() {
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <Link
-                href="/devis"
+                href="/formules"
                 className="rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground shadow-lg transition hover:brightness-110"
               >
                 Demander un devis
@@ -157,11 +157,11 @@ export default function Home() {
               Prêt à réserver votre date ?
             </h2>
             <p className="mt-3 text-muted-foreground">
-              Configurez votre devis en ligne en quelques minutes : formule, options, lieu et
-              créneau. Réponse rapide garantie.
+              Configurez votre devis en ligne en quelques minutes : formule, options, lieu,
+              date et horaires. Réponse rapide garantie.
             </p>
             <Link
-              href="/devis"
+              href="/formules"
               className="mt-6 inline-block rounded-lg bg-primary px-8 py-3 font-medium text-primary-foreground shadow-lg transition hover:brightness-110"
             >
               Configurer mon devis

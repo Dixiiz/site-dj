@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { fr } from "react-day-picker/locale";
 import { toast } from "sonner";
-import { submitQuoteAndBooking } from "@/app/actions";
+import { estimateTravelFee, submitQuoteAndBooking } from "@/app/actions";
 import { FadeIn } from "@/components/fade-in";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatEuros } from "@/lib/money";
-import type { Formula, QuoteOption, Slot } from "@/lib/types";
+import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
+import type { Formula, QuoteOption } from "@/lib/types";
+
+type TravelState = { distanceKm: number; feeCents: number } | null;
 
 function dateKey(value: Date) {
   const y = value.getFullYear();
@@ -29,23 +32,31 @@ function dateKey(value: Date) {
   return `${y}-${m}-${d}`;
 }
 
-function formatTime(time: string) {
-  return time.slice(0, 5);
+function toMinutes(time: string) {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
 }
+
+const START_TIMES = ["20:00", "20:30", "21:00", "21:30", "22:00"];
+const END_TIMES = [
+  "23:00", "23:30", "00:00", "00:30", "01:00", "01:30",
+  "02:00", "02:30", "03:00", "03:30", "04:00", "04:30", "05:00",
+];
 
 export function QuoteBookingForm({
   formulas,
   options,
-  slots,
 }: {
   formulas: Formula[];
   options: QuoteOption[];
-  slots: Slot[];
 }) {
   const [formulaId, setFormulaId] = useState(formulas[0]?.id ?? "");
   const [optionIds, setOptionIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [slotId, setSlotId] = useState("");
+  const [startTime, setStartTime] = useState("20:00");
+  const [endTime, setEndTime] = useState("");
+  const [travel, setTravel] = useState<TravelState>(null);
+  const [travelPending, startTravelTransition] = useTransition();
   const [pending, startTransition] = useTransition();
 
   const visibleOptions = useMemo(
@@ -60,14 +71,31 @@ export function QuoteBookingForm({
   const selectedOptions = visibleOptions.filter((option) =>
     optionIds.includes(option.id)
   );
+
+  // Heure de fin incluse dans le forfait : 03:00 (anniversaire) ou 04:00 (mariage).
+  const cutoffLabel = formula?.name.toLowerCase().includes("mariage") ? "04:00" : "03:00";
+  const cutoffMinutes = toMinutes(cutoffLabel);
+
+  const startMinutes = toMinutes(startTime);
+  const endMinutes = endTime ? toMinutes(endTime) : null;
+  // Les fins après minuit (00:00–05:00) sont ramenées après 20 h pour comparer.
+  const normalizedEndMinutes =
+    endMinutes != null && endMinutes < 12 * 60 ? endMinutes + 24 * 60 : endMinutes;
+  const invalidOrder =
+    normalizedEndMinutes != null && normalizedEndMinutes <= startMinutes;
+
+  const extraHours = useMemo(() => {
+    if (normalizedEndMinutes == null || invalidOrder) return 0;
+    const past = normalizedEndMinutes - cutoffMinutes;
+    return past > 0 ? Math.ceil(past / 60) : 0;
+  }, [normalizedEndMinutes, cutoffMinutes, invalidOrder]);
+  const extraFeeCents = extraHours * EXTRA_HOUR_RATE_CENTS;
+
   const total =
     (formula?.price_cents ?? 0) +
-    selectedOptions.reduce((sum, option) => sum + option.price_cents, 0);
-
-  const openDates = useMemo(() => new Set(slots.map((slot) => slot.slot_date)), [slots]);
-  const slotsForDay = slots.filter(
-    (slot) => selectedDate && slot.slot_date === dateKey(selectedDate)
-  );
+    selectedOptions.reduce((sum, option) => sum + option.price_cents, 0) +
+    extraFeeCents +
+    (travel?.feeCents ?? 0);
 
   function toggleOption(id: string, checked: boolean) {
     setOptionIds((current) =>
@@ -77,7 +105,27 @@ export function QuoteBookingForm({
 
   function onDateChange(date?: Date) {
     setSelectedDate(date);
-    setSlotId("");
+  }
+
+  function onEstimateTravel() {
+    const input = document.getElementById("event_location") as HTMLInputElement | null;
+    const address = input?.value.trim() ?? "";
+    if (!address) {
+      toast.error("Indique d'abord le lieu de l'événement.");
+      return;
+    }
+    startTravelTransition(async () => {
+      const fd = new FormData();
+      fd.set("event_location", address);
+      const result = await estimateTravelFee(fd);
+      if (result && result.ok) {
+        setTravel({ distanceKm: result.estimate.distanceKm, feeCents: result.estimate.feeCents });
+        toast.success(`Distance estimée : ${result.estimate.distanceKm} km`);
+      } else if (result && !result.ok) {
+        setTravel(null);
+        toast.error(result.error);
+      }
+    });
   }
 
   function onSubmit(formData: FormData) {
@@ -92,10 +140,15 @@ export function QuoteBookingForm({
   return (
     <form action={onSubmit} className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
       <input type="hidden" name="formula_id" value={formulaId} />
-      <input type="hidden" name="slot_id" value={slotId} />
+      <input type="hidden" name="event_date" value={selectedDate ? dateKey(selectedDate) : ""} />
+      <input type="hidden" name="start_time" value={startTime} />
+      <input type="hidden" name="end_time" value={endTime} />
+      <input type="hidden" name="extra_hours" value={extraHours} />
       {optionIds.map((id) => (
         <input key={id} type="hidden" name="option_ids" value={id} />
       ))}
+      <input type="hidden" name="travel_distance_km" value={travel?.distanceKm ?? ""} />
+      <input type="hidden" name="travel_fee_cents" value={travel?.feeCents ?? ""} />
 
       <div className="space-y-6">
         <FadeIn>
@@ -110,6 +163,7 @@ export function QuoteBookingForm({
                   onClick={() => {
                     setFormulaId(item.id);
                     setOptionIds([]);
+                    setEndTime("");
                   }}
                   className={`glow-hover rounded-xl border p-4 text-left transition-colors ${
                     selected
@@ -168,41 +222,75 @@ export function QuoteBookingForm({
         </FadeIn>
 
         <FadeIn delay={0.1}>
-          <h2 className="mb-3 text-xl font-medium">3. Date et créneau</h2>
+          <h2 className="mb-3 text-xl font-medium">3. Date et horaires</h2>
           <Card>
-            <CardContent className="flex flex-col gap-4 pt-1 sm:flex-row">
+            <CardContent className="space-y-4 pt-1">
+              <p className="text-sm text-muted-foreground">
+                Disponible 7 jours sur 7, week-end inclus. Départ à partir de 20 h.
+                Jusqu&apos;à {cutoffLabel} inclus dans la formule choisie — au-delà, chaque heure
+                supplémentaire est facturée {formatEuros(EXTRA_HOUR_RATE_CENTS)}.
+              </p>
               <Calendar
                 mode="single"
                 locale={fr}
                 selected={selectedDate}
                 onSelect={onDateChange}
-                disabled={[
-                  { before: new Date() },
-                  (date) => !openDates.has(dateKey(date)),
-                ]}
+                disabled={[{ before: new Date() }]}
                 className="w-full"
               />
-              <div className="flex-1 space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  {selectedDate
-                    ? "Créneaux disponibles ce jour :"
-                    : "Choisis un jour en surbrillance."}
-                </p>
-                {slotsForDay.length === 0 && selectedDate ? (
-                  <p className="text-sm">Aucun créneau ce jour-là.</p>
-                ) : null}
-                {slotsForDay.map((slot) => (
-                  <Button
-                    key={slot.id}
-                    type="button"
-                    variant={slotId === slot.id ? "default" : "outline"}
-                    className="w-full justify-start"
-                    onClick={() => setSlotId(slot.id)}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="start_time_select">Heure de début (20 h minimum)</Label>
+                  <select
+                    id="start_time_select"
+                    value={startTime}
+                    onChange={(event) => setStartTime(event.target.value)}
+                    className="w-full rounded-lg border border-white/10 bg-background px-3 py-2"
                   >
-                    {formatTime(slot.start_time)} – {formatTime(slot.end_time)}
-                  </Button>
-                ))}
+                    {START_TIMES.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="end_time_select">Heure de fin</Label>
+                  <select
+                    id="end_time_select"
+                    value={endTime}
+                    onChange={(event) => setEndTime(event.target.value)}
+                    className="w-full rounded-lg border border-white/10 bg-background px-3 py-2"
+                  >
+                    <option value="">Choisir…</option>
+                    {END_TIMES.filter(
+                      (time) =>
+                        (toMinutes(time) < 12 * 60
+                          ? toMinutes(time) + 24 * 60
+                          : toMinutes(time)) > startMinutes
+                    ).map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
+              {invalidOrder ? (
+                <p className="text-sm text-red-400">
+                  L&apos;heure de fin doit être après l&apos;heure de début.
+                </p>
+              ) : extraHours > 0 ? (
+                <p className="text-sm text-accent">
+                  ⏱ {extraHours} heure{extraHours > 1 ? "s" : ""} supplémentaire
+                  {extraHours > 1 ? "s" : ""} au-delà de {cutoffLabel} — incluse
+                  {extraHours > 1 ? "s" : ""} dans le devis.
+                </p>
+              ) : endTime ? (
+                <p className="text-sm text-muted-foreground">
+                  ✅ Cette heure de fin est incluse dans le forfait.
+                </p>
+              ) : null}
             </CardContent>
           </Card>
         </FadeIn>
@@ -222,16 +310,43 @@ export function QuoteBookingForm({
             <Input id="customer_phone" name="customer_phone" />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="event_type">Type d’événement</Label>
+            <Label htmlFor="event_type">Type d&apos;événement</Label>
             <Input id="event_type" name="event_type" placeholder="Mariage, anniversaire…" />
           </div>
           <div className="sm:col-span-2 space-y-1.5">
-            <Label htmlFor="event_location">Lieu</Label>
-            <Input id="event_location" name="event_location" />
+            <Label htmlFor="event_location">Lieu de réception</Label>
+            <div className="flex gap-2">
+              <Input
+                id="event_location"
+                name="event_location"
+                placeholder="Adresse ou ville"
+                required
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onEstimateTravel}
+                disabled={travelPending}
+              >
+                {travelPending ? "Calcul…" : "Frais de déplacement"}
+              </Button>
+            </div>
+            {travel ? (
+              <p className="text-sm text-muted-foreground">
+                🚗 {travel.distanceKm} km depuis Huisseau-sur-Cosson —{" "}
+                {travel.feeCents === 0
+                  ? "déplacement offert (30 km gratuits)"
+                  : `frais estimés : ${formatEuros(travel.feeCents)}`}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                30 km offerts autour de Huisseau-sur-Cosson, puis 0,80 €/km.
+              </p>
+            )}
           </div>
           <div className="sm:col-span-2 space-y-1.5">
             <Label htmlFor="notes">Message</Label>
-            <Textarea id="notes" name="notes" placeholder="Ambiance souhaitée, horaires, contraintes…" />
+            <Textarea id="notes" name="notes" placeholder="Ambiance souhaitée, contraintes…" />
           </div>
         </FadeIn>
       </div>
@@ -240,7 +355,9 @@ export function QuoteBookingForm({
         <Card className="border border-accent/20 shadow-[0_0_40px_-15px_var(--accent)]">
           <CardHeader>
             <CardTitle>Récapitulatif</CardTitle>
-            <CardDescription>Le devis et le rendez-vous sont enregistrés ensemble.</CardDescription>
+            <CardDescription>
+              Ta demande est enregistrée et tu reçois une réponse rapide.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between gap-4">
@@ -253,15 +370,34 @@ export function QuoteBookingForm({
                 <span>{formatEuros(option.price_cents)}</span>
               </div>
             ))}
+            {extraHours > 0 ? (
+              <div className="flex justify-between gap-4 text-muted-foreground">
+                <span>
+                  Heures supplémentaires ({extraHours} × {formatEuros(EXTRA_HOUR_RATE_CENTS)})
+                </span>
+                <span>{formatEuros(extraFeeCents)}</span>
+              </div>
+            ) : null}
+            {travel && travel.feeCents > 0 ? (
+              <div className="flex justify-between gap-4 text-muted-foreground">
+                <span>Frais de déplacement ({travel.distanceKm} km)</span>
+                <span>{formatEuros(travel.feeCents)}</span>
+              </div>
+            ) : null}
             <div className="flex justify-between border-t border-white/10 pt-3 text-lg font-medium">
               <span>Total estimé</span>
               <span>{formatEuros(total)}</span>
             </div>
-            <Button type="submit" className="w-full" size="lg" disabled={pending || !formulaId}>
-              {pending ? "Enregistrement…" : "Envoyer le devis et réserver"}
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              disabled={pending || !formulaId || !selectedDate || !endTime || invalidOrder}
+            >
+              {pending ? "Enregistrement…" : "Envoyer ma demande de devis"}
             </Button>
             <p className="text-xs text-muted-foreground">
-              Les jours sans créneau sont grisés. Tu pourras modifier formules et prix plus tard dans Supabase.
+              Tu pourras modifier formules et prix plus tard dans Supabase.
             </p>
           </CardContent>
         </Card>
@@ -269,3 +405,4 @@ export function QuoteBookingForm({
     </form>
   );
 }
+

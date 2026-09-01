@@ -2,7 +2,7 @@ import { FadeIn } from "@/components/fade-in";
 import { QuoteBookingForm } from "@/components/quote-booking-form";
 import { SiteHeader } from "@/components/site-header";
 import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/admin";
-import type { Formula, QuoteOption, Slot } from "@/lib/types";
+import type { Formula, QuoteOption } from "@/lib/types";
 
 export default async function FormulesPage() {
   if (!isSupabaseConfigured()) {
@@ -21,16 +21,9 @@ export default async function FormulesPage() {
   }
 
   const supabase = createAdminClient();
-  const [{ data: formulas }, { data: options }, { data: slots }] = await Promise.all([
+  const [{ data: formulas }, { data: options }] = await Promise.all([
     supabase.from("formulas").select("*").eq("is_active", true).order("sort_order"),
     supabase.from("options").select("*").eq("is_active", true).order("sort_order"),
-    supabase
-      .from("slots")
-      .select("*")
-      .eq("is_open", true)
-      .gte("slot_date", new Date().toISOString().slice(0, 10))
-      .order("slot_date")
-      .order("start_time"),
   ]);
 
   return (
@@ -58,7 +51,6 @@ export default async function FormulesPage() {
           <QuoteBookingForm
             formulas={(formulas ?? []) as Formula[]}
             options={(options ?? []) as QuoteOption[]}
-            slots={(slots ?? []) as Slot[]}
           />
         </FadeIn>
       </main>

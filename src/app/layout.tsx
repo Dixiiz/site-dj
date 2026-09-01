@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description: "Configurateur de devis et de créneaux en ligne.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="fr"
