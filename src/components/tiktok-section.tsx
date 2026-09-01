@@ -1,5 +1,6 @@
 import { FadeIn } from "@/components/fade-in";
 import { TIKTOK_VIDEOS, TIKTOK_PROFILE_URL } from "@/config/tiktok";
+import { TikTokCarousel } from "@/components/tiktok-carousel";
 
 type OEmbedResponse = {
   html?: string;
@@ -38,7 +39,7 @@ export async function TikTokSection() {
             rel="noopener noreferrer"
             className="mt-8 inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground shadow-lg transition hover:brightness-110"
           >
-            @propulsounddj sur TikTok
+            @propulsound.dj sur TikTok
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M7 17 17 7" />
               <path d="M7 7h10v10" />
@@ -65,18 +66,9 @@ export async function TikTokSection() {
           Les meilleurs moments de nos soirées, en direct de TikTok.
         </p>
       </FadeIn>
-      <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
-        {valid.map(({ url, data }, index) => (
-          <FadeIn key={url} delay={index * 0.05}>
-            <div className="mx-auto w-full max-w-[270px] overflow-hidden rounded-xl border border-border bg-card/60 [&_iframe]:!w-full">
-              <div
-                className="tiktok-embed-wrapper"
-                dangerouslySetInnerHTML={{ __html: data!.html! }}
-              />
-            </div>
-          </FadeIn>
-        ))}
-      </div>
+      <FadeIn delay={0.1}>
+        <TikTokCarousel embeds={valid.map((v) => v.data!.html!)} />
+      </FadeIn>
       {TIKTOK_PROFILE_URL && (
         <FadeIn delay={0.2}>
           <a
@@ -96,3 +88,4 @@ export async function TikTokSection() {
     </section>
   );
 }
+
