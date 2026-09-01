@@ -3,6 +3,8 @@ import { FadeIn } from "@/components/fade-in";
 import { GoogleReviews } from "@/components/google-reviews";
 import { Gallery } from "@/components/gallery";
 import Link from "next/link";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
 export const metadata = {
   title: "Propul'Sound DJ — DJ & animations événementielles",
@@ -34,6 +36,8 @@ const services = [
 ];
 
 export default function Home() {
+  const hasHeroVideo = existsSync(join(process.cwd(), "public", "videos", "hero.mp4"));
+
   return (
     <>
       <SiteHeader />
@@ -47,8 +51,27 @@ export default function Home() {
           className="pointer-events-none absolute top-[40rem] -left-20 -z-10 h-72 w-72 rounded-full bg-primary/25 blur-3xl"
         />
 
-        {/* Héro */}
-        <section className="mx-auto w-full max-w-5xl px-4 pt-20 pb-16 text-center sm:pt-28">
+        {/* Héro — avec vidéo de fond si public/videos/hero.mp4 existe */}
+        <section className="relative mx-auto w-full max-w-5xl overflow-hidden px-4 pt-20 pb-16 text-center sm:pt-28">
+          {hasHeroVideo && (
+            <>
+              <video
+                aria-hidden
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="absolute inset-0 -z-10 h-full w-full object-cover opacity-60"
+              >
+                <source src="/videos/hero.mp4" type="video/mp4" />
+              </video>
+              {/* Voile dégradé pour garder le texte lisible */}
+              <div
+                aria-hidden
+                className="absolute inset-0 -z-10 bg-gradient-to-b from-background/80 via-background/60 to-background"
+              />
+            </>
+          )}
           <FadeIn>
             <p className="text-sm tracking-[0.3em] text-accent uppercase">
               DJ &amp; animations — Loir-et-Cher
@@ -83,33 +106,50 @@ export default function Home() {
 
         {/* Présentation + services */}
         <section className="mx-auto w-full max-w-5xl px-4 py-20">
-          <FadeIn as="section" className="grid items-center gap-10 md:grid-cols-2">
-            <div>
-              <p className="text-sm tracking-[0.2em] text-accent uppercase">Qui suis-je ?</p>
-              <h2 className="mt-2 text-3xl font-medium tracking-tight">
-                Une passion, une exigence
-              </h2>
-              <p className="mt-4 text-muted-foreground">
-                Passionné de musique et d&apos;ambiance, Propul&apos;Sound DJ accompagne vos
-                événements en Loir-et-Cher et dans toute la région. Chaque prestation est
-                préparée avec vous : sélection musicale personnalisée, synchronisation des
-                temps forts et adaptation en direct à votre public.
-              </p>
-              <p className="mt-3 text-muted-foreground">
-                Du son cristallin aux lumières qui suivent le rythme, tout est pensé pour que
-                vous n&apos;ayez qu&apos;une chose à faire : profiter.
-              </p>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {services.map((service) => (
-                <div
-                  key={service.title}
-                  className="rounded-xl border border-border bg-card/60 p-5 transition hover:border-accent/50"
-                >
-                  <h3 className="font-medium text-accent">{service.title}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">{service.description}</p>
-                </div>
-              ))}
+          <FadeIn as="section" className="relative overflow-hidden rounded-3xl border border-border">
+            {/* Photo de fond : se fond dans le bleu du site par un dégradé */}
+            <div
+              aria-hidden
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: "url('/galerie/moi.jpg')" }}
+            />
+            <div
+              aria-hidden
+              className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/20"
+            />
+            <div
+              aria-hidden
+              className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-background/40"
+            />
+
+            <div className="relative grid items-center gap-10 p-8 sm:p-12 md:grid-cols-2">
+              <div>
+                <p className="text-sm tracking-[0.2em] text-accent uppercase">Qui suis-je ?</p>
+                <h2 className="mt-2 text-3xl font-medium tracking-tight">
+                  Une passion, une exigence
+                </h2>
+                <p className="mt-4 text-muted-foreground">
+                  Passionné de musique et d&apos;ambiance, Propul&apos;Sound DJ accompagne vos
+                  événements en Loir-et-Cher et dans toute la région. Chaque prestation est
+                  préparée avec vous : sélection musicale personnalisée, synchronisation des
+                  temps forts et adaptation en direct à votre public.
+                </p>
+                <p className="mt-3 text-muted-foreground">
+                  Du son cristallin aux lumières qui suivent le rythme, tout est pensé pour que
+                  vous n&apos;ayez qu&apos;une chose à faire : profiter.
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {services.map((service) => (
+                  <div
+                    key={service.title}
+                    className="rounded-xl border border-border bg-background/70 p-5 backdrop-blur-sm transition hover:border-accent/50"
+                  >
+                    <h3 className="font-medium text-accent">{service.title}</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">{service.description}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </FadeIn>
         </section>

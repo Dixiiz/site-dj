@@ -1,9 +1,9 @@
-import Image from "next/image";
-import { FadeIn } from "@/components/fade-in";
+// Composant serveur : lit le dossier /public/galerie et mélange les photos
+// (ordre changeant chaque jour), puis passe la liste au carrousel client.
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
+import { GalleryCarousel } from "@/components/gallery-carousel";
 
-// Lit automatiquement les images du dossier /public/galerie
 function listGalleryPhotos(): string[] {
   try {
     const dir = join(process.cwd(), "public", "galerie");
@@ -35,34 +35,10 @@ function shuffleByDay<T>(items: T[]): T[] {
 }
 
 export function Gallery() {
-  const photos = shuffleByDay(listGalleryPhotos());
-
-  if (photos.length === 0) return null;
-
-  return (
-    <section className="mx-auto w-full max-w-5xl px-4 py-10">
-      <FadeIn>
-        <p className="text-center text-sm tracking-[0.2em] text-accent uppercase">Galerie</p>
-        <h2 className="mt-2 text-center text-3xl font-medium tracking-tight">
-          Nos dernières prestations
-        </h2>
-      </FadeIn>
-      <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3">
-        {photos.map((src, index) => (
-          <FadeIn key={src} delay={Math.min(index, 8) * 0.05}>
-            <div className="group relative aspect-square overflow-hidden rounded-xl border border-border bg-card">
-              <Image
-                src={src}
-                alt="Prestation Propul'Sound DJ"
-                fill
-                sizes="(max-width: 640px) 50vw, 33vw"
-                className="object-cover transition duration-500 group-hover:scale-105"
-              />
-            </div>
-          </FadeIn>
-        ))}
-      </div>
-    </section>
+  const photos = shuffleByDay(listGalleryPhotos()).filter(
+    (src) => src !== "/galerie/moi.jpg" // réservée à la section "Qui suis-je ?"
   );
+  return <GalleryCarousel photos={photos} />;
 }
+
 
