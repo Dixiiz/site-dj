@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatEuros } from "@/lib/money";
+import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
 import type { Formula, QuoteOption } from "@/lib/types";
 
 type TravelState = { distanceKm: number; feeCents: number } | null;
@@ -38,7 +39,7 @@ function toMinutes(time: string) {
 
 const END_TIMES = [
   "23:00", "23:30", "00:00", "00:30", "01:00", "01:30",
-  "02:00", "02:30", "03:00", "04:00",
+  "02:00", "02:30", "03:00", "03:30", "04:00", "04:30", "05:00",
 ];
 
 function isMariageFormula(name: string) {
@@ -101,9 +102,17 @@ export function QuoteBookingForm({
   const invalidOrder =
     normalizedEndMinutes != null && normalizedEndMinutes <= startMinutes;
 
+  const extraHours = useMemo(() => {
+    if (normalizedEndMinutes == null || invalidOrder) return 0;
+    const past = normalizedEndMinutes - cutoffMinutes;
+    return past > 0 ? Math.ceil(past / 60) : 0;
+  }, [normalizedEndMinutes, cutoffMinutes, invalidOrder]);
+  const extraFeeCents = extraHours * EXTRA_HOUR_RATE_CENTS;
+
   const total =
     (formula?.price_cents ?? 0) +
     selectedOptions.reduce((sum, option) => sum + option.price_cents, 0) +
+    extraFeeCents +
     (travel?.feeCents ?? 0);
 
   function toggleOption(id: string, checked: boolean) {
@@ -185,6 +194,7 @@ export function QuoteBookingForm({
       <input type="hidden" name="event_date" value={selectedDate ? dateKey(selectedDate) : ""} />
       <input type="hidden" name="start_time" value={startTime} />
       <input type="hidden" name="end_time" value={endTime} />
+      <input type="hidden" name="extra_hours" value={extraHours} />
       {optionIds.map((id) => (
         <input key={id} type="hidden" name="option_ids" value={id} />
       ))}
@@ -306,12 +316,10 @@ export function QuoteBookingForm({
                   >
                     <option value="">Choisir…</option>
                     {END_TIMES.filter(
-                      (time) => {
-                        const minutes = toMinutes(time) < 12 * 60
+                      (time) =>
+                        (toMinutes(time) < 12 * 60
                           ? toMinutes(time) + 24 * 60
-                          : toMinutes(time);
-                        return minutes > startMinutes && minutes <= cutoffMinutes;
-                      }
+                          : toMinutes(time)) > startMinutes
                     ).map((time) => (
                       <option key={time} value={time}>
                         {time}
@@ -323,6 +331,12 @@ export function QuoteBookingForm({
               {invalidOrder ? (
                 <p className="text-sm text-red-400">
                   L&apos;heure de fin doit être après l&apos;heure de début.
+                </p>
+              ) : extraHours > 0 ? (
+                <p className="text-sm text-accent">
+                  ⏱ {extraHours} heure{extraHours > 1 ? "s" : ""} supplémentaire
+                  {extraHours > 1 ? "s" : ""} au-delà de {cutoffLabel} —{" "}
+                  {formatEuros(extraFeeCents)} (inclus dans le devis).
                 </p>
               ) : endTime ? (
                 <p className="text-sm text-muted-foreground">
@@ -386,7 +400,7 @@ export function QuoteBookingForm({
             ) : null}
             {travel ? (
               <p className="text-sm text-muted-foreground">
-                🚗 Frais de déplacement estimés :{" "}
+                Frais de déplacement estimés :{" "}
                 {travel.feeCents === 0
                   ? "offerts (30 km gratuits)"
                   : formatEuros(travel.feeCents)}{" "}
@@ -425,6 +439,14 @@ export function QuoteBookingForm({
                 <span>{formatEuros(option.price_cents)}</span>
               </div>
             ))}
+            {extraHours > 0 ? (
+              <div className="flex justify-between gap-4 text-muted-foreground">
+                <span>
+                  Heures supplémentaires ({extraHours} × {formatEuros(EXTRA_HOUR_RATE_CENTS)})
+                </span>
+                <span>{formatEuros(extraFeeCents)}</span>
+              </div>
+            ) : null}
             {travel && travel.feeCents > 0 ? (
               <div className="flex justify-between gap-4 text-muted-foreground">
                 <span>Frais de déplacement ({travel.distanceKm} km)</span>

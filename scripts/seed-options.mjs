@@ -35,8 +35,20 @@ const opts = [
   },
 ];
 
-// Supprime les anciennes versions de ces options puis les insère à jour.
-const names = opts.map((o) => o.name);
-await sb.from("options").delete().in("name", names);
-const { error } = await sb.from("options").insert(opts);
-console.log(error ? "ERREUR : " + error.message : "OK — options insérées");
+// Supprime les options retirées
+const toDelete = [
+  "Heure supplémentaire",
+  "Jeu de lumières",
+  "Machine à fumée",
+  "Micro / animation",
+];
+const del = await sb.from("options").delete().in("name", toDelete);
+console.log(del.error ? "ERREUR suppression : " + del.error.message : "Options supprimées");
+
+// Lister les options
+const { data, error } = await sb.from("options").select("id,name,price_cents");
+if (error) {
+  console.log("ERREUR", error.message);
+} else {
+  for (const o of data) console.log(o.id, "|", o.name, "|", o.price_cents);
+}
