@@ -5,8 +5,8 @@
  */
 export const TIKTOK_VIDEOS: string[] = [
   // Exemple :
-  // "https://www.tiktok.com/@propulsound/video/7400000000000000000",
+  // "https://www.tiktok.com/@propulsounddj/video/7400000000000000000",
 ];
 
 /** Lien de votre profil TikTok (utilisé pour le bouton "Suivre sur TikTok") */
-export const TIKTOK_PROFILE_URL = "";
+export const TIKTOK_PROFILE_URL = "https://www.tiktok.com/@propulsounddj";

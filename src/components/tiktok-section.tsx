@@ -21,7 +21,33 @@ async function fetchEmbed(url: string): Promise<OEmbedResponse | null> {
 }
 
 export async function TikTokSection() {
-  if (TIKTOK_VIDEOS.length === 0) return null;
+  if (TIKTOK_VIDEOS.length === 0) {
+    if (!TIKTOK_PROFILE_URL) return null;
+    return (
+      <section className="mx-auto w-full max-w-5xl px-4 py-20 text-center">
+        <FadeIn>
+          <h2 className="text-3xl font-medium tracking-tight sm:text-4xl">
+            Retrouvez-nous sur <span className="text-accent">TikTok</span>
+          </h2>
+          <p className="mt-3 text-muted-foreground">
+            Les meilleurs moments de nos soirées, en direct de TikTok.
+          </p>
+          <a
+            href={TIKTOK_PROFILE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-8 inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground shadow-lg transition hover:brightness-110"
+          >
+            @propulsounddj sur TikTok
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M7 17 17 7" />
+              <path d="M7 7h10v10" />
+            </svg>
+          </a>
+        </FadeIn>
+      </section>
+    );
+  }
 
   const embeds = await Promise.all(
     TIKTOK_VIDEOS.slice(0, 6).map(async (url) => ({ url, data: await fetchEmbed(url) }))
