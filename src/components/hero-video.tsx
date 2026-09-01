@@ -74,6 +74,9 @@ export function HeroVideo() {
     <>
       <div className="absolute inset-0 -z-10" style={fadeX}>
         <div className="absolute inset-0" style={fadeY}>
+          {/* Fond uni : le fondu des bords se raccorde exactement à la
+              couleur d'arrière-plan du site */}
+          <div aria-hidden className="absolute inset-0 bg-background" />
           <video
             ref={videoRef}
             aria-hidden
