@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { clearAdminSession, isAdmin, setAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateTravelFromAddress } from "@/lib/travel";
-import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
 import type { SelectedOption } from "@/lib/types";
 
 export async function estimateTravelFee(formData: FormData) {
@@ -53,7 +52,6 @@ export async function submitQuoteAndBooking(formData: FormData) {
   const event_date = String(formData.get("event_date") ?? "").trim();
   const start_time = String(formData.get("start_time") ?? "").trim();
   const end_time = String(formData.get("end_time") ?? "").trim();
-  const extra_hours = Number(formData.get("extra_hours") ?? 0) || 0;
   const travel_distance_km = formData.get("travel_distance_km")
     ? Number(formData.get("travel_distance_km"))
     : null;
@@ -104,12 +102,10 @@ export async function submitQuoteAndBooking(formData: FormData) {
     ? travelResult.estimate.distanceKm
     : travel_distance_km;
 
-  const extra_fee_cents = extra_hours * EXTRA_HOUR_RATE_CENTS;
   const total_cents =
     formula.price_cents +
     selected.reduce((sum, option) => sum + option.price_cents, 0) +
-    confirmedTravelFeeCents +
-    extra_fee_cents;
+    confirmedTravelFeeCents;
 
   const { data: slot, error: slotError } = await supabase
     .from("slots")
@@ -137,7 +133,6 @@ export async function submitQuoteAndBooking(formData: FormData) {
     `Date : ${event_date}`,
     `Début : ${start_time}`,
     `Fin : ${end_time}`,
-    extra_hours > 0 ? `Heures supplémentaires : ${extra_hours} (${(extra_fee_cents / 100).toFixed(2)} €)` : null,
     notes ? `Message : ${notes}` : null,
   ]
     .filter(Boolean)

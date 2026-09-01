@@ -20,7 +20,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatEuros } from "@/lib/money";
-import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
 import type { Formula, QuoteOption } from "@/lib/types";
 
 type TravelState = { distanceKm: number; feeCents: number } | null;
@@ -37,11 +36,14 @@ function toMinutes(time: string) {
   return h * 60 + m;
 }
 
-const START_TIMES = ["18:00", "18:30", "19:00", "19:30", "20:00"];
 const END_TIMES = [
   "23:00", "23:30", "00:00", "00:30", "01:00", "01:30",
-  "02:00", "02:30", "03:00", "03:30", "04:00", "04:30", "05:00",
+  "02:00", "02:30", "03:00", "04:00",
 ];
+
+function isMariageFormula(name: string) {
+  return name.toLowerCase().includes("mariage");
+}
 
 export function QuoteBookingForm({
   formulas,
@@ -53,7 +55,9 @@ export function QuoteBookingForm({
   const [formulaId, setFormulaId] = useState(formulas[0]?.id ?? "");
   const [optionIds, setOptionIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [startTime, setStartTime] = useState("18:00");
+  const [startTime, setStartTime] = useState(
+    formulas[0] && isMariageFormula(formulas[0].name) ? "14:00" : "17:00"
+  );
   const [endTime, setEndTime] = useState("");
   const [eventLocation, setEventLocation] = useState("");
   const [suggestions, setSuggestions] = useState<{ label: string }[]>([]);
@@ -77,8 +81,17 @@ export function QuoteBookingForm({
 
   // Heure de fin incluse dans le forfait : 03:00 (anniversaire) ou 04:00 (mariage).
   // Le seuil est toujours après minuit : on le ramène lui aussi après 20 h (jour suivant).
-  const cutoffLabel = formula?.name.toLowerCase().includes("mariage") ? "04:00" : "03:00";
+  const isMariage = formula?.name.toLowerCase().includes("mariage");
+  const cutoffLabel = isMariage ? "04:00" : "03:00";
   const cutoffMinutes = toMinutes(cutoffLabel) + 24 * 60;
+  // Départ dès 14 h pour les mariages, 17 h pour le reste (20 h dernier départ).
+  const startTimes = useMemo(() => {
+    const first = isMariage ? 14 : 17;
+    return Array.from({ length: (20 - first) * 2 + 1 }, (_, i) => {
+      const minutes = first * 60 + i * 30;
+      return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+    });
+  }, [isMariage]);
 
   const startMinutes = toMinutes(startTime);
   const endMinutes = endTime ? toMinutes(endTime) : null;
@@ -88,18 +101,9 @@ export function QuoteBookingForm({
   const invalidOrder =
     normalizedEndMinutes != null && normalizedEndMinutes <= startMinutes;
 
-  const extraHours = useMemo(() => {
-    if (normalizedEndMinutes == null || invalidOrder) return 0;
-    const past = normalizedEndMinutes - cutoffMinutes;
-    return past > 0 ? Math.ceil(past / 60) : 0;
-  }, [normalizedEndMinutes, cutoffMinutes, invalidOrder]);
-
-  const extraFeeCents = extraHours * EXTRA_HOUR_RATE_CENTS;
-
   const total =
     (formula?.price_cents ?? 0) +
     selectedOptions.reduce((sum, option) => sum + option.price_cents, 0) +
-    extraFeeCents +
     (travel?.feeCents ?? 0);
 
   function toggleOption(id: string, checked: boolean) {
@@ -181,7 +185,6 @@ export function QuoteBookingForm({
       <input type="hidden" name="event_date" value={selectedDate ? dateKey(selectedDate) : ""} />
       <input type="hidden" name="start_time" value={startTime} />
       <input type="hidden" name="end_time" value={endTime} />
-      <input type="hidden" name="extra_hours" value={extraHours} />
       {optionIds.map((id) => (
         <input key={id} type="hidden" name="option_ids" value={id} />
       ))}
@@ -201,6 +204,7 @@ export function QuoteBookingForm({
                   onClick={() => {
                     setFormulaId(item.id);
                     setOptionIds([]);
+                    setStartTime(isMariageFormula(item.name) ? "14:00" : "17:00");
                     setEndTime("");
                   }}
                   className={`glow-hover rounded-xl border p-4 text-left transition-colors ${
@@ -264,10 +268,9 @@ export function QuoteBookingForm({
           <Card>
             <CardContent className="space-y-4 pt-1">
               <p className="text-sm text-muted-foreground">
-                Disponible 7 jours sur 7, week-end inclus. Départ entre 18 h et 20 h
-                (20 h dernier départ). Jusqu&apos;à {cutoffLabel} inclus dans la formule
-                choisie — au-delà, chaque heure supplémentaire est facturée{" "}
-                {formatEuros(EXTRA_HOUR_RATE_CENTS)}.
+                Disponible 7 jours sur 7, week-end inclus. Départ entre 14 h et 20 h
+                pour les mariages, entre 17 h et 20 h pour les autres événements.
+                Fin au plus tard à {cutoffLabel}, incluse dans la formule choisie.
               </p>
               <Calendar
                 mode="single"
@@ -279,14 +282,14 @@ export function QuoteBookingForm({
               />
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="start_time_select">Heure de début (entre 18 h et 20 h)</Label>
+                  <Label htmlFor="start_time_select">Heure de début</Label>
                   <select
                     id="start_time_select"
                     value={startTime}
                     onChange={(event) => setStartTime(event.target.value)}
                     className="w-full rounded-lg border border-white/10 bg-background px-3 py-2"
                   >
-                    {START_TIMES.map((time) => (
+                    {startTimes.map((time) => (
                       <option key={time} value={time}>
                         {time}
                       </option>
@@ -303,10 +306,12 @@ export function QuoteBookingForm({
                   >
                     <option value="">Choisir…</option>
                     {END_TIMES.filter(
-                      (time) =>
-                        (toMinutes(time) < 12 * 60
+                      (time) => {
+                        const minutes = toMinutes(time) < 12 * 60
                           ? toMinutes(time) + 24 * 60
-                          : toMinutes(time)) > startMinutes
+                          : toMinutes(time);
+                        return minutes > startMinutes && minutes <= cutoffMinutes;
+                      }
                     ).map((time) => (
                       <option key={time} value={time}>
                         {time}
@@ -318,12 +323,6 @@ export function QuoteBookingForm({
               {invalidOrder ? (
                 <p className="text-sm text-red-400">
                   L&apos;heure de fin doit être après l&apos;heure de début.
-                </p>
-              ) : extraHours > 0 ? (
-                <p className="text-sm text-accent">
-                  ⏱ {extraHours} heure{extraHours > 1 ? "s" : ""} supplémentaire
-                  {extraHours > 1 ? "s" : ""} au-delà de {cutoffLabel} — incluse
-                  {extraHours > 1 ? "s" : ""} dans le devis.
                 </p>
               ) : endTime ? (
                 <p className="text-sm text-muted-foreground">
@@ -347,21 +346,6 @@ export function QuoteBookingForm({
           <div className="space-y-1.5">
             <Label htmlFor="customer_phone">Téléphone</Label>
             <Input id="customer_phone" name="customer_phone" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="event_type">Type d&apos;événement</Label>
-            <Input
-              id="event_type"
-              name="event_type"
-              placeholder="Mariage, anniversaire…"
-              list="event-type-suggestions"
-            />
-            <datalist id="event-type-suggestions">
-              <option value="Mariage" />
-              <option value="Anniversaire" />
-              <option value="Entreprise / Afterwork" />
-              <option value="Autre" />
-            </datalist>
           </div>
           <div className="sm:col-span-2 space-y-1.5 relative">
             <Label htmlFor="event_location">Lieu de réception</Label>
@@ -402,10 +386,11 @@ export function QuoteBookingForm({
             ) : null}
             {travel ? (
               <p className="text-sm text-muted-foreground">
-                🚗 {travel.distanceKm} km depuis Huisseau-sur-Cosson —{" "}
+                🚗 Frais de déplacement estimés :{" "}
                 {travel.feeCents === 0
-                  ? "déplacement offert (30 km gratuits)"
-                  : `frais estimés : ${formatEuros(travel.feeCents)}`}
+                  ? "offerts (30 km gratuits)"
+                  : formatEuros(travel.feeCents)}{" "}
+                ({travel.distanceKm} km)
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">
@@ -440,14 +425,6 @@ export function QuoteBookingForm({
                 <span>{formatEuros(option.price_cents)}</span>
               </div>
             ))}
-            {extraHours > 0 ? (
-              <div className="flex justify-between gap-4 text-muted-foreground">
-                <span>
-                  Heures supplémentaires ({extraHours} × {formatEuros(EXTRA_HOUR_RATE_CENTS)})
-                </span>
-                <span>{formatEuros(extraFeeCents)}</span>
-              </div>
-            ) : null}
             {travel && travel.feeCents > 0 ? (
               <div className="flex justify-between gap-4 text-muted-foreground">
                 <span>Frais de déplacement ({travel.distanceKm} km)</span>
