@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from "react";
 
 const FADE_MS = 700; // durée du fondu de boucle
 const PARALLAX = 0.55; // la vidéo descend à 55% de la vitesse du scroll
+const MAX_SHIFT_RATIO = 0.2; // course maximale de la vidéo (proportion du héro)
 
-// Vidéo de fond du héro : boucle avec fondu enchaîné, bords estompés
-// (masque dégradé) et léger décalage au scroll (parallaxe).
+// Vidéo de fond du héro : boucle avec fondu enchaîné, bords estompés par des
+// masques FIXES (la vidéo glisse dessous au scroll → aucun bord jamais visible).
 export function HeroVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
   const [fading, setFading] = useState(false);
 
   // Fondu à la boucle
@@ -33,18 +33,18 @@ export function HeroVideo() {
     };
   }, []);
 
-  // Parallaxe : la vidéo suit le scroll plus lentement que la page
+  // Parallaxe : la vidéo glisse sous les masques fixes
   useEffect(() => {
     let raf = 0;
     const onScroll = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        const wrapper = wrapperRef.current;
-        if (!wrapper) return;
-        const hero = wrapper.parentElement;
-        const maxY = hero ? hero.offsetHeight : 600;
-        const shift = Math.min(window.scrollY * PARALLAX, maxY);
-        wrapper.style.transform = `translateY(${shift}px)`;
+        const video = videoRef.current;
+        if (!video) return;
+        const hero = video.closest("section");
+        const maxShift = (hero ? hero.offsetHeight : 600) * MAX_SHIFT_RATIO;
+        const shift = Math.min(window.scrollY * PARALLAX, maxShift);
+        video.style.transform = `translateY(${shift}px) scale(1.5)`;
       });
     };
     onScroll();
@@ -55,29 +55,24 @@ export function HeroVideo() {
     };
   }, []);
 
-  // Masques : les 4 côtés de la vidéo fondus progressivement.
-  // Deux éléments imbriqués (un dégradé chacun) pour une compatibilité
-  // parfaite entre navigateurs, sans mask-composite.
+  // Masques fixes : fondus doux sur les 4 côtés, portée réduite pour
+  // laisser la vidéo bien visible au centre.
   const fadeX = {
     WebkitMaskImage:
-      "linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%)",
+      "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
     maskImage:
-      "linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%)",
+      "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
   };
   const fadeY = {
     WebkitMaskImage:
-      "linear-gradient(to bottom, transparent 0%, black 30%, black 65%, transparent 100%)",
+      "linear-gradient(to bottom, transparent 0%, black 18%, black 75%, transparent 100%)",
     maskImage:
-      "linear-gradient(to bottom, transparent 0%, black 30%, black 65%, transparent 100%)",
+      "linear-gradient(to bottom, transparent 0%, black 18%, black 75%, transparent 100%)",
   };
 
   return (
     <>
-      <div
-        ref={wrapperRef}
-        className="absolute inset-0 -z-10 will-change-transform"
-        style={fadeX}
-      >
+      <div className="absolute inset-0 -z-10" style={fadeX}>
         <div className="absolute inset-0" style={fadeY}>
           <video
             ref={videoRef}
@@ -87,21 +82,26 @@ export function HeroVideo() {
             loop
             playsInline
             preload="auto"
-            style={{ transitionDuration: `${FADE_MS}ms` }}
-            className={`absolute inset-0 h-full w-full scale-125 object-cover transition-opacity ease-in-out ${
-              fading ? "opacity-0" : "opacity-60"
+            style={{
+              transform: "scale(1.5)",
+              transitionDuration: `${FADE_MS}ms`,
+              willChange: "transform",
+            }}
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity ease-in-out ${
+              fading ? "opacity-0" : "opacity-75"
             }`}
           >
             <source src="/videos/hero.mp4" type="video/mp4" />
           </video>
         </div>
       </div>
-      {/* Voile dégradé pour garder le texte lisible */}
+      {/* Voile dégradé léger pour garder le texte lisible */}
       <div
         aria-hidden
-        className="absolute inset-0 -z-10 bg-gradient-to-b from-background/80 via-background/60 to-background"
+        className="absolute inset-0 -z-10 bg-gradient-to-b from-background/60 via-background/40 to-background"
       />
     </>
   );
 }
+
 
