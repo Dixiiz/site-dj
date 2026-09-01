@@ -72,6 +72,9 @@ export function HeroVideo() {
 
   return (
     <>
+      {/* Fond uni couvrant tout le héro, devant les halos décoratifs :
+          garantit un raccord de couleur identique sur tout le pourtour */}
+      <div aria-hidden className="absolute inset-0 -z-10 bg-background" />
       <div className="absolute inset-0 -z-10" style={fadeX}>
         <div className="absolute inset-0" style={fadeY}>
           {/* Fond uni : le fondu des bords se raccorde exactement à la
