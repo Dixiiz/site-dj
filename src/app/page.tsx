@@ -8,8 +8,7 @@ import { GoogleReviews } from "@/components/google-reviews";
 import { Gallery } from "@/components/gallery";
 import { HeroVideo } from "@/components/hero-video";
 import { VideoShowcase } from "@/components/video-showcase";
-import { TikTokSection } from "@/components/tiktok-section";
-import Script from "next/script";
+import { TIKTOK_PROFILE_URL } from "@/config/tiktok";
 import Link from "next/link";
 
 
@@ -54,7 +53,6 @@ export default function Home() {
 
   return (
     <>
-      <Script src="https://www.tiktok.com/embed.js" strategy="lazyOnload" />
       <SiteHeader />
       <main className="relative">
         {/* Héro — avec vidéo de fond si public/videos/hero.mp4 existe */}
@@ -106,11 +104,24 @@ export default function Home() {
             <FadeIn delay={0.1}>
               <VideoShowcase videos={showcaseVideos} orientation="portrait" />
             </FadeIn>
+            {TIKTOK_PROFILE_URL && (
+              <FadeIn delay={0.2}>
+                <a
+                  href={TIKTOK_PROFILE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-8 inline-flex items-center gap-2 rounded-lg border border-border px-6 py-3 font-medium transition hover:border-accent hover:text-accent"
+                >
+                  Plus de vidéos sur TikTok
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M7 17 17 7" />
+                    <path d="M7 7h10v10" />
+                  </svg>
+                </a>
+              </FadeIn>
+            )}
           </section>
         )}
-
-        {/* TikTok : vidéos configurées dans src/config/tiktok.ts */}
-        <TikTokSection />
 
         {/* Présentation + services */}
         <section className="mx-auto w-full max-w-5xl px-4 py-20">
