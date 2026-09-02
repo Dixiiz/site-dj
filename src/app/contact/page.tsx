@@ -23,7 +23,40 @@ export default function ContactPage() {
         </FadeIn>
 
         <FadeIn delay={0.1}>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <a
+              href="https://www.instagram.com/propulsounddj/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="glow-hover rounded-xl border border-white/10 bg-white/[0.03] p-5 transition-colors hover:border-accent/50"
+            >
+              <p className="font-medium">📸 Instagram</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                @propulsounddj — photos & stories
+              </p>
+            </a>
+            <a
+              href="https://www.facebook.com/PropulSoundDJ"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="glow-hover rounded-xl border border-white/10 bg-white/[0.03] p-5 transition-colors hover:border-accent/50"
+            >
+              <p className="font-medium">👍 Facebook</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Propul&apos;Sound DJ — actualités & événements
+              </p>
+            </a>
+            <a
+              href="https://wa.me/33674850769"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="glow-hover rounded-xl border border-white/10 bg-white/[0.03] p-5 transition-colors hover:border-accent/50"
+            >
+              <p className="font-medium">💬 WhatsApp</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Réponse rapide au 06 74 85 07 69
+              </p>
+            </a>
             <a
               href="https://www.tiktok.com/@propulsound.dj"
               target="_blank"
