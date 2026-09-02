@@ -119,8 +119,25 @@ export function QuoteBookingForm({
       );
     }
     window.addEventListener("propul:select-pack", onSelectPack);
-    return () => window.removeEventListener("propul:select-pack", onSelectPack);
-  }, [formulas]);
+    function onToggleOption(event: Event) {
+      const optionName = (event as CustomEvent<{ name: string }>).detail?.name;
+      if (!optionName) return;
+      const match = options.find(
+        (option) => option.name.toLowerCase() === optionName.toLowerCase()
+      );
+      if (!match) return;
+      setOptionIds((current) =>
+        current.includes(match.id)
+          ? current.filter((id) => id !== match.id)
+          : [...current, match.id]
+      );
+    }
+    window.addEventListener("propul:toggle-option", onToggleOption);
+    return () => {
+      window.removeEventListener("propul:select-pack", onSelectPack);
+      window.removeEventListener("propul:toggle-option", onToggleOption);
+    };
+  }, [formulas, options]);
 
   const visibleOptions = useMemo(
     () =>
@@ -169,7 +186,7 @@ export function QuoteBookingForm({
   const extraFeeCents = extraHours * extraRateCents;
 
   const total =
-    (pack?.priceCents ?? formula?.price_cents ?? 0) +
+    (pack?.priceCents ?? 0) +
     selectedOptions.reduce((sum, option) => sum + option.price_cents, 0) +
     extraFeeCents +
     (travel?.feeCents ?? 0);
@@ -303,40 +320,8 @@ export function QuoteBookingForm({
           )}
         </FadeIn>
 
-        <FadeIn delay={0.05}>
-          <h2 className="mb-3 text-xl font-medium">2. Options</h2>
-          <div className="space-y-3">
-            {visibleOptions.map((option) => {
-              const checked = optionIds.includes(option.id);
-              return (
-                <label
-                  key={option.id}
-                  className="glow-hover flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 p-3"
-                >
-                  <Checkbox
-                    checked={checked}
-                    onCheckedChange={(value) => toggleOption(option.id, value === true)}
-                    className="mt-0.5"
-                  />
-                  <span className="flex-1">
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{option.name}</span>
-                      <span className="text-sm">{formatEuros(option.price_cents)}</span>
-                    </span>
-                    {option.description ? (
-                      <span className="mt-1 block text-sm text-muted-foreground">
-                        {option.description}
-                      </span>
-                    ) : null}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-        </FadeIn>
-
         <FadeIn delay={0.1}>
-          <h2 className="mb-3 text-xl font-medium">3. Date et horaires</h2>
+          <h2 className="mb-3 text-xl font-medium">2. Horaires &amp; date</h2>
           <Card>
             <CardContent className="space-y-4 pt-1">
               <p className="text-sm text-muted-foreground">
@@ -346,22 +331,16 @@ export function QuoteBookingForm({
                 prestation ; au-delà, chaque heure entamée est facturée{" "}
                 {formatEuros(extraRateCents)}.
               </p>
-              <Calendar
-                mode="single"
-                locale={fr}
-                selected={selectedDate}
-                onSelect={onDateChange}
-                disabled={[{ before: new Date() }]}
-                className="w-full"
-              />
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="start_time_select">Heure de début</Label>
+                  <Label htmlFor="start_time_select" className="text-base">
+                    Heure de début
+                  </Label>
                   <select
                     id="start_time_select"
                     value={startTime}
                     onChange={(event) => setStartTime(event.target.value)}
-                    className="w-full rounded-lg border border-white/10 bg-background px-3 py-2"
+                    className="w-full rounded-lg border border-white/10 bg-background px-3 py-3 text-lg font-medium"
                   >
                     {startTimes.map((time) => (
                       <option key={time} value={time}>
@@ -371,12 +350,14 @@ export function QuoteBookingForm({
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="end_time_select">Heure de fin</Label>
+                  <Label htmlFor="end_time_select" className="text-base">
+                    Heure de fin
+                  </Label>
                   <select
                     id="end_time_select"
                     value={endTime}
                     onChange={(event) => setEndTime(event.target.value)}
-                    className="w-full rounded-lg border border-white/10 bg-background px-3 py-2"
+                    className="w-full rounded-lg border border-white/10 bg-background px-3 py-3 text-lg font-medium"
                   >
                     <option value="">Choisir…</option>
                     {END_TIMES.filter(
@@ -392,6 +373,14 @@ export function QuoteBookingForm({
                   </select>
                 </div>
               </div>
+              <Calendar
+                mode="single"
+                locale={fr}
+                selected={selectedDate}
+                onSelect={onDateChange}
+                disabled={[{ before: new Date() }]}
+                className="w-full"
+              />
               {invalidOrder ? (
                 <p className="text-sm text-red-400">
                   L&apos;heure de fin doit être après l&apos;heure de début.
@@ -413,7 +402,7 @@ export function QuoteBookingForm({
         </FadeIn>
 
         <FadeIn delay={0.15} className="grid gap-3 sm:grid-cols-2">
-          <h2 className="sm:col-span-2 text-xl font-medium">4. Tes coordonnées</h2>
+          <h2 className="sm:col-span-2 text-xl font-medium">3. Tes coordonnées</h2>
           <div className="space-y-1.5">
             <Label htmlFor="customer_name">Nom</Label>
             <Input id="customer_name" name="customer_name" required />
@@ -501,8 +490,8 @@ export function QuoteBookingForm({
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between gap-4">
-              <span>{pack?.name ?? formula?.name ?? "Formule"}</span>
-              <span>{formatEuros(pack?.priceCents ?? formula?.price_cents ?? 0)}</span>
+              <span>{pack?.name ?? "Aucun pack sélectionné"}</span>
+              <span>{formatEuros(pack?.priceCents ?? 0)}</span>
             </div>
             {selectedOptions.map((option) => (
               <div key={option.id} className="flex justify-between gap-4 text-muted-foreground">

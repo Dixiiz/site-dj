@@ -205,6 +205,13 @@ const CATEGORIES: Category[] = [
   },
 ];
 
+// Correspondance entre les cartes Options FX et les noms des options du devis.
+const OPTION_TO_FORM: Record<string, string> = {
+  "Nuage de fumée lourde": "Machine à fumée lourde",
+  "Étincelles froides": "2 machines à étincelles froides",
+  "Pistolet à fumée effet CO2": "Pistolet à fumée effet CO2 (à l'unité)",
+};
+
 const FX_OPTIONS = [
   {
     name: "Nuage de fumée lourde",
@@ -549,11 +556,16 @@ export function PricingSection() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() =>
+                onClick={() => {
+                  window.dispatchEvent(
+                    new CustomEvent("propul:toggle-option", {
+                      detail: { name: OPTION_TO_FORM[option.name] ?? option.name },
+                    })
+                  );
                   document
                     .getElementById("formulaire-devis")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
+                    ?.scrollIntoView({ behavior: "smooth" });
+                }}
               >
                 Ajouter au devis
               </Button>
