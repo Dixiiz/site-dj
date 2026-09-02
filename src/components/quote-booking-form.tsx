@@ -346,7 +346,68 @@ export function QuoteBookingForm({
         </FadeIn>
 
         <FadeIn delay={0.1}>
-          <h2 className="mb-3 text-xl font-medium">2. Horaires &amp; date</h2>
+          <h2 className="mb-3 text-xl font-medium">2. Lieu de réception</h2>
+          <Card>
+            <CardContent className="space-y-2 pt-1">
+              <div className="space-y-1.5 relative">
+                <Label htmlFor="event_location">Lieu de réception</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="event_location"
+                    name="event_location"
+                    placeholder="Adresse, ville ou nom du domaine"
+                    autoComplete="off"
+                    value={eventLocation}
+                    onChange={(event) => setEventLocation(event.target.value)}
+                    onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onEstimateTravel}
+                    disabled={travelPending}
+                  >
+                    {travelPending ? "Calcul…" : "Recalculer"}
+                  </Button>
+                </div>
+                {showSuggestions && suggestions.length > 0 ? (
+                  <ul className="absolute z-20 w-full overflow-hidden rounded-lg border border-white/10 bg-card shadow-xl">
+                    {suggestions.map((suggestion) => (
+                      <li key={suggestion.label}>
+                        <button
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-accent/10"
+                          onClick={() => chooseSuggestion(suggestion.label)}
+                        >
+                          📍 {suggestion.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {travel ? (
+                  <p className="text-sm text-muted-foreground">
+                    Frais de déplacement estimés :{" "}
+                    {travel.feeCents === 0
+                      ? "offerts (30 km gratuits)"
+                      : formatEuros(travel.feeCents)}{" "}
+                    ({travel.distanceKm} km)
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    30 km offerts autour de Huisseau-sur-Cosson, puis 0,80 €/km (aller-retour).
+                    Les frais se calculent automatiquement dès que vous choisissez un lieu
+                    suggéré. Péages en sus au réel.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </FadeIn>
+
+        <FadeIn delay={0.1}>
+          <h2 className="mb-3 text-xl font-medium">3. Horaires &amp; date</h2>
           <Card>
             <CardContent className="space-y-4 pt-1">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -469,7 +530,7 @@ export function QuoteBookingForm({
         </FadeIn>
 
         <FadeIn delay={0.15} className="grid gap-3 sm:grid-cols-2">
-          <h2 className="sm:col-span-2 text-xl font-medium">3. Tes coordonnées</h2>
+          <h2 className="sm:col-span-2 text-xl font-medium">4. Tes coordonnées</h2>
           <div className="space-y-1.5">
             <Label htmlFor="customer_name">Nom</Label>
             <Input id="customer_name" name="customer_name" required />
@@ -481,58 +542,6 @@ export function QuoteBookingForm({
           <div className="space-y-1.5">
             <Label htmlFor="customer_phone">Téléphone</Label>
             <Input id="customer_phone" name="customer_phone" />
-          </div>
-          <div className="sm:col-span-2 space-y-1.5 relative">
-            <Label htmlFor="event_location">Lieu de réception</Label>
-            <div className="flex gap-2">
-              <Input
-                id="event_location"
-                name="event_location"
-                placeholder="Adresse ou ville"
-                autoComplete="off"
-                value={eventLocation}
-                onChange={(event) => setEventLocation(event.target.value)}
-                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                required
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onEstimateTravel}
-                disabled={travelPending}
-              >
-                {travelPending ? "Calcul…" : "Recalculer"}
-              </Button>
-            </div>
-            {showSuggestions && suggestions.length > 0 ? (
-              <ul className="absolute z-20 w-full overflow-hidden rounded-lg border border-white/10 bg-card shadow-xl">
-                {suggestions.map((suggestion) => (
-                  <li key={suggestion.label}>
-                    <button
-                      type="button"
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-accent/10"
-                      onClick={() => chooseSuggestion(suggestion.label)}
-                    >
-                      📍 {suggestion.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {travel ? (
-              <p className="text-sm text-muted-foreground">
-                Frais de déplacement estimés :{" "}
-                {travel.feeCents === 0
-                  ? "offerts (30 km gratuits)"
-                  : formatEuros(travel.feeCents)}{" "}
-                ({travel.distanceKm} km)
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                30 km offerts autour de Huisseau-sur-Cosson, puis 0,80 €/km. Les frais se
-                calculent automatiquement dès que vous choisissez un lieu suggéré.
-              </p>
-            )}
           </div>
           <div className="sm:col-span-2 space-y-1.5">
             <Label htmlFor="notes">Message</Label>

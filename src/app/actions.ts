@@ -19,10 +19,46 @@ export async function estimateTravelFee(formData: FormData) {
   return estimateTravelFromAddress(address);
 }
 
-// Suggestions d'adresses françaises pour le formulaire (OpenStreetMap Nominatim).
+// Suggestions d'adresses pour le formulaire : Google Places (New) en priorité,
+// avec repli sur OpenStreetMap Nominatim si Google indisponible.
 export async function searchAddresses(query: string) {
   const q = query.trim();
   if (q.length < 3) return { ok: true as const, results: [] as string[] };
+
+  // 1) Google Places (New) — Text Search, trouve aussi les domaines/lieux (pas que les adresses).
+  const key = process.env.GOOGLE_PLACES_API_KEY;
+  if (key) {
+    try {
+      const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": key,
+          "X-Goog-FieldMask": "places.displayName,places.formattedAddress",
+        },
+        body: JSON.stringify({
+          textQuery: q,
+          languageCode: "fr",
+          regionCode: "FR",
+        }),
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          places?: { displayName?: { text?: string }; formattedAddress?: string }[];
+        };
+        const results = (data.places ?? [])
+          .map((p) => p.formattedAddress ?? p.displayName?.text ?? "")
+          .filter((label) => label.length > 0)
+          .slice(0, 5);
+        if (results.length > 0) return { ok: true as const, results };
+      }
+    } catch {
+      // Repli ci-dessous.
+    }
+  }
+
+  // 2) Repli : OpenStreetMap Nominatim.
   try {
     const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=fr&addressdetails=1&q=${encodeURIComponent(q)}`;
     const res = await fetch(url, {

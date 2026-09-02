@@ -500,6 +500,11 @@ export function PricingSection() {
           {/* Panneau packs (re-anime à chaque changement de catégorie) */}
           <div key={active.id} className="animate-in fade-in slide-in-from-right-8 duration-500">
             <p className="mt-6 text-sm text-muted-foreground">{active.intro}</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Les packs se différencient principalement par leurs{" "}
+              <span className="text-foreground">jeux de lumières</span> : plus vous montez en
+              gamme, plus la scénographie est riche (nombre de lyres, PAR LED, effets).
+            </p>
             <div className="mt-4 flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center sm:justify-between">
               <Badge className="w-fit bg-accent/15 text-accent hover:bg-accent/15">
                 ⚡ Éclairage 100 % synchronisé en temps réel
