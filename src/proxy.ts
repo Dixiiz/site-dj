@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Rafraîchit la session Supabase à chaque requête.
+// Rafraîchit la session Supabase à chaque requête (convention Next 16 : proxy).
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
