@@ -54,6 +54,7 @@ export function QuoteBookingForm({
   options: QuoteOption[];
 }) {
   const [formulaId, setFormulaId] = useState(formulas[0]?.id ?? "");
+  const [selectedPack, setSelectedPack] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [optionIds, setOptionIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
@@ -87,7 +88,13 @@ export function QuoteBookingForm({
           (categoryPatterns[2].test(pack) && categoryPatterns[2].test(name))
         );
       });
-      if (match) setFormulaId(match.id);
+      if (match) {
+        setFormulaId(match.id);
+        setOptionIds([]);
+        setStartTime(isMariageFormula(match.name) ? "14:00" : "17:00");
+        setEndTime("");
+      }
+      setSelectedPack(packName);
       setNotes((current) =>
         current.includes(packName)
           ? current
@@ -234,42 +241,41 @@ export function QuoteBookingForm({
 
       <div className="space-y-6">
         <FadeIn>
-          <h2 className="mb-3 text-xl font-medium">1. Choisis ta formule</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {formulas.map((item) => {
-              const selected = item.id === formulaId;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    setFormulaId(item.id);
-                    setOptionIds([]);
-                    setStartTime(isMariageFormula(item.name) ? "14:00" : "17:00");
-                    setEndTime("");
-                  }}
-                  className={`glow-hover rounded-xl border p-4 text-left transition-colors ${
-                    selected
-                      ? "border-accent bg-primary/10"
-                      : "border-white/10 hover:border-accent/50"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-medium">{item.name}</p>
-                    <Badge variant={selected ? "default" : "outline"}>
-                      {formatEuros(item.price_cents)}
-                    </Badge>
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {item.description}
-                  </p>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {item.duration_hours} h de prestation
-                  </p>
-                </button>
-              );
-            })}
-          </div>
+          <h2 className="mb-3 text-xl font-medium">1. Votre pack</h2>
+          {selectedPack ? (
+            <div className="glow-hover rounded-xl border border-accent/60 bg-primary/10 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-medium">
+                  <span className="mr-2 text-accent">✓</span>
+                  {selectedPack}
+                </p>
+                <Badge>{formatEuros(formula?.price_cents ?? 0)}</Badge>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {formula?.description}
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {formula?.duration_hours} h de prestation — modifiable en cliquant
+                sur un autre pack ci-dessus.
+              </p>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() =>
+                document
+                  .getElementById("formules-tarifs")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="glow-hover w-full rounded-xl border border-dashed border-accent/50 p-5 text-left transition-colors hover:border-accent"
+            >
+              <p className="font-medium">Aucun pack sélectionné pour l&apos;instant</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Cliquez ici ou choisissez directement un pack dans la section
+                « Nos Formules &amp; Tarifs » ci-dessus.
+              </p>
+            </button>
+          )}
         </FadeIn>
 
         <FadeIn delay={0.05}>
