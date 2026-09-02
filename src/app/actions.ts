@@ -337,6 +337,31 @@ export async function updateQuoteAdmin(formData: FormData) {
   redirect(`/admin/devis?modifie=1`);
 }
 
+export async function getUnavailableDates(): Promise<string[]> {
+  "use server";
+  const today = new Date().toISOString().slice(0, 10);
+  const out = new Set<string>();
+  try {
+    const supabase = createAdminClient();
+    const { data: quotes } = await supabase
+      .from("quotes")
+      .select("event_date")
+      .eq("status", "confirme")
+      .gte("event_date", today);
+    for (const r of quotes ?? []) {
+      if (r.event_date) out.add(String(r.event_date));
+    }
+    const { data: blocked } = await supabase
+      .from("blocked_dates")
+      .select("date")
+      .gte("date", today);
+    for (const r of blocked ?? []) out.add(String(r.date));
+  } catch {
+    // ignore
+  }
+  return [...out];
+}
+
 export async function toggleBlockedDate(formData: FormData) {
   if (!(await isAdmin())) return;
   const slot_date = String(formData.get("slot_date") ?? "").trim();

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { fr } from "react-day-picker/locale";
 import { toast } from "sonner";
-import { estimateTravelFee, searchAddresses, submitQuoteAndBooking } from "@/app/actions";
+import { estimateTravelFee, getUnavailableDates, searchAddresses, submitQuoteAndBooking } from "@/app/actions";
 import { FadeIn } from "@/components/fade-in";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,18 @@ export function QuoteBookingForm({
   const [optionIds, setOptionIds] = useState<string[]>([]);
   const [co2Qty, setCo2Qty] = useState<1 | 2>(1);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [unavailableDates, setUnavailableDates] = useState<string[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    getUnavailableDates().then((dates) => {
+      if (alive) setUnavailableDates(dates);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const [startTime, setStartTime] = useState(
     formulas[0] && isMariageFormula(formulas[0].name) ? "15:00" : "18:00"
   );
@@ -516,9 +528,16 @@ export function QuoteBookingForm({
                 locale={fr}
                 selected={selectedDate}
                 onSelect={onDateChange}
-                disabled={[{ before: new Date() }]}
+                disabled={[
+                  { before: new Date() },
+                  (date: Date) => unavailableDates.includes(dateKey(date)),
+                ]}
                 className="w-full"
               />
+              <p className="text-xs text-muted-foreground">
+                Les dates déjà réservées ou indisponibles sont grisées et non
+                sélectionnables.
+              </p>
               {invalidOrder ? (
                 <p className="text-sm text-red-400">
                   L&apos;heure de fin doit être après l&apos;heure de début.

@@ -24,6 +24,7 @@ type Category = {
   id: string;
   label: string;
   intro: string;
+  image: string;
   baseNote: string;
   extraHourLabel: string;
   common: string[];
@@ -34,6 +35,7 @@ const CATEGORIES: Category[] = [
   {
     id: "anniversaire",
     label: "Anniversaires & Soirées privées",
+    image: "/galerie/1.jpg",
     intro:
       "Une soirée clé en main chez vous ou en salle : installation, mix et lumière synchronisée pendant toute la durée de votre événement.",
     baseNote: "Base : minimum 6 h de mix + forfait installation 100 € (base fixe 580 €).",
@@ -46,7 +48,7 @@ const CATEGORIES: Category[] = [
       {
         name: "Pack Standard",
         price: 58000,
-        image: "/galerie/1.jpg",
+        image: "/galerie/jeannebastien-1320.jpg",
         baseMinutes: 360,
         extraRateCents: 8000,
         defaultStart: "20:00",
@@ -61,7 +63,7 @@ const CATEGORIES: Category[] = [
         name: "Pack Premium",
         price: 68000,
         highlight: "populaire",
-        image: "/galerie/1.jpg",
+        image: "/galerie/jeannebastien-1348.jpg",
         baseMinutes: 360,
         extraRateCents: 8000,
         defaultStart: "20:00",
@@ -78,6 +80,7 @@ const CATEGORIES: Category[] = [
   {
     id: "mariage",
     label: "Mariages & Grandes Réceptions",
+    image: "/galerie/2.jpg",
     intro:
       "De la première danse au bout de la nuit : un dispositif son & lumière à la hauteur de votre plus beau jour.",
     baseNote: "Base : minimum 8 h de mix + forfait installation 100 € (base fixe 1 060 €).",
@@ -90,7 +93,7 @@ const CATEGORIES: Category[] = [
       {
         name: "Pack Essential",
         price: 106000,
-        image: "/galerie/2.jpg",
+        image: "/galerie/gwendoline-remi-soiree-et-diner-210625-13.jpg",
         baseMinutes: 480,
         extraRateCents: 12000,
         defaultStart: "20:00",
@@ -105,7 +108,7 @@ const CATEGORIES: Category[] = [
         name: "Pack Deluxe",
         price: 116000,
         highlight: "populaire",
-        image: "/galerie/2.jpg",
+        image: "/galerie/leanivet-clemence-neal-810.jpg",
         baseMinutes: 480,
         extraRateCents: 12000,
         defaultStart: "20:00",
@@ -121,7 +124,7 @@ const CATEGORIES: Category[] = [
         name: "Pack L'Ultime Show",
         price: 121000,
         highlight: "show",
-        image: "/galerie/2.jpg",
+        image: "/galerie/manolieraphael-0910.jpg",
         baseMinutes: 480,
         extraRateCents: 12000,
         defaultStart: "20:00",
@@ -139,6 +142,7 @@ const CATEGORIES: Category[] = [
   {
     id: "pro",
     label: "Bars, Clubs & Soirées Pro",
+    image: "/galerie/3.jpg",
     intro:
       "Vous disposez déjà du son ou d'une scène ? De la simple prestation DJ à la formule clé en main complète, choisissez le niveau d'accompagnement.",
     baseNote: "Trois formats au choix selon votre lieu et vos équipements.",
@@ -151,7 +155,7 @@ const CATEGORIES: Category[] = [
       {
         name: "Set DJ (matériel & son sur place)",
         price: 11000,
-        image: "/galerie/3.jpg",
+        image: "/galerie/dsc-8110.jpg",
         baseMinutes: 120,
         extraRateCents: 5500,
         defaultStart: "20:00",
@@ -165,7 +169,7 @@ const CATEGORIES: Category[] = [
       {
         name: "Clé en main Standard",
         price: 37000,
-        image: "/galerie/3.jpg",
+        image: "/galerie/jeannebastien-1367.jpg",
         baseMinutes: 180,
         extraRateCents: 9000,
         defaultStart: "20:00",
@@ -181,7 +185,7 @@ const CATEGORIES: Category[] = [
         name: "Clé en main Premium",
         price: 47000,
         highlight: "show",
-        image: "/galerie/3.jpg",
+        image: "/galerie/jeannebastien-1328.jpg",
         baseMinutes: 180,
         extraRateCents: 9000,
         defaultStart: "20:00",
@@ -462,7 +466,7 @@ export function PricingSection() {
               className="group glow-hover relative h-56 overflow-hidden rounded-2xl border border-white/10 text-left transition-colors hover:border-accent/60 focus-visible:outline-2 focus-visible:outline-accent"
             >
               <Image
-                src={category.packs[0].image}
+                src={category.image}
                 alt=""
                 fill
                 sizes="(max-width: 640px) 100vw, 33vw"
@@ -519,7 +523,7 @@ export function PricingSection() {
 
           {/* Panneau packs (re-anime à chaque changement de catégorie) */}
           <div key={active.id} className="animate-in fade-in slide-in-from-right-8 duration-500">
-            <p className="mt-6 text-sm text-muted-foreground">{active.intro}</p>
+            <p className="mt-4 text-sm text-muted-foreground">{active.intro}</p>
             <p className="mt-2 text-sm text-muted-foreground">
               Les packs se différencient principalement par leurs{" "}
               <span className="text-foreground">jeux de lumières</span> : plus vous montez en
