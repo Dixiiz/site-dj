@@ -15,7 +15,15 @@ export const PLAYLIST_MOMENTS = [
   "Anniversaires & temps forts",
 ];
 
-type Track = { id: string; moment: string; title: string; artist: string | null; kind: string };
+type Track = {
+  id: string;
+  moment: string;
+  title: string;
+  artist: string | null;
+  kind: string;
+  preview_url: string | null;
+  artwork_url: string | null;
+};
 
 export function ClientPlaylistEditor({
   quoteId,
@@ -126,20 +134,33 @@ function TrackRow({
   onRemove: (cb: () => Promise<void>) => void;
 }) {
   return (
-    <li className="flex items-center justify-between gap-3 rounded-lg border border-white/10 px-3 py-2 text-sm">
-      <div className="min-w-0">
+    <li className="flex items-center gap-3 rounded-lg border border-white/10 px-3 py-2 text-sm">
+      {track.artwork_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={track.artwork_url}
+          alt=""
+          width={40}
+          height={40}
+          className="h-10 w-10 shrink-0 rounded-md object-cover"
+        />
+      ) : null}
+      <div className="min-w-0 flex-1">
         <p className="truncate">
           <span className="font-medium">{track.title}</span>
           {track.artist ? <span className="text-muted-foreground"> — {track.artist}</span> : null}
         </p>
         <p className="text-xs text-muted-foreground">{track.moment}</p>
       </div>
+      {track.preview_url ? (
+        <audio controls preload="none" src={track.preview_url} className="h-8 w-44 shrink-0" />
+      ) : null}
       <form
         action={(formData) => onRemove(async () => void (await removePlaylistTrack(formData)))}
       >
         <input type="hidden" name="quote_id" value={quoteId} />
         <input type="hidden" name="track_id" value={track.id} />
-        <Button type="submit" variant="outline" size="sm" disabled={onRemove === null}>
+        <Button type="submit" variant="outline" size="sm">
           Retirer
         </Button>
       </form>

@@ -32,3 +32,8 @@ create index if not exists playlist_tracks_quote_idx on playlist_tracks (quote_i
 -- aucune table n'est accessible directement depuis le navigateur.
 alter table quote_messages enable row level security;
 alter table playlist_tracks enable row level security;
+
+-- Extraits audio + pochettes (API iTunes)
+alter table playlist_tracks add column if not exists preview_url text;
+alter table playlist_tracks add column if not exists artwork_url text;
+

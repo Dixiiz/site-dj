@@ -228,8 +228,18 @@ export async function getPlaylistTracks(quoteId: string) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("playlist_tracks")
-    .select("id, moment, title, artist, kind")
+    .select("id, moment, title, artist, kind, preview_url, artwork_url")
     .eq("quote_id", quoteId)
+    .order("created_at", { ascending: true });
+  return data ?? [];
+}
+
+// Playlist partagée : visible aussi côté admin.
+export async function getAdminPlaylist() {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("playlist_tracks")
+    .select("id, quote_id, moment, title, artist, kind, preview_url, artwork_url")
     .order("created_at", { ascending: true });
   return data ?? [];
 }
@@ -247,6 +257,26 @@ export async function addPlaylistTrack(formData: FormData) {
   const { user } = await getOwnedQuote(quoteId);
   if (!user) return;
 
+  // Recherche d'un extrait audio + pochette via l'API iTunes (gratuite, sans clé).
+  let previewUrl: string | null = null;
+  let artworkUrl: string | null = null;
+  try {
+    const term = [title, artist].filter(Boolean).join(" ");
+    const res = await fetch(
+      `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&limit=1`,
+      { cache: "no-store" }
+    );
+    if (res.ok) {
+      const json = (await res.json()) as {
+        results?: { previewUrl?: string; artworkUrl100?: string }[];
+      };
+      previewUrl = json.results?.[0]?.previewUrl ?? null;
+      artworkUrl = json.results?.[0]?.artworkUrl100 ?? null;
+    }
+  } catch {
+    // Pas d'extrait trouvé : la musique est quand même enregistrée.
+  }
+
   const supabase = createAdminClient();
   await supabase.from("playlist_tracks").insert({
     quote_id: quoteId,
@@ -255,9 +285,12 @@ export async function addPlaylistTrack(formData: FormData) {
     title,
     artist: artist || null,
     kind,
+    preview_url: previewUrl,
+    artwork_url: artworkUrl,
   });
 
   revalidatePath(`/mon-espace/devis/${quoteId}`);
+  revalidatePath("/admin/messages");
 }
 
 export async function removePlaylistTrack(formData: FormData) {
