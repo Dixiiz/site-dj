@@ -68,13 +68,15 @@ export function QuoteBookingForm({
   const [optionIds, setOptionIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [startTime, setStartTime] = useState(
-    formulas[0] && isMariageFormula(formulas[0].name) ? "14:00" : "17:00"
+    formulas[0] && isMariageFormula(formulas[0].name) ? "15:00" : "18:00"
   );
   const [endTime, setEndTime] = useState("");
   const [eventLocation, setEventLocation] = useState("");
   const [suggestions, setSuggestions] = useState<{ label: string }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [travel, setTravel] = useState<TravelState>(null);
+  const [wantCeremony, setWantCeremony] = useState(false);
+  const [wantCocktail, setWantCocktail] = useState(false);
   const [travelPending, startTravelTransition] = useTransition();
   const [pending, startTransition] = useTransition();
 
@@ -154,12 +156,17 @@ export function QuoteBookingForm({
 
   // Heure de fin incluse dans le forfait : 03:00 (anniversaire) ou 04:00 (mariage).
   // Le seuil est toujours après minuit : on le ramène lui aussi après 20 h (jour suivant).
-  const isMariage = formula?.name.toLowerCase().includes("mariage");
+  const isMariage = pack
+    ? isMariageFormula(pack.name)
+    : (formula?.name.toLowerCase().includes("mariage") ?? false);
+  const isBarClub = pack
+    ? /set dj|clé en main|bar|club|pro/i.test(pack.name)
+    : false;
   const cutoffLabel = isMariage ? "04:00" : "03:00";
   const cutoffMinutes = toMinutes(cutoffLabel) + 24 * 60;
   // Départ dès 14 h pour les mariages, 17 h pour le reste (20 h dernier départ).
   const startTimes = useMemo(() => {
-    const first = isMariage ? 14 : 17;
+    const first = isMariage ? 14 : 18;
     return Array.from({ length: (20 - first) * 2 + 1 }, (_, i) => {
       const minutes = first * 60 + i * 30;
       return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
@@ -174,16 +181,24 @@ export function QuoteBookingForm({
   const invalidOrder =
     normalizedEndMinutes != null && normalizedEndMinutes <= startMinutes;
 
-  // Le prix du pack couvre baseMinutes de prestation ; chaque heure entamée
-  // au-delà est facturée au tarif horaire du pack.
+  // Le prix du pack couvre baseMinutes de prestation ; chaque demi-heure entamée
+  // au-delà est facturée au tarif horaire du pack (0,5 h = demi tarif).
   const includedMinutes = pack?.baseMinutes ?? (isMariage ? 480 : 360);
   const extraRateCents = pack?.extraRateCents ?? EXTRA_HOUR_RATE_CENTS;
   const extraHours = useMemo(() => {
     if (normalizedEndMinutes == null || invalidOrder) return 0;
     const past = normalizedEndMinutes - startMinutes - includedMinutes;
-    return past > 0 ? Math.ceil(past / 60) : 0;
+    return past > 0 ? Math.ceil(past / 30) * 0.5 : 0;
   }, [normalizedEndMinutes, startMinutes, includedMinutes, invalidOrder]);
   const extraFeeCents = extraHours * extraRateCents;
+
+  function extraLabel(hours: number) {
+    const minutes = Math.round(hours * 60);
+    if (minutes < 60) return `${minutes} min`;
+    const h = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    return rest > 0 ? `${h} h ${rest}` : `${h} heure${h > 1 ? "s" : ""}`;
+  }
 
   const total =
     (pack?.priceCents ?? 0) +
@@ -295,8 +310,10 @@ export function QuoteBookingForm({
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
                 {isMariage
-                  ? "Soirée dansante — 8 h minimum. Début avant 18 h : cérémonie laïque et cocktail inclus dans la prestation."
-                  : `${Math.round(pack.baseMinutes / 60)} h de prestation minimum — soirée dansante.`}
+                  ? "Soirée dansante — 8 h minimum. Début avant 18 h : sonorisation de la cérémonie laïque et/ou du cocktail à cocher ci-dessous."
+                  : isBarClub
+                    ? "Set DJ — durée minimum selon l'option choisie."
+                    : "Soirée dansante — 6 h minimum. Début à 18 h : sonorisation de l'apéritif à cocher ci-dessous."}
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
                 Modifiable en cliquant sur un autre pack ci-dessus.
@@ -325,13 +342,6 @@ export function QuoteBookingForm({
           <h2 className="mb-3 text-xl font-medium">2. Horaires &amp; date</h2>
           <Card>
             <CardContent className="space-y-4 pt-1">
-              <p className="text-sm text-muted-foreground">
-                Disponible 7 jours sur 7, week-end inclus. Départ entre 14 h et 20 h
-                pour les mariages, entre 17 h et 20 h pour les autres événements.
-                Le prix du pack comprend {Math.round(includedMinutes / 60)} h de
-                prestation ; au-delà, chaque heure entamée est facturée{" "}
-                {formatEuros(extraRateCents)}.
-              </p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="start_time_select" className="text-base">
@@ -374,6 +384,66 @@ export function QuoteBookingForm({
                   </select>
                 </div>
               </div>
+              {invalidOrder ? (
+                <p className="text-sm text-red-400">
+                  L&apos;heure de fin doit être après l&apos;heure de début.
+                </p>
+              ) : extraHours > 0 ? (
+                <p className="text-sm text-accent">
+                  ⏱ {extraLabel(extraHours)} supplémentaires (au-delà des{" "}
+                  {Math.round(includedMinutes / 60)} h incluses) —{" "}
+                  {formatEuros(extraFeeCents)} ajoutés au devis.
+                </p>
+              ) : endTime ? (
+                <p className="text-sm text-muted-foreground">
+                  ✅ Cette heure de fin est incluse dans le forfait.
+                </p>
+              ) : null}
+
+              {isMariage && startMinutes < toMinutes("18:00") ? (
+                <div className="space-y-2 rounded-lg border border-white/10 p-3">
+                  <p className="text-sm font-medium">
+                    Vous commencez avant 18 h — souhaitez-vous de la sonorisation en plus ?
+                  </p>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={wantCeremony}
+                      onCheckedChange={(v) => setWantCeremony(v === true)}
+                    />
+                    Sonorisation de la cérémonie laïque
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={wantCocktail}
+                      onCheckedChange={(v) => setWantCocktail(v === true)}
+                    />
+                    Sonorisation du cocktail / vin d&apos;honneur
+                  </label>
+                </div>
+              ) : isMariage && startMinutes === toMinutes("18:00") ? (
+                <div className="space-y-2 rounded-lg border border-white/10 p-3">
+                  <p className="text-sm font-medium">Début à 18 h</p>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={wantCocktail}
+                      onCheckedChange={(v) => setWantCocktail(v === true)}
+                    />
+                    Sonorisation du cocktail / vin d&apos;honneur
+                  </label>
+                </div>
+              ) : !isMariage && !isBarClub && startMinutes === toMinutes("18:00") ? (
+                <div className="space-y-2 rounded-lg border border-white/10 p-3">
+                  <p className="text-sm font-medium">Début à 18 h</p>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={wantCocktail}
+                      onCheckedChange={(v) => setWantCocktail(v === true)}
+                    />
+                    Sonorisation de l&apos;apéritif / cocktail
+                  </label>
+                </div>
+              ) : null}
+
               <Calendar
                 mode="single"
                 locale={fr}
@@ -385,17 +455,6 @@ export function QuoteBookingForm({
               {invalidOrder ? (
                 <p className="text-sm text-red-400">
                   L&apos;heure de fin doit être après l&apos;heure de début.
-                </p>
-              ) : extraHours > 0 ? (
-                <p className="text-sm text-accent">
-                  ⏱ {extraHours} heure{extraHours > 1 ? "s" : ""} supplémentaire
-                  {extraHours > 1 ? "s" : ""} (au-delà des{" "}
-                  {Math.round(includedMinutes / 60)} h incluses) —{" "}
-                  {formatEuros(extraFeeCents)} ajoutés au devis.
-                </p>
-              ) : endTime ? (
-                <p className="text-sm text-muted-foreground">
-                  ✅ Cette heure de fin est incluse dans le forfait.
                 </p>
               ) : null}
             </CardContent>

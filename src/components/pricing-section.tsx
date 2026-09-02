@@ -6,13 +6,6 @@ import { FadeIn } from "@/components/fade-in";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { formatEuros } from "@/lib/money";
 
 type Pack = {
@@ -218,18 +211,21 @@ const FX_OPTIONS = [
     detail: "Heavyfog 2000p — tapis de fumée au sol, idéal ouverture de bal.",
     price: 15000,
     badge: "Idéal ouverture de bal",
+    image: "/galerie/jeannebastien-1320.jpg",
   },
   {
     name: "Étincelles froides",
     detail: "Pack de 2 machines, gerbes jusqu'à 5 m — inodore et sécurisé.",
     price: 15000,
     badge: "Inodore & sécurisé",
+    image: "/galerie/leanivet-clemence-neal-810.jpg",
   },
   {
     name: "Pistolet à fumée effet CO2",
     detail: "Gun CO2 — jet de fumée glacée qui explose sur les beats.",
     price: 7500,
     badge: "Prix promo : au lieu de 150 €",
+    image: "/galerie/manolieraphael-0910.jpg",
   },
 ];
 
@@ -277,13 +273,11 @@ function PackCard({
   selected,
   onSelect,
   previousEquipment,
-  onOpenImage,
 }: {
   pack: Pack;
   selected: boolean;
   onSelect: () => void;
   previousEquipment: string[] | null;
-  onOpenImage: () => void;
 }) {
   return (
     <Card
@@ -315,16 +309,8 @@ function PackCard({
         </span>
       ) : null}
 
-      {/* Aperçu scénographie : zoom au survol, clic sur l'image = lightbox */}
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onOpenImage();
-        }}
-        aria-label={`Voir le rendu visuel du ${pack.name} en grand`}
-        className="relative block aspect-video w-full cursor-zoom-in overflow-hidden"
-      >
+      {/* Aperçu scénographie : zoom au survol, sans clic possible */}
+      <div className="relative aspect-video w-full overflow-hidden">
         <Image
           src={pack.image}
           alt={`Ambiance lumineuse du ${pack.name}`}
@@ -333,10 +319,7 @@ function PackCard({
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
         />
         <span className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
-        <span className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-background/70 px-3 py-1 text-xs text-foreground opacity-0 backdrop-blur transition-opacity duration-300 group-hover:opacity-100 focus-visible:opacity-100">
-          🔍 Voir le rendu visuel
-        </span>
-      </button>
+      </div>
 
       <CardHeader>
         <CardTitle className="text-lg">{pack.name}</CardTitle>
@@ -384,7 +367,6 @@ function PackCard({
 export function PricingSection() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [selectedPack, setSelectedPack] = useState<string | null>(null);
-  const [lightbox, setLightbox] = useState<Pack | null>(null);
   const active = CATEGORIES.find((c) => c.id === categoryId) ?? null;
 
   function choosePack(pack: Pack) {
@@ -502,7 +484,6 @@ export function PricingSection() {
                   selected={selectedPack === pack.name}
                   onSelect={() => choosePack(pack)}
                   previousEquipment={index > 0 ? active.packs[index - 1].equipment : null}
-                  onOpenImage={() => setLightbox(pack)}
                 />
               ))}
             </div>
@@ -519,29 +500,6 @@ export function PricingSection() {
         </div>
       )}
 
-      {/* Lightbox : aperçu de la scénographie en grand (clic, idéal mobile) */}
-      <Dialog open={lightbox !== null} onOpenChange={(open) => !open && setLightbox(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{lightbox?.name} — rendu visuel</DialogTitle>
-            <DialogDescription>
-              Un aperçu de l&apos;ambiance son &amp; lumière de ce pack.
-            </DialogDescription>
-          </DialogHeader>
-          {lightbox ? (
-            <div className="relative aspect-video overflow-hidden rounded-lg">
-              <Image
-                src={lightbox.image}
-                alt={`Scénographie du ${lightbox.name}`}
-                fill
-                sizes="(max-width: 768px) 100vw, 672px"
-                className="object-cover"
-              />
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
-
       {/* Options FX */}
       <h3 className="mt-14 text-xl font-medium">Options FX — Effets spéciaux</h3>
       <p className="mt-1 text-sm text-muted-foreground">
@@ -550,7 +508,20 @@ export function PricingSection() {
       </p>
       <div className="mt-6 grid gap-5 sm:grid-cols-3">
         {FX_OPTIONS.map((option) => (
-          <Card key={option.name} className="border-white/10">
+          <Card key={option.name} className="overflow-hidden border-white/10">
+            <div className="relative aspect-video w-full overflow-hidden">
+              <Image
+                src={option.image}
+                alt={`Aperçu : ${option.name}`}
+                fill
+                sizes="(max-width: 768px) 100vw, 33vw"
+                className="object-cover"
+              />
+              <span className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
+              <span className="absolute bottom-2 left-3 rounded-full bg-accent/90 px-2.5 py-0.5 text-xs font-semibold text-background">
+                {option.badge}
+              </span>
+            </div>
             <CardHeader>
               <CardTitle className="text-base">{option.name}</CardTitle>
               <CardDescription className="text-sm">{option.detail}</CardDescription>
@@ -558,7 +529,6 @@ export function PricingSection() {
             <CardContent className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xl font-semibold">{formatEuros(option.price)}</p>
-                <p className="text-xs text-accent">{option.badge}</p>
               </div>
               <Button
                 variant="outline"
