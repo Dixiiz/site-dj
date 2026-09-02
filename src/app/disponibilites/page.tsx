@@ -25,17 +25,14 @@ async function getBookedDates(): Promise<BookedDate[]> {
     const now = new Date().toISOString().slice(0, 10);
     const { data, error } = await supabase
       .from("quotes")
-      .select("event_date, event_type")
+      .select("event_date")
       .eq("status", "confirme")
       .gte("event_date", now)
       .order("event_date", { ascending: true });
     if (error || !data) return [];
     return data
       .filter((r) => r.event_date)
-      .map((r) => ({
-        date: String(r.event_date),
-        label: r.event_type || "Événement",
-      }));
+      .map((r) => ({ date: String(r.event_date), label: "Événement" }));
   } catch {
     return [];
   }
@@ -127,17 +124,19 @@ export default async function DisponibilitesPage({
                       if (day === null) return <span key={i} />;
                       const iso = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                       const isBooked = bookedMap.has(iso);
+                      const isPast = iso < todayIso;
                       const isToday = iso === todayIso;
                       return (
                         <span
                           key={i}
-                          title={isBooked ? "Déjà réservé" : undefined}
                           className={`flex h-8 items-center justify-center rounded-md ${
                             isBooked
                               ? "bg-accent/20 font-semibold text-accent line-through"
-                              : isToday
-                                ? "border border-accent/50"
-                                : ""
+                              : isPast
+                                ? "text-muted-foreground/30"
+                                : isToday
+                                  ? "border border-accent/50"
+                                  : ""
                           }`}
                         >
                           {day}
