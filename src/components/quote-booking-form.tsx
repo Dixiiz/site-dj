@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { fr } from "react-day-picker/locale";
 import { toast } from "sonner";
 import { estimateTravelFee, searchAddresses, submitQuoteAndBooking } from "@/app/actions";
@@ -237,7 +237,12 @@ export function QuoteBookingForm({
   }
 
   // Suggestions d'adresses via action serveur (Nominatim), avec debouncing.
+  const skipFetchRef = useRef(false);
   useEffect(() => {
+    if (skipFetchRef.current) {
+      skipFetchRef.current = false;
+      return;
+    }
     if (eventLocation.trim().length < 3) {
       setSuggestions([]);
       return;
@@ -253,6 +258,7 @@ export function QuoteBookingForm({
   }, [eventLocation]);
 
   function chooseSuggestion(label: string) {
+    skipFetchRef.current = true;
     setEventLocation(label);
     setShowSuggestions(false);
     setSuggestions([]);

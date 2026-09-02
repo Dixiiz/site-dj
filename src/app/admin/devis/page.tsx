@@ -32,12 +32,34 @@ function detailRow(label: string, value: string | null | undefined) {
   );
 }
 
-export default async function DevisPage() {
+export default async function DevisPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
+  const query = (q ?? "").trim().toLowerCase();
   const supabase = createAdminClient();
   const { data: quotes } = await supabase
     .from("quotes")
     .select("*")
     .order("created_at", { ascending: false });
+
+  const filtered = (quotes ?? []).filter((quote) => {
+    if (!query) return true;
+    const haystack = [
+      quote.customer_name,
+      quote.customer_email,
+      quote.customer_phone,
+      quote.event_location,
+      quote.event_date,
+      quote.formula_name,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(query);
+  });
 
   return (
     <div className="space-y-6">
@@ -48,11 +70,35 @@ export default async function DevisPage() {
         </p>
       </div>
 
-      {(quotes ?? []).length === 0 ? (
-        <p className="text-muted-foreground">Aucun devis pour le moment.</p>
+      <form method="get" className="flex gap-2">
+        <input
+          type="search"
+          name="q"
+          defaultValue={q ?? ""}
+          placeholder="Rechercher : nom, e-mail, téléphone, lieu, date…"
+          className="w-full max-w-md rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+        />
+        <button
+          type="submit"
+          className="rounded-lg border border-accent/60 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/10"
+        >
+          Rechercher
+        </button>
+        {query ? (
+          <a
+            href="/admin/devis"
+            className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Réinitialiser
+          </a>
+        ) : null}
+      </form>
+
+      {filtered.length === 0 ? (
+        <p className="text-muted-foreground">Aucun devis correspondant.</p>
       ) : (
         <div className="space-y-3">
-          {(quotes ?? []).map((quote) => {
+          {filtered.map((quote) => {
             const options = (quote.selected_options ?? []) as SelectedOption[];
             const status = STATUS_STYLES[quote.status] ?? {
               label: quote.status,

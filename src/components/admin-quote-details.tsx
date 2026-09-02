@@ -1,4 +1,5 @@
 import { QuoteStatusSelect } from "@/components/quote-status-select";
+import { AdminQuoteEdit } from "@/components/admin-quote-edit";
 import { formatEuros } from "@/lib/money";
 import type { SelectedOption } from "@/lib/types";
 
@@ -133,7 +134,10 @@ export function AdminQuoteDetails({
             timeStyle: "short",
           })}
         </span>
-        <QuoteStatusSelect id={quote.id} status={quote.status} />
+        <div className="flex items-center gap-2">
+          <AdminQuoteEdit quote={quote} options={options} />
+          <QuoteStatusSelect id={quote.id} status={quote.status} />
+        </div>
       </div>
     </div>
   );

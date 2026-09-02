@@ -271,7 +271,63 @@ export async function loginAdmin(formData: FormData) {
   redirect("/admin/devis");
 }
 
+export async function updateQuoteAdmin(formData: FormData) {
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return;
+
+  const supabase = createAdminClient();
+
+  // Options : une par ligne au format "Nom | prix"
+  const optionsRaw = String(formData.get("options_raw") ?? "");
+  const selected: SelectedOption[] = optionsRaw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      const [name, price] = line.split("|").map((part) => part.trim());
+      const cents = Math.round(Number.parseFloat((price ?? "0").replace(",", ".")) * 100);
+      return {
+        id: `custom-${index}`,
+        name: name || "Option",
+        price_cents: Number.isFinite(cents) ? cents : 0,
+      };
+    });
+
+  const toCents = (value: FormDataEntryValue | null) => {
+    const n = Number.parseFloat(String(value ?? "").replace(",", "."));
+    return Number.isFinite(n) ? Math.round(n * 100) : 0;
+  };
+
+  const { error } = await supabase
+    .from("quotes")
+    .update({
+      customer_name: String(formData.get("customer_name") ?? "").trim(),
+      customer_email: String(formData.get("customer_email") ?? "").trim(),
+      customer_phone: String(formData.get("customer_phone") ?? "").trim() || null,
+      event_location: String(formData.get("event_location") ?? "").trim() || null,
+      event_date: String(formData.get("event_date") ?? "").trim() || null,
+      notes: String(formData.get("notes") ?? "").trim() || null,
+      formula_name: String(formData.get("formula_name") ?? "").trim(),
+      formula_price_cents: toCents(formData.get("formula_price")),
+      travel_distance_km: Number.parseFloat(String(formData.get("travel_distance_km") ?? "")) || null,
+      travel_fee_cents: toCents(formData.get("travel_fee")),
+      extra_fee_cents: toCents(formData.get("extra_fee")),
+      total_cents: toCents(formData.get("total")),
+      status: String(formData.get("status") ?? "nouveau"),
+      selected_options: selected,
+    })
+    .eq("id", id);
+
+  if (error) {
+    redirect(`/admin/devis?erreur=1`);
+  }
+
+  revalidatePath("/admin/devis");
+  redirect(`/admin/devis?modifie=1`);
+}
+
 export async function logoutAdmin() {
+  "use server";
   await clearAdminSession();
   redirect("/admin");
 }
