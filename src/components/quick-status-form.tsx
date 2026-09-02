@@ -1,11 +1,13 @@
 "use client";
 
 export function QuickStatusForm({
-  action,
+  statusAction,
+  deleteAction,
   quoteId,
   currentStatus,
 }: {
-  action: (formData: FormData) => void | Promise<void>;
+  statusAction: (formData: FormData) => void | Promise<void>;
+  deleteAction: (formData: FormData) => void | Promise<void>;
   quoteId: string;
   currentStatus: string | null;
 }) {
@@ -17,28 +19,46 @@ export function QuickStatusForm({
     ["annule", "Annulé"],
   ];
   return (
-    <form
-      action={action}
+    <div
       className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-2"
       onClick={(e) => e.stopPropagation()}
     >
-      <input type="hidden" name="id" value={quoteId} />
-      <span className="text-xs text-muted-foreground">Statut rapide :</span>
-      {statuses.map(([value, lbl]) => (
+      <form action={statusAction} className="flex flex-wrap items-center gap-2">
+        <input type="hidden" name="id" value={quoteId} />
+        <span className="text-xs text-muted-foreground">Statut rapide :</span>
+        {statuses.map(([value, lbl]) => (
+          <button
+            key={value}
+            type="submit"
+            name="status"
+            value={value}
+            className={`rounded-lg border px-2.5 py-1 text-xs transition-colors ${
+              currentStatus === value
+                ? "border-accent bg-accent/15 text-foreground"
+                : "border-border text-muted-foreground hover:border-accent hover:text-foreground"
+            }`}
+          >
+            {lbl}
+          </button>
+        ))}
+      </form>
+      <form
+        action={deleteAction}
+        className="ml-auto"
+        onSubmit={(e) => {
+          if (!window.confirm("Supprimer définitivement ce devis ? Cette action est irréversible.")) {
+            e.preventDefault();
+          }
+        }}
+      >
+        <input type="hidden" name="id" value={quoteId} />
         <button
-          key={value}
           type="submit"
-          name="status"
-          value={value}
-          className={`rounded-lg border px-2.5 py-1 text-xs transition-colors ${
-            currentStatus === value
-              ? "border-accent bg-accent/15 text-foreground"
-              : "border-border text-muted-foreground hover:border-accent hover:text-foreground"
-          }`}
+          className="rounded-lg border border-red-500/40 px-2.5 py-1 text-xs text-red-400 transition-colors hover:bg-red-500/15"
         >
-          {lbl}
+          Supprimer
         </button>
-      ))}
-    </form>
+      </form>
+    </div>
   );
 }

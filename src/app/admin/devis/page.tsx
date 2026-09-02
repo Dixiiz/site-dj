@@ -1,3 +1,4 @@
+import { deleteQuote } from "@/app/actions";
 import { QuickStatusForm } from "@/components/quick-status-form";
 import { AdminQuoteDetails } from "@/components/admin-quote-details";
 import { updateQuoteStatus } from "@/app/actions";
@@ -156,7 +157,7 @@ export default async function DevisPage({
                     </div>
                   </div>
                 </summary>
-<QuickStatusForm action={updateQuoteStatus} quoteId={quote.id} currentStatus={quote.status} />
+<QuickStatusForm statusAction={updateQuoteStatus} deleteAction={deleteQuote} quoteId={quote.id} currentStatus={quote.status} />
                 <AdminQuoteDetails quote={quote} options={options} />
               </details>
             );

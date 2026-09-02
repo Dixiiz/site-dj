@@ -375,6 +375,18 @@ export async function updateQuoteStatus(formData: FormData) {
   revalidatePath("/disponibilites");
 }
 
+export async function deleteQuote(formData: FormData) {
+  if (!(await isAdmin())) return;
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const supabase = createAdminClient();
+  await supabase.from("quote_options").delete().eq("quote_id", id);
+  await supabase.from("quotes").delete().eq("id", id);
+  revalidatePath("/admin/devis");
+  revalidatePath("/admin/planning");
+  revalidatePath("/disponibilites");
+}
+
 export async function createSlot(formData: FormData) {
   if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
   const slot_date = String(formData.get("slot_date") ?? "");
