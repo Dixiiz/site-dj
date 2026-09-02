@@ -83,6 +83,12 @@ export default function Home() {
               >
                 Découvrir les formules
               </Link>
+              <Link
+                href="/disponibilites"
+                className="rounded-lg border border-border px-6 py-3 font-medium transition hover:border-accent hover:text-accent"
+              >
+                Voir les disponibilités
+              </Link>
             </div>
           </FadeIn>
         </section>
