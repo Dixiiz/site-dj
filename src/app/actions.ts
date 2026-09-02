@@ -14,6 +14,25 @@ function formatPrice(cents: number) {
 }
 
 import type { SelectedOption } from "@/lib/types";
+import { Resend } from "resend";
+
+const NOTIF_EMAIL = process.env.NOTIF_EMAIL ?? "";
+const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
+
+async function sendQuoteNotification(lines: string[]) {
+  if (!NOTIF_EMAIL || !RESEND_API_KEY) return;
+  try {
+    const resend = new Resend(RESEND_API_KEY);
+    await resend.emails.send({
+      from: "Propul'Sound DJ <onboarding@resend.dev>",
+      to: NOTIF_EMAIL,
+      subject: "🎧 Nouveau devis reçu",
+      text: lines.join("\n"),
+    });
+  } catch (err) {
+    console.error("[notif] Echec envoi e-mail:", err);
+  }
+}
 
 export async function estimateTravelFee(formData: FormData) {
   const address = String(formData.get("event_location") ?? "").trim();
@@ -226,6 +245,22 @@ export async function submitQuoteAndBooking(formData: FormData) {
     console.error("[submitQuote] Erreur Supabase:", quoteError);
     return { ok: false as const, error: "Impossible d’enregistrer le devis. Réessaie dans un instant." };
   }
+
+  await sendQuoteNotification([
+    "Nouveau devis reçu sur le site :",
+    `Client : ${customer_name}`,
+    `E-mail : ${customer_email}`,
+    customer_phone ? `Téléphone : ${customer_phone}` : null,
+    `Pack : ${pack_name || formula.name} (${formatPrice(packPriceCents)})`,
+    `Date : ${event_date}`,
+    `Horaires : ${start_time} - ${end_time}`,
+    event_location ? `Lieu : ${event_location}` : null,
+    selected.length > 0
+      ? `Options : ${selected.map((o) => o.name).join(", ")}`
+      : "Options : aucune",
+    `Total : ${formatPrice(total_cents)}`,
+    notes ? `Message : ${notes}` : null,
+  ].filter(Boolean) as string[]);
 
   redirect(`/merci?nom=${encodeURIComponent(customer_name)}`);
 }
