@@ -614,7 +614,7 @@ export function PricingSection() {
                 muted
                 loop
                 playsInline
-                preload="none"
+                preload="metadata"
                 ref={(el) => {
                   if (!el) return;
                   el.dataset.fxVideo = "1";
