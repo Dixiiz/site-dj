@@ -48,7 +48,7 @@ const CATEGORIES: Category[] = [
       {
         name: "Pack Standard",
         price: 58000,
-        image: "/galerie/jeannebastien-1320.jpg",
+        image: "/galerie/5.jpg",
         baseMinutes: 360,
         extraRateCents: 8000,
         defaultStart: "20:00",
@@ -63,7 +63,7 @@ const CATEGORIES: Category[] = [
         name: "Pack Premium",
         price: 68000,
         highlight: "populaire",
-        image: "/galerie/jeannebastien-1348.jpg",
+        image: "/galerie/4.jpg",
         baseMinutes: 360,
         extraRateCents: 8000,
         defaultStart: "20:00",
@@ -155,7 +155,7 @@ const CATEGORIES: Category[] = [
       {
         name: "Set DJ (matériel & son sur place)",
         price: 11000,
-        image: "/galerie/dsc-8110.jpg",
+        image: "/galerie/4.jpg",
         baseMinutes: 120,
         extraRateCents: 5500,
         defaultStart: "20:00",

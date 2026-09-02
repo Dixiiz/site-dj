@@ -533,10 +533,12 @@ export function QuoteBookingForm({
                   (date: Date) => unavailableDates.includes(dateKey(date)),
                 ]}
                 className="w-full"
+                modifiers={{ indisponible: (date: Date) => unavailableDates.includes(dateKey(date)) }}
+                modifiersClassNames={{ indisponible: "text-red-400 line-through opacity-60" }}
               />
               <p className="text-xs text-muted-foreground">
-                Les dates déjà réservées ou indisponibles sont grisées et non
-                sélectionnables.
+                Les dates déjà réservées ou indisponibles sont en{" "}
+                <span className="text-red-400">rouge</span> et non sélectionnables.
               </p>
               {invalidOrder ? (
                 <p className="text-sm text-red-400">

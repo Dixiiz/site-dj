@@ -15,6 +15,7 @@ export function SiteHeader() {
             className="h-10 w-auto object-contain"
             priority
           />
+          <span className="text-lg font-semibold tracking-wide">Propul&apos;Sound DJ</span>
         </Link>
         <MainNav />
       </div>
