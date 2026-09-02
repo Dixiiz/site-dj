@@ -78,12 +78,6 @@ export default function Home() {
                 Demander un devis
               </Link>
               <Link
-                href="/formules"
-                className="rounded-lg border border-border px-6 py-3 font-medium transition hover:border-accent hover:text-accent"
-              >
-                Découvrir les formules
-              </Link>
-              <Link
                 href="/disponibilites"
                 className="rounded-lg border border-border px-6 py-3 font-medium transition hover:border-accent hover:text-accent"
               >
