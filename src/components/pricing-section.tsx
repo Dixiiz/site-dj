@@ -219,7 +219,8 @@ const FX_OPTIONS = [
     detail: "Pack de 2 machines, gerbes jusqu'à 5 m — inodore et sécurisé.",
     price: 15000,
     badge: "Inodore & sécurisé",
-    image: "/galerie/leanivet-clemence-neal-810.jpg",
+    image: "/images/fx/etincelles.jpg",
+    video: "/videos/fx/etincelles.mp4",
   },
   {
     name: "Pistolet à fumée effet CO2",
