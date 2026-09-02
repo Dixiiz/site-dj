@@ -375,6 +375,7 @@ function PackCard({
 export function PricingSection() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [selectedPack, setSelectedPack] = useState<string | null>(null);
+  const [selectedFx, setSelectedFx] = useState<string[]>([]);
   const active = CATEGORIES.find((c) => c.id === categoryId) ?? null;
 
   function choosePack(pack: Pack) {
@@ -389,6 +390,35 @@ export function PricingSection() {
           defaultStart: pack.defaultStart,
           defaultEnd: pack.defaultEnd,
         },
+      })
+    );
+  }
+
+  // Synchronise la surbrillance des cartes FX avec les options cochées dans le formulaire.
+  useEffect(() => {
+    function onOptionsChanged(event: Event) {
+      const names = (event as CustomEvent<{ names?: string[] }>).detail?.names;
+      if (!Array.isArray(names)) return;
+      const fxNames = new Set(
+        Object.entries(OPTION_TO_FORM)
+          .filter(([, formName]) => names.includes(formName))
+          .map(([fxName]) => fxName)
+      );
+      setSelectedFx((current) => {
+        const next = FX_OPTIONS.map((o) => o.name).filter((n) => fxNames.has(n));
+        return next.length === current.length && next.every((n) => current.includes(n))
+          ? current
+          : next;
+      });
+    }
+    window.addEventListener("propul:options-changed", onOptionsChanged);
+    return () => window.removeEventListener("propul:options-changed", onOptionsChanged);
+  }, []);
+
+  function toggleFx(optionName: string) {
+    window.dispatchEvent(
+      new CustomEvent("propul:toggle-option", {
+        detail: { name: OPTION_TO_FORM[optionName] ?? optionName },
       })
     );
   }
@@ -515,15 +545,36 @@ export function PricingSection() {
         devis ci-dessous.
       </p>
       <div className="mt-6 grid gap-5 sm:grid-cols-3">
-        {FX_OPTIONS.map((option) => (
-          <Card key={option.name} className="group relative overflow-hidden border-white/10">
+        {FX_OPTIONS.map((option) => {
+          const fxSelected = selectedFx.includes(option.name);
+          return (
+            <Card
+              key={option.name}
+              onClick={() => toggleFx(option.name)}
+              role="button"
+              tabIndex={0}
+              aria-pressed={fxSelected}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  toggleFx(option.name);
+                }
+              }}
+              className={`group relative cursor-pointer overflow-hidden transition-all duration-300 ease-out focus-visible:outline-2 focus-visible:outline-accent ${
+                fxSelected
+                  ? "scale-[1.03] border-accent shadow-[0_0_60px_-5px] shadow-accent/70 ring-2 ring-accent"
+                  : "border-white/10 hover:border-accent/40"
+              }`}
+            >
             {/* Aperçu en fond, fané derrière le texte — nette au survol */}
             <Image
               src={option.image}
               alt={`Aperçu : ${option.name}`}
               fill
               sizes="(max-width: 768px) 100vw, 33vw"
-              className="object-cover opacity-15 transition-all duration-700 ease-out group-hover:scale-105 group-hover:opacity-50"
+              className={`object-cover transition-all duration-700 ease-out group-hover:scale-105 ${
+                fxSelected ? "opacity-40" : "opacity-15 group-hover:opacity-50"
+              }`}
             />
             <span className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background/90 transition-opacity duration-700 group-hover:opacity-40" />
             <CardHeader className="relative">
@@ -536,24 +587,17 @@ export function PricingSection() {
                 <p className="text-xs text-accent">{option.badge}</p>
               </div>
               <Button
-                variant="outline"
+                variant={fxSelected ? "default" : "outline"}
                 size="sm"
-                onClick={() => {
-                  window.dispatchEvent(
-                    new CustomEvent("propul:toggle-option", {
-                      detail: { name: OPTION_TO_FORM[option.name] ?? option.name },
-                    })
-                  );
-                  document
-                    .getElementById("formulaire-devis")
-                    ?.scrollIntoView({ behavior: "smooth" });
-                }}
+                tabIndex={-1}
+                className="pointer-events-none"
               >
-                Ajouter au devis
+                {fxSelected ? "✓ Ajoutée au devis" : "Ajouter au devis"}
               </Button>
             </CardContent>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
 
       {/* Conditions & déplacements */}

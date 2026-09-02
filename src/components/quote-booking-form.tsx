@@ -138,6 +138,16 @@ export function QuoteBookingForm({
     };
   }, [formulas, options]);
 
+  // Informe la section tarifs des options cochées (pour la surbrillance des cartes FX).
+  useEffect(() => {
+    const names = options
+      .filter((option) => optionIds.includes(option.id))
+      .map((option) => option.name);
+    window.dispatchEvent(
+      new CustomEvent("propul:options-changed", { detail: { names } })
+    );
+  }, [optionIds, options]);
+
   const visibleOptions = useMemo(
     () =>
       options.filter(
