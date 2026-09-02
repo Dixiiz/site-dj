@@ -144,6 +144,7 @@ export function QuoteBookingForm({
       if (match) {
         setFormulaId(match.id);
       }
+      setRecapVisible(false); // une sélection vient d'être faite → mini récap immédiat
       setPack({
         name: packName,
         priceCents: detail?.priceCents ?? match?.price_cents ?? 0,
@@ -163,6 +164,7 @@ export function QuoteBookingForm({
       const detail = (event as CustomEvent<{ name: string; qty?: number }>).detail;
       const optionName = detail?.name;
       if (!optionName) return;
+      setRecapVisible(false); // une sélection vient d'être faite → mini récap immédiat
       if (typeof detail?.qty === "number") {
         setCo2Qty(detail.qty === 2 ? 2 : 1);
       }

@@ -313,17 +313,7 @@ function PackCard({
             : "border-white/10 hover:border-accent/40"
       }`}
     >
-      {selected ? (
-        <span className="absolute top-12 left-1/2 z-10 -translate-x-1/2 rounded-full bg-accent px-3 py-0.5 text-xs font-semibold text-background">
-          ✓ Ajouté au devis
-        </span>
-      ) : pack.highlight ? (
-        <span className="absolute top-12 left-1/2 z-10 -translate-x-1/2 rounded-full bg-accent px-3 py-0.5 text-xs font-semibold text-background">
-          {pack.highlight === "show" ? "Show complet" : "Le plus populaire"}
-        </span>
-      ) : null}
-
-      {/* Aperçu scénographie : bandeau photo en tête de carte */}
+      {/* Badge sur la photo : sélection ou mis en avant */}
       <div className="relative aspect-video w-full overflow-hidden">
         <Image
           src={pack.image}
