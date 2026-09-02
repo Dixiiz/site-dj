@@ -1,3 +1,4 @@
+import { QuickStatusForm } from "@/components/quick-status-form";
 import { AdminQuoteDetails } from "@/components/admin-quote-details";
 import { updateQuoteStatus } from "@/app/actions";
 
@@ -155,36 +156,7 @@ export default async function DevisPage({
                     </div>
                   </div>
                 </summary>
-                {/* Changement de statut rapide, sans ouvrir le détail */}
-                <form
-                  action={updateQuoteStatus}
-                  className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <input type="hidden" name="id" value={quote.id} />
-                  <span className="text-xs text-muted-foreground">Statut rapide :</span>
-                  {[
-                    ["nouveau", "Nouveau"],
-                    ["contacte", "Contacté"],
-                    ["confirme", "Confirmé"],
-                    ["refuse", "Refusé"],
-                    ["annule", "Annulé"],
-                  ].map(([value, lbl]) => (
-                    <button
-                      key={value}
-                      type="submit"
-                      name="status"
-                      value={value}
-                      className={`rounded-lg border px-2.5 py-1 text-xs transition-colors ${
-                        quote.status === value
-                          ? "border-accent bg-accent/15 text-foreground"
-                          : "border-border text-muted-foreground hover:border-accent hover:text-foreground"
-                      }`}
-                    >
-                      {lbl}
-                    </button>
-                  ))}
-                </form>
+<QuickStatusForm action={updateQuoteStatus} quoteId={quote.id} currentStatus={quote.status} />
                 <AdminQuoteDetails quote={quote} options={options} />
               </details>
             );
