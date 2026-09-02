@@ -297,9 +297,9 @@ function PackCard({
           onSelect();
         }
       }}
-      className={`group relative flex cursor-pointer flex-col overflow-hidden transition-colors focus-visible:outline-2 focus-visible:outline-accent ${
+      className={`group relative flex cursor-pointer flex-col overflow-hidden transition-all duration-300 ease-out focus-visible:outline-2 focus-visible:outline-accent ${
         selected
-          ? "border-accent shadow-[0_0_35px_-10px] shadow-accent/50"
+          ? "scale-[1.03] border-accent shadow-[0_0_60px_-5px] shadow-accent/70 ring-2 ring-accent"
           : pack.highlight
             ? "border-accent/60 shadow-[0_0_35px_-10px] shadow-accent/40"
             : "border-white/10 hover:border-accent/40"
@@ -342,6 +342,13 @@ function PackCard({
         <CardTitle className="text-lg">{pack.name}</CardTitle>
         <p className="mt-1 text-3xl font-semibold text-glow">
           {formatEuros(pack.price)}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {Math.round(pack.baseMinutes / 60)} h minimum incluses
+          {/mariage|essential|deluxe|ultime/i.test(pack.name)
+            ? " — début avant 18 h : cérémonie laïque et cocktail inclus"
+            : ""}
+          .
         </p>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col">
