@@ -62,7 +62,7 @@ export default function Home() {
             <p className="text-sm tracking-[0.3em] text-accent uppercase">
               DJ &amp; animations — Loir-et-Cher
             </p>
-            <h1 className="mx-auto mt-4 max-w-3xl text-4xl font-medium tracking-tight text-glow sm:text-5xl">
+            <h1 className="mx-auto mt-4 max-w-3xl text-3xl font-medium tracking-tight text-glow sm:text-5xl">
               Mettez de l&apos;énergie dans vos événements avec{" "}
               <span className="text-accent">Propul&apos;Sound DJ</span>
             </h1>
@@ -178,7 +178,7 @@ export default function Home() {
                 Propul&apos;Sound <span className="text-accent">en action</span>
               </h2>
               <p className="mt-3 text-muted-foreground">
-                Quelques extraits de nos soirées — survolez une vidéo pour la lancer.
+                Quelques extraits de nos soirées — survolez ou touchez une vidéo pour la lancer.
               </p>
             </FadeIn>
             <FadeIn delay={0.1}>

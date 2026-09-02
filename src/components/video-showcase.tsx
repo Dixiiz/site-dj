@@ -44,6 +44,17 @@ export function VideoShowcase({ videos, orientation = "landscape" }: VideoShowca
 
   const advance = () => setIndex((i) => (i >= max ? 0 : i + 1));
 
+  // Sur mobile (pas de survol) : un tap lance / met en pause la vidéo.
+  const togglePlay = (src: string) => {
+    const v = refs.current?.[src];
+    if (!v) return;
+    if (v.paused) {
+      v.play().catch(() => {});
+    } else {
+      v.pause();
+    }
+  };
+
   const toggleSound = (src: string) => {
     setMutedStates((prev) => {
       const next = { ...prev, [src]: !prev[src] };
@@ -90,6 +101,10 @@ export function VideoShowcase({ videos, orientation = "landscape" }: VideoShowca
                 <SoundButton muted={mutedStates[src]} onToggle={() => toggleSound(src)} />
                 <div
                   className="absolute inset-0"
+                  onTouchStart={() => {
+                    const v = refs.current?.[src];
+                    v?.play().catch(() => {});
+                  }}
                   onMouseEnter={() => {
                     const v = refs.current?.[src];
                     v?.play().catch(() => {});
@@ -101,6 +116,13 @@ export function VideoShowcase({ videos, orientation = "landscape" }: VideoShowca
                       v.currentTime = 0;
                     }
                   }}
+                />
+                {/* Sur mobile, un tap sur la vidéo la lance ou la met en pause. */}
+                <button
+                  type="button"
+                  aria-label="Lire ou mettre en pause la vidéo"
+                  className="absolute inset-0 sm:hidden"
+                  onClick={() => togglePlay(src)}
                 />
               </div>
             </div>
@@ -159,7 +181,7 @@ function SoundButton({ muted, onToggle }: { muted: boolean; onToggle: () => void
         onToggle();
       }}
       aria-label={muted ? "Activer le son" : "Couper le son"}
-      className="absolute bottom-3 right-3 z-10 rounded-full bg-background/80 p-2 text-foreground opacity-0 backdrop-blur transition-opacity focus:opacity-100 group-hover:opacity-100"
+      className="absolute bottom-3 right-3 z-10 rounded-full bg-background/80 p-2 text-foreground backdrop-blur transition-opacity focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
     >
       {muted ? (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

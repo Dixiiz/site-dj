@@ -307,7 +307,7 @@ function PackCard({
       }}
       className={`group relative flex cursor-pointer flex-col overflow-hidden transition-all duration-300 ease-out focus-visible:outline-2 focus-visible:outline-accent ${
         selected
-          ? "scale-[1.03] border-accent shadow-[0_0_60px_-5px] shadow-accent/70 ring-2 ring-accent"
+          ? "border-accent shadow-[0_0_60px_-5px] shadow-accent/70 ring-2 ring-accent sm:scale-[1.03]"
           : pack.highlight
             ? "border-accent/60 shadow-[0_0_35px_-10px] shadow-accent/40"
             : "border-white/10 hover:border-accent/40"
@@ -493,11 +493,11 @@ export function PricingSection() {
           key="packs-step"
           className="mt-8 animate-in fade-in slide-in-from-right-8 duration-500"
         >
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="no-scrollbar -mx-4 flex flex-nowrap items-center gap-2 overflow-x-auto px-4 pb-1 sm:flex-wrap sm:overflow-visible sm:px-0">
             <button
               type="button"
               onClick={() => setCategoryId(null)}
-              className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-accent/40 hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent"
+              className="shrink-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-accent/40 hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent"
             >
               ← Catégories
             </button>
@@ -509,7 +509,7 @@ export function PricingSection() {
                   type="button"
                   onClick={() => setCategoryId(category.id)}
                   aria-pressed={selected}
-                  className={`rounded-xl border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-accent ${
+                  className={`shrink-0 whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-accent ${
                     selected
                       ? "border-accent/60 bg-accent/15 text-foreground"
                       : "border-white/10 bg-white/[0.03] text-muted-foreground hover:border-accent/30 hover:text-foreground"
@@ -615,7 +615,7 @@ export function PricingSection() {
               }}
               className={`group relative cursor-pointer overflow-hidden transition-all duration-300 ease-out focus-visible:outline-2 focus-visible:outline-accent ${
                 fxSelected
-                  ? "scale-[1.03] border-accent shadow-[0_0_60px_-5px] shadow-accent/70 ring-2 ring-accent"
+                  ? "border-accent shadow-[0_0_60px_-5px] shadow-accent/70 ring-2 ring-accent sm:scale-[1.03]"
                   : "border-white/10 hover:border-accent/40"
               }`}
             >
