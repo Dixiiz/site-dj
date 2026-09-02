@@ -8,7 +8,7 @@ export function SiteHeader() {
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <Link href="/" className="flex items-center gap-2.5">
           <Image
-            src="/logobleu.png"
+            src="/logo-bleu-v2.png"
             alt="Propul'Sound DJ"
             width={140}
             height={40}
