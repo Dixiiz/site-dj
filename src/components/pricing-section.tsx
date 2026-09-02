@@ -309,24 +309,26 @@ function PackCard({
         </span>
       ) : null}
 
-      {/* Aperçu scénographie : fondu en arrière-plan du texte, net au survol */}
-      <div className="pointer-events-none absolute inset-0">
+      {/* Aperçu scénographie : bandeau photo en tête de carte */}
+      <div className="relative aspect-video w-full overflow-hidden">
         <Image
           src={pack.image}
-          alt=""
+          alt={`Scénographie du ${pack.name}`}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className={`object-cover transition-all duration-700 ease-out group-hover:scale-105 ${
-            selected ? "opacity-40" : "opacity-15 group-hover:opacity-45"
-          }`}
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
         />
-        <span
-          className={`absolute inset-0 transition-opacity duration-700 ${
-            selected ? "opacity-0" : "opacity-100 group-hover:opacity-0"
-          } bg-gradient-to-t from-background via-background/70 to-background/40`}
-        />
+        <span className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
+        {selected ? (
+          <span className="absolute bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-accent px-3 py-0.5 text-xs font-semibold text-background">
+            ✓ Ajouté au devis
+          </span>
+        ) : pack.highlight ? (
+          <span className="absolute bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-accent px-3 py-0.5 text-xs font-semibold text-background">
+            {pack.highlight === "show" ? "Show complet" : "Le plus populaire"}
+          </span>
+        ) : null}
       </div>
-      <div className="relative">
       <CardHeader>
         <CardTitle className="text-lg">{pack.name}</CardTitle>
         <p className="mt-1 text-3xl font-semibold text-glow">
@@ -366,7 +368,6 @@ function PackCard({
           {selected ? "✓ Ajouté au devis — continuez ci-dessous" : "Cliquer pour sélectionner ce pack"}
         </p>
       </CardContent>
-      </div>
     </Card>
   );
 }
