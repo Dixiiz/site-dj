@@ -1,4 +1,5 @@
 import { AdminQuoteDetails } from "@/components/admin-quote-details";
+import { updateQuoteStatus } from "@/app/actions";
 
 import { QuoteStatusSelect } from "@/components/quote-status-select";
 import { Badge } from "@/components/ui/badge";
@@ -6,11 +7,14 @@ import { formatEuros } from "@/lib/money";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { SelectedOption } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   nouveau: { label: "Nouveau", className: "border-accent/60 text-accent" },
   contacte: { label: "Contacté", className: "border-yellow-500/60 text-yellow-400" },
   confirme: { label: "Confirmé", className: "border-green-500/60 text-green-400" },
   refuse: { label: "Refusé", className: "border-red-500/60 text-red-400" },
+  annule: { label: "Annulé", className: "border-zinc-500/60 text-zinc-400" },
 };
 
 function eventKind(formulaName: string): string {
@@ -142,13 +146,45 @@ export default async function DevisPage({
                       </Badge>
                     )}
                   </div>
-                  <div className="ml-auto text-right">
-                    <div className="font-semibold">{formatEuros(quote.total_cents ?? 0)}</div>
-                    <Badge variant="outline" className={status.className}>
-                      {status.label}
-                    </Badge>
+                  <div className="ml-auto flex items-center gap-3 text-right">
+                    <div>
+                      <div className="font-semibold">{formatEuros(quote.total_cents ?? 0)}</div>
+                      <Badge variant="outline" className={status.className}>
+                        {status.label}
+                      </Badge>
+                    </div>
                   </div>
                 </summary>
+                {/* Changement de statut rapide, sans ouvrir le détail */}
+                <form
+                  action={updateQuoteStatus}
+                  className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input type="hidden" name="id" value={quote.id} />
+                  <span className="text-xs text-muted-foreground">Statut rapide :</span>
+                  {[
+                    ["nouveau", "Nouveau"],
+                    ["contacte", "Contacté"],
+                    ["confirme", "Confirmé"],
+                    ["refuse", "Refusé"],
+                    ["annule", "Annulé"],
+                  ].map(([value, lbl]) => (
+                    <button
+                      key={value}
+                      type="submit"
+                      name="status"
+                      value={value}
+                      className={`rounded-lg border px-2.5 py-1 text-xs transition-colors ${
+                        quote.status === value
+                          ? "border-accent bg-accent/15 text-foreground"
+                          : "border-border text-muted-foreground hover:border-accent hover:text-foreground"
+                      }`}
+                    >
+                      {lbl}
+                    </button>
+                  ))}
+                </form>
                 <AdminQuoteDetails quote={quote} options={options} />
               </details>
             );

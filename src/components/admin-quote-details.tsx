@@ -10,6 +10,8 @@ type Quote = {
   customer_phone: string | null;
   event_location: string | null;
   event_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
   notes: string | null;
   formula_name: string;
   formula_price_cents: number | null;

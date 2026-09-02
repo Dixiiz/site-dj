@@ -12,6 +12,8 @@ type Quote = {
   customer_phone: string | null;
   event_location: string | null;
   event_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
   notes: string | null;
   formula_name: string;
   formula_price_cents: number | null;
@@ -24,6 +26,20 @@ type Quote = {
 
 const euros = (cents: number | null) =>
   ((cents ?? 0) / 100).toFixed(2).replace(".", ",");
+
+// Récupère "Début : 18:00" / "Fin : 04:00" dans les anciennes notes
+function parseTime(notes: string | null, key: string) {
+  if (!notes) return null;
+  const m = notes.match(new RegExp(`${key}\\s*:\\s*(\\d{1,2}:\\d{2})`));
+  return m ? m[1] : null;
+}
+
+// Extrait uniquement le message client des anciennes notes
+function parseMessage(notes: string | null) {
+  if (!notes) return "";
+  const m = notes.match(/Message\s*:\s*([\s\S]*)$/);
+  return m ? m[1].trim() : "";
+}
 
 export function AdminQuoteEdit({
   quote,
@@ -86,6 +102,12 @@ export function AdminQuoteEdit({
       className="w-full space-y-3 rounded-xl border border-accent/40 bg-primary/5 p-4"
     >
       <input type="hidden" name="id" value={quote.id} />
+      <input
+        type="hidden"
+        name="checked_options"
+        value={checked.join("||")}
+      />
+      <input type="hidden" name="co2_qty" value={co2Qty} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className={label}>Nom du client</label>
@@ -108,8 +130,31 @@ export function AdminQuoteEdit({
           <input name="event_date" type="date" defaultValue={quote.event_date ?? ""} className={input} />
         </div>
         <div>
-          <label className={label}>Horaires / notes</label>
-          <input name="notes" defaultValue={quote.notes ?? ""} className={input} />
+          <label className={label}>Heure de début</label>
+          <input
+            name="start_time"
+            type="time"
+            defaultValue={quote.start_time ?? parseTime(quote.notes, "Début") ?? ""}
+            className={input}
+          />
+        </div>
+        <div>
+          <label className={label}>Heure de fin</label>
+          <input
+            name="end_time"
+            type="time"
+            defaultValue={quote.end_time ?? parseTime(quote.notes, "Fin") ?? ""}
+            className={input}
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className={label}>Message du client / vos notes</label>
+          <input
+            name="notes"
+            defaultValue={parseMessage(quote.notes)}
+            className={input}
+            placeholder="Message du client, ambiance souhaitée, contraintes…"
+          />
         </div>
         <div>
           <label className={label}>Déplacement — distance (km)</label>

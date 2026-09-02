@@ -6,6 +6,7 @@ import { clearAdminSession, isAdmin, setAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateTravelFromAddress } from "@/lib/travel";
 import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
+import { ADMIN_FX_OPTIONS } from "@/components/pricing-section";
 import { formatEuros } from "@/lib/money";
 
 function formatPrice(cents: number) {
@@ -206,6 +207,8 @@ export async function submitQuoteAndBooking(formData: FormData) {
       event_type: event_type || null,
       event_location: event_location || null,
       event_date: event_date || null,
+      start_time: start_time || null,
+      end_time: end_time || null,
       notes: scheduleNotes || null,
       formula_id: formula.id,
       formula_name: pack_name || formula.name,
@@ -277,26 +280,28 @@ export async function updateQuoteAdmin(formData: FormData) {
 
   const supabase = createAdminClient();
 
-  // Options : une par ligne au format "Nom | prix"
-  const optionsRaw = String(formData.get("options_raw") ?? "");
-  const selected: SelectedOption[] = optionsRaw
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line, index) => {
-      const [name, price] = line.split("|").map((part) => part.trim());
-      const cents = Math.round(Number.parseFloat((price ?? "0").replace(",", ".")) * 100);
-      return {
-        id: `custom-${index}`,
-        name: name || "Option",
-        price_cents: Number.isFinite(cents) ? cents : 0,
-      };
-    });
+  // Options cochées : "Nom (quantité)" -> sélection avec prix du catalogue FX
+  const checkedRaw = String(formData.get("checked_options") ?? "");
+  const checkedNames = checkedRaw.split("||").map((n) => n.trim()).filter(Boolean);
+  const co2Qty = Math.min(2, Math.max(1, Number(formData.get("co2_qty") ?? 1)));
+  const selected: SelectedOption[] = checkedNames.map((name, index) => {
+    const fx = ADMIN_FX_OPTIONS.find((f) => f.name === name);
+    const qty = /CO2/i.test(name) ? co2Qty : 1;
+    return {
+      id: `admin-${index}`,
+      name: qty > 1 ? `${name} × ${qty}` : name,
+      price_cents: fx ? fx.price * qty : 0,
+      qty,
+    };
+  });
 
   const toCents = (value: FormDataEntryValue | null) => {
     const n = Number.parseFloat(String(value ?? "").replace(",", "."));
     return Number.isFinite(n) ? Math.round(n * 100) : 0;
   };
+
+  const start_time = String(formData.get("start_time") ?? "").trim() || null;
+  const end_time = String(formData.get("end_time") ?? "").trim() || null;
 
   const { error } = await supabase
     .from("quotes")
@@ -306,6 +311,8 @@ export async function updateQuoteAdmin(formData: FormData) {
       customer_phone: String(formData.get("customer_phone") ?? "").trim() || null,
       event_location: String(formData.get("event_location") ?? "").trim() || null,
       event_date: String(formData.get("event_date") ?? "").trim() || null,
+      start_time,
+      end_time,
       notes: String(formData.get("notes") ?? "").trim() || null,
       formula_name:
         String(formData.get("formula_name_hidden") ?? "").trim() ||
@@ -326,7 +333,27 @@ export async function updateQuoteAdmin(formData: FormData) {
   }
 
   revalidatePath("/admin/devis");
+  revalidatePath("/disponibilites");
   redirect(`/admin/devis?modifie=1`);
+}
+
+export async function toggleBlockedDate(formData: FormData) {
+  if (!(await isAdmin())) return;
+  const slot_date = String(formData.get("slot_date") ?? "").trim();
+  if (!slot_date) return;
+  const supabase = createAdminClient();
+  const { data: existing } = await supabase
+    .from("blocked_dates")
+    .select("date")
+    .eq("date", slot_date)
+    .maybeSingle();
+  if (existing) {
+    await supabase.from("blocked_dates").delete().eq("date", slot_date);
+  } else {
+    await supabase.from("blocked_dates").insert({ date: slot_date });
+  }
+  revalidatePath("/admin/planning");
+  revalidatePath("/disponibilites");
 }
 
 export async function logoutAdmin() {
@@ -336,17 +363,16 @@ export async function logoutAdmin() {
 }
 
 export async function updateQuoteStatus(formData: FormData) {
-  if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
+  if (!(await isAdmin())) return;
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
-  const allowed = ["nouveau", "contacte", "confirme", "refuse", "decale"];
-  if (!id || !allowed.includes(status)) {
-    return { ok: false as const, error: "Statut invalide." };
-  }
+  const allowed = ["nouveau", "contacte", "confirme", "refuse", "annule"];
+  if (!id || !allowed.includes(status)) return;
   const supabase = createAdminClient();
   await supabase.from("quotes").update({ status }).eq("id", id);
   revalidatePath("/admin/devis");
-  return { ok: true as const };
+  revalidatePath("/admin/planning");
+  revalidatePath("/disponibilites");
 }
 
 export async function createSlot(formData: FormData) {
