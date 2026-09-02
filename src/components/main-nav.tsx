@@ -30,9 +30,6 @@ export function MainNav() {
           </Link>
         );
       })}
-      <Link href="/admin" className="transition-colors hover:text-accent">
-        Admin
-      </Link>
     </nav>
   );
 }
