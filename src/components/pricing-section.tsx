@@ -211,7 +211,8 @@ const FX_OPTIONS = [
     detail: "Heavyfog 2000p — tapis de fumée au sol, idéal ouverture de bal.",
     price: 15000,
     badge: "Idéal ouverture de bal",
-    image: "/galerie/jeannebastien-1320.jpg",
+    image: "/images/fx/fumee.jpg",
+    video: "/videos/fx/fumee.mp4",
   },
   {
     name: "Étincelles froides",
@@ -227,7 +228,14 @@ const FX_OPTIONS = [
     badge: "Prix promo : au lieu de 150 €",
     image: "/galerie/manolieraphael-0910.jpg",
   },
-];
+] satisfies {
+  name: string;
+  detail: string;
+  price: number;
+  badge: string;
+  image: string;
+  video?: string;
+}[];
 
 // Vulgarisation : bénéfice client associé à chaque matériel technique.
 const EXPLANATIONS: [RegExp, string][] = [
@@ -560,6 +568,24 @@ export function PricingSection() {
               role="button"
               tabIndex={0}
               aria-pressed={fxSelected}
+              onMouseEnter={(event) => {
+                event.currentTarget
+                  .querySelector("video[data-fx-video]")
+                  ?.play()
+                  .catch(() => {});
+              }}
+              onMouseLeave={(event) => {
+                const video = event.currentTarget.querySelector(
+                  "video[data-fx-video]"
+                ) as HTMLVideoElement | null;
+                if (video) video.pause();
+              }}
+              onTouchStart={(event) => {
+                event.currentTarget
+                  .querySelector("video[data-fx-video]")
+                  ?.play()
+                  .catch(() => {});
+              }}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
@@ -572,16 +598,33 @@ export function PricingSection() {
                   : "border-white/10 hover:border-accent/40"
               }`}
             >
-            {/* Aperçu en fond, fané derrière le texte — nette au survol */}
-            <Image
-              src={option.image}
-              alt={`Aperçu : ${option.name}`}
-              fill
-              sizes="(max-width: 768px) 100vw, 33vw"
-              className={`object-cover transition-all duration-700 ease-out group-hover:scale-105 ${
-                fxSelected ? "opacity-40" : "opacity-15 group-hover:opacity-50"
-              }`}
-            />
+            {/* Aperçu en fond, fané derrière le texte — vidéo au survol, sinon image */}
+            {option.video ? (
+              <video
+                src={option.video}
+                poster={option.image}
+                muted
+                loop
+                playsInline
+                preload="none"
+                ref={(el) => {
+                  if (!el) return;
+                  el.dataset.fxVideo = "1";
+                }}
+                className="absolute inset-0 h-full w-full object-cover opacity-15 transition-all duration-700 ease-out group-hover:scale-105 group-hover:opacity-50"
+                style={fxSelected ? { opacity: 0.4 } : undefined}
+              />
+            ) : (
+              <Image
+                src={option.image}
+                alt={`Aperçu : ${option.name}`}
+                fill
+                sizes="(max-width: 768px) 100vw, 33vw"
+                className={`object-cover transition-all duration-700 ease-out group-hover:scale-105 ${
+                  fxSelected ? "opacity-40" : "opacity-15 group-hover:opacity-50"
+                }`}
+              />
+            )}
             <span className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background/90 transition-opacity duration-700 group-hover:opacity-40" />
             <CardHeader className="relative">
               <CardTitle className="text-base">{option.name}</CardTitle>
