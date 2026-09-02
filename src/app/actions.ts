@@ -205,6 +205,7 @@ export async function submitQuoteAndBooking(formData: FormData) {
       customer_phone: customer_phone || null,
       event_type: event_type || null,
       event_location: event_location || null,
+      event_date: event_date || null,
       notes: scheduleNotes || null,
       formula_id: formula.id,
       formula_name: pack_name || formula.name,
@@ -279,7 +280,7 @@ export async function updateQuoteStatus(formData: FormData) {
   if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
-  const allowed = ["nouveau", "contacte", "confirme", "refuse"];
+  const allowed = ["nouveau", "contacte", "confirme", "refuse", "decale"];
   if (!id || !allowed.includes(status)) {
     return { ok: false as const, error: "Statut invalide." };
   }
