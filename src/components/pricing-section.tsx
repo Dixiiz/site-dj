@@ -21,6 +21,10 @@ type Pack = {
   highlight?: "populaire" | "show";
   equipment: string[];
   image: string; // aperçu scénographie (remplaçable via public/images/packs/)
+  baseMinutes: number; // durée de prestation incluse dans le prix de base
+  extraRateCents: number; // tarif horaire au-delà de la base
+  defaultStart: string;
+  defaultEnd: string;
 };
 
 type Category = {
@@ -50,6 +54,10 @@ const CATEGORIES: Category[] = [
         name: "Pack Standard",
         price: 58000,
         image: "/galerie/jeannebastien-1320.jpg",
+        baseMinutes: 360,
+        extraRateCents: 8000,
+        defaultStart: "20:00",
+        defaultEnd: "02:00",
         equipment: [
           "2 Lyres Beam (monotubes)",
           "2 Bars LED",
@@ -61,6 +69,10 @@ const CATEGORIES: Category[] = [
         price: 68000,
         highlight: "populaire",
         image: "/galerie/jeannebastien-1348.jpg",
+        baseMinutes: 360,
+        extraRateCents: 8000,
+        defaultStart: "20:00",
+        defaultEnd: "02:00",
         equipment: [
           "4 Lyres Beam",
           "4 Bars LED",
@@ -86,6 +98,10 @@ const CATEGORIES: Category[] = [
         name: "Pack Essential",
         price: 106000,
         image: "/galerie/gwendoline-remi-soiree-et-diner-210625-13.jpg",
+        baseMinutes: 480,
+        extraRateCents: 12000,
+        defaultStart: "20:00",
+        defaultEnd: "04:00",
         equipment: [
           "2 Lyres Beam (monotubes)",
           "2 Bars LED",
@@ -97,6 +113,10 @@ const CATEGORIES: Category[] = [
         price: 116000,
         highlight: "populaire",
         image: "/galerie/leanivet-clemence-neal-810.jpg",
+        baseMinutes: 480,
+        extraRateCents: 12000,
+        defaultStart: "20:00",
+        defaultEnd: "04:00",
         equipment: [
           "4 Lyres Beam",
           "4 Bars LED",
@@ -109,6 +129,10 @@ const CATEGORIES: Category[] = [
         price: 121000,
         highlight: "show",
         image: "/galerie/manolieraphael-0910.jpg",
+        baseMinutes: 480,
+        extraRateCents: 12000,
+        defaultStart: "20:00",
+        defaultEnd: "04:00",
         equipment: [
           "6 Lyres Beam",
           "2 Lyres Spot",
@@ -135,6 +159,10 @@ const CATEGORIES: Category[] = [
         name: "Set DJ (matériel & son sur place)",
         price: 11000,
         image: "/galerie/dsc-8110.jpg",
+        baseMinutes: 120,
+        extraRateCents: 5500,
+        defaultStart: "20:00",
+        defaultEnd: "22:00",
         equipment: [
           "Minimum 2 h de mix (55 €/h)",
           "Platines DJ + ordinateur portable",
@@ -145,6 +173,10 @@ const CATEGORIES: Category[] = [
         name: "Clé en main Standard",
         price: 37000,
         image: "/galerie/jeannebastien-1367.jpg",
+        baseMinutes: 180,
+        extraRateCents: 9000,
+        defaultStart: "20:00",
+        defaultEnd: "23:00",
         equipment: [
           "Minimum 3 h de mix (90 €/h) + installation 100 €",
           "Régie DJ + Sono Audiophony Modjo2000",
@@ -157,6 +189,10 @@ const CATEGORIES: Category[] = [
         price: 47000,
         highlight: "show",
         image: "/galerie/jeannebastien-1328.jpg",
+        baseMinutes: 180,
+        extraRateCents: 9000,
+        defaultStart: "20:00",
+        defaultEnd: "23:00",
         equipment: [
           "Minimum 3 h de mix (90 €/h) + installation 100 €",
           "Régie DJ + Sono Audiophony Modjo2000",
@@ -340,7 +376,16 @@ export function PricingSection() {
   function choosePack(pack: Pack) {
     setSelectedPack(pack.name);
     window.dispatchEvent(
-      new CustomEvent("propul:select-pack", { detail: { pack: pack.name } })
+      new CustomEvent("propul:select-pack", {
+        detail: {
+          pack: pack.name,
+          priceCents: pack.price,
+          baseMinutes: pack.baseMinutes,
+          extraRateCents: pack.extraRateCents,
+          defaultStart: pack.defaultStart,
+          defaultEnd: pack.defaultEnd,
+        },
+      })
     );
   }
 

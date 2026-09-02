@@ -6,6 +6,11 @@ import { clearAdminSession, isAdmin, setAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateTravelFromAddress } from "@/lib/travel";
 import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
+import { formatEuros } from "@/lib/money";
+
+function formatPrice(cents: number) {
+  return formatEuros(cents);
+}
 
 import type { SelectedOption } from "@/lib/types";
 
@@ -49,12 +54,14 @@ export async function submitQuoteAndBooking(formData: FormData) {
   const event_location = String(formData.get("event_location") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const formula_id = String(formData.get("formula_id") ?? "");
-  const slot_id = String(formData.get("slot_id") ?? "");
+  const pack_name = String(formData.get("pack_name") ?? "").trim();
+  const pack_price_cents = Number(formData.get("pack_price_cents") ?? 0) || 0;
+  const pack_base_minutes = Number(formData.get("pack_base_minutes") ?? 0) || 0;
+  const pack_extra_rate_cents = Number(formData.get("pack_extra_rate_cents") ?? 0) || 0;
   const optionIds = formData.getAll("option_ids").map(String);
   const event_date = String(formData.get("event_date") ?? "").trim();
   const start_time = String(formData.get("start_time") ?? "").trim();
   const end_time = String(formData.get("end_time") ?? "").trim();
-  const extra_hours = Number(formData.get("extra_hours") ?? 0) || 0;
   const travel_distance_km = formData.get("travel_distance_km")
     ? Number(formData.get("travel_distance_km"))
     : null;
@@ -105,36 +112,38 @@ export async function submitQuoteAndBooking(formData: FormData) {
     ? travelResult.estimate.distanceKm
     : travel_distance_km;
 
-  const extra_fee_cents = extra_hours * EXTRA_HOUR_RATE_CENTS;
+  // Prix : le pack choisi prime sur le prix de la formule de base.
+  const packPriceCents = pack_price_cents > 0 ? pack_price_cents : formula.price_cents;
+
+  // Recalcul serveur des heures supplémentaires : durée réelle (fin après minuit
+  // ramenée au lendemain) moins les minutes incluses dans le pack.
+  function toMin(value: string) {
+    const [h, m] = value.split(":").map(Number);
+    return h * 60 + m;
+  }
+  const startMin = toMin(start_time);
+  const endMinRaw = toMin(end_time);
+  const endMin = endMinRaw < 12 * 60 ? endMinRaw + 24 * 60 : endMinRaw;
+  const baseMinutes =
+    pack_base_minutes > 0
+      ? pack_base_minutes
+      : formula.name.toLowerCase().includes("mariage")
+        ? 480
+        : 360;
+  const extraRateCents =
+    pack_extra_rate_cents > 0 ? pack_extra_rate_cents : EXTRA_HOUR_RATE_CENTS;
+  const pastBase = endMin - startMin - baseMinutes;
+  const extra_hours = pastBase > 0 ? Math.ceil(pastBase / 60) : 0;
+  const extra_fee_cents = extra_hours * extraRateCents;
+
   const total_cents =
-    formula.price_cents +
+    packPriceCents +
     selected.reduce((sum, option) => sum + option.price_cents, 0) +
     confirmedTravelFeeCents +
     extra_fee_cents;
 
-  const { data: slot, error: slotError } = await supabase
-    .from("slots")
-    .select("*")
-    .eq("id", slot_id)
-    .eq("is_open", true)
-    .single();
-
-  if (slotError || !slot) {
-    return { ok: false as const, error: "Ce créneau n’est plus disponible. Choisis-en un autre." };
-  }
-
-  const { data: existing } = await supabase
-    .from("bookings")
-    .select("id")
-    .eq("slot_id", slot_id)
-    .neq("status", "annule")
-    .maybeSingle();
-
-  if (existing) {
-    return { ok: false as const, error: "Ce créneau vient d’être réservé. Choisis-en un autre." };
-  }
-
   const scheduleNotes = [
+    `Pack : ${pack_name || formula.name} (${formatPrice(packPriceCents)})`,
     `Date : ${event_date}`,
     `Début : ${start_time}`,
     `Fin : ${end_time}`,
@@ -154,8 +163,8 @@ export async function submitQuoteAndBooking(formData: FormData) {
       event_location: event_location || null,
       notes: scheduleNotes || null,
       formula_id: formula.id,
-      formula_name: formula.name,
-      formula_price_cents: formula.price_cents,
+      formula_name: pack_name || formula.name,
+      formula_price_cents: packPriceCents,
       selected_options: selected,
       travel_distance_km: confirmedTravelDistanceKm,
       travel_fee_cents: confirmedTravelFeeCents,

@@ -46,6 +46,15 @@ function isMariageFormula(name: string) {
   return name.toLowerCase().includes("mariage");
 }
 
+type PackInfo = {
+  name: string;
+  priceCents: number;
+  baseMinutes: number;
+  extraRateCents: number;
+  defaultStart: string;
+  defaultEnd: string;
+};
+
 export function QuoteBookingForm({
   formulas,
   options,
@@ -54,7 +63,7 @@ export function QuoteBookingForm({
   options: QuoteOption[];
 }) {
   const [formulaId, setFormulaId] = useState(formulas[0]?.id ?? "");
-  const [selectedPack, setSelectedPack] = useState<string | null>(null);
+  const [pack, setPack] = useState<PackInfo | null>(null);
   const [notes, setNotes] = useState("");
   const [optionIds, setOptionIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
@@ -72,9 +81,10 @@ export function QuoteBookingForm({
   // Pré-sélection depuis la section "Nos Formules & Tarifs" (bouton d'un pack).
   useEffect(() => {
     function onSelectPack(event: Event) {
-      const packName = (event as CustomEvent<{ pack: string }>).detail?.pack;
+      const detail = (event as CustomEvent<Partial<PackInfo> & { pack?: string }>).detail;
+      const packName = detail?.pack;
       if (!packName) return;
-      const pack = packName.toLowerCase();
+      const packKey = packName.toLowerCase();
       const categoryPatterns: RegExp[] = [
         /set dj|clé en main|bar|club|pro/,
         /mariage|essential|deluxe|ultime/,
@@ -83,18 +93,25 @@ export function QuoteBookingForm({
       const match = formulas.find((formula) => {
         const name = formula.name.toLowerCase();
         return (
-          (categoryPatterns[0].test(pack) && categoryPatterns[0].test(name)) ||
-          (categoryPatterns[1].test(pack) && categoryPatterns[1].test(name)) ||
-          (categoryPatterns[2].test(pack) && categoryPatterns[2].test(name))
+          (categoryPatterns[0].test(packKey) && categoryPatterns[0].test(name)) ||
+          (categoryPatterns[1].test(packKey) && categoryPatterns[1].test(name)) ||
+          (categoryPatterns[2].test(packKey) && categoryPatterns[2].test(name))
         );
       });
       if (match) {
         setFormulaId(match.id);
         setOptionIds([]);
-        setStartTime(isMariageFormula(match.name) ? "14:00" : "17:00");
-        setEndTime("");
       }
-      setSelectedPack(packName);
+      setPack({
+        name: packName,
+        priceCents: detail?.priceCents ?? match?.price_cents ?? 0,
+        baseMinutes: detail?.baseMinutes ?? (isMariageFormula(packName) ? 480 : 360),
+        extraRateCents: detail?.extraRateCents ?? EXTRA_HOUR_RATE_CENTS,
+        defaultStart: detail?.defaultStart ?? "20:00",
+        defaultEnd: detail?.defaultEnd ?? (isMariageFormula(packName) ? "04:00" : "02:00"),
+      });
+      setStartTime(detail?.defaultStart ?? "20:00");
+      setEndTime(detail?.defaultEnd ?? (isMariageFormula(packName) ? "04:00" : "02:00"));
       setNotes((current) =>
         current.includes(packName)
           ? current
@@ -140,15 +157,19 @@ export function QuoteBookingForm({
   const invalidOrder =
     normalizedEndMinutes != null && normalizedEndMinutes <= startMinutes;
 
+  // Le prix du pack couvre baseMinutes de prestation ; chaque heure entamée
+  // au-delà est facturée au tarif horaire du pack.
+  const includedMinutes = pack?.baseMinutes ?? (isMariage ? 480 : 360);
+  const extraRateCents = pack?.extraRateCents ?? EXTRA_HOUR_RATE_CENTS;
   const extraHours = useMemo(() => {
     if (normalizedEndMinutes == null || invalidOrder) return 0;
-    const past = normalizedEndMinutes - cutoffMinutes;
+    const past = normalizedEndMinutes - startMinutes - includedMinutes;
     return past > 0 ? Math.ceil(past / 60) : 0;
-  }, [normalizedEndMinutes, cutoffMinutes, invalidOrder]);
-  const extraFeeCents = extraHours * EXTRA_HOUR_RATE_CENTS;
+  }, [normalizedEndMinutes, startMinutes, includedMinutes, invalidOrder]);
+  const extraFeeCents = extraHours * extraRateCents;
 
   const total =
-    (formula?.price_cents ?? 0) +
+    (pack?.priceCents ?? formula?.price_cents ?? 0) +
     selectedOptions.reduce((sum, option) => sum + option.price_cents, 0) +
     extraFeeCents +
     (travel?.feeCents ?? 0);
@@ -233,6 +254,10 @@ export function QuoteBookingForm({
       <input type="hidden" name="start_time" value={startTime} />
       <input type="hidden" name="end_time" value={endTime} />
       <input type="hidden" name="extra_hours" value={extraHours} />
+      <input type="hidden" name="pack_name" value={pack?.name ?? ""} />
+      <input type="hidden" name="pack_price_cents" value={pack?.priceCents ?? ""} />
+      <input type="hidden" name="pack_base_minutes" value={pack?.baseMinutes ?? ""} />
+      <input type="hidden" name="pack_extra_rate_cents" value={pack?.extraRateCents ?? ""} />
       {optionIds.map((id) => (
         <input key={id} type="hidden" name="option_ids" value={id} />
       ))}
@@ -242,21 +267,21 @@ export function QuoteBookingForm({
       <div className="space-y-6">
         <FadeIn>
           <h2 className="mb-3 text-xl font-medium">1. Votre pack</h2>
-          {selectedPack ? (
+          {pack ? (
             <div className="glow-hover rounded-xl border border-accent/60 bg-primary/10 p-4">
               <div className="flex items-center justify-between gap-2">
                 <p className="font-medium">
                   <span className="mr-2 text-accent">✓</span>
-                  {selectedPack}
+                  {pack.name}
                 </p>
-                <Badge>{formatEuros(formula?.price_cents ?? 0)}</Badge>
+                <Badge>{formatEuros(pack.priceCents)}</Badge>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
                 {formula?.description}
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
-                {formula?.duration_hours} h de prestation — modifiable en cliquant
-                sur un autre pack ci-dessus.
+                {Math.round(pack.baseMinutes / 60)} h de prestation incluses —
+                modifiable en cliquant sur un autre pack ci-dessus.
               </p>
             </div>
           ) : (
@@ -317,7 +342,9 @@ export function QuoteBookingForm({
               <p className="text-sm text-muted-foreground">
                 Disponible 7 jours sur 7, week-end inclus. Départ entre 14 h et 20 h
                 pour les mariages, entre 17 h et 20 h pour les autres événements.
-                Fin au plus tard à {cutoffLabel}, incluse dans la formule choisie.
+                Le prix du pack comprend {Math.round(includedMinutes / 60)} h de
+                prestation ; au-delà, chaque heure entamée est facturée{" "}
+                {formatEuros(extraRateCents)}.
               </p>
               <Calendar
                 mode="single"
@@ -372,8 +399,9 @@ export function QuoteBookingForm({
               ) : extraHours > 0 ? (
                 <p className="text-sm text-accent">
                   ⏱ {extraHours} heure{extraHours > 1 ? "s" : ""} supplémentaire
-                  {extraHours > 1 ? "s" : ""} au-delà de {cutoffLabel} —{" "}
-                  {formatEuros(extraFeeCents)} (inclus dans le devis).
+                  {extraHours > 1 ? "s" : ""} (au-delà des{" "}
+                  {Math.round(includedMinutes / 60)} h incluses) —{" "}
+                  {formatEuros(extraFeeCents)} ajoutés au devis.
                 </p>
               ) : endTime ? (
                 <p className="text-sm text-muted-foreground">
@@ -473,8 +501,8 @@ export function QuoteBookingForm({
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between gap-4">
-              <span>{formula?.name ?? "Formule"}</span>
-              <span>{formatEuros(formula?.price_cents ?? 0)}</span>
+              <span>{pack?.name ?? formula?.name ?? "Formule"}</span>
+              <span>{formatEuros(pack?.priceCents ?? formula?.price_cents ?? 0)}</span>
             </div>
             {selectedOptions.map((option) => (
               <div key={option.id} className="flex justify-between gap-4 text-muted-foreground">
@@ -485,7 +513,7 @@ export function QuoteBookingForm({
             {extraHours > 0 ? (
               <div className="flex justify-between gap-4 text-muted-foreground">
                 <span>
-                  Heures supplémentaires ({extraHours} × {formatEuros(EXTRA_HOUR_RATE_CENTS)})
+                  Heures supplémentaires ({extraHours} × {formatEuros(extraRateCents)})
                 </span>
                 <span>{formatEuros(extraFeeCents)}</span>
               </div>
