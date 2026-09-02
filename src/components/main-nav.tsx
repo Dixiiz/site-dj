@@ -12,6 +12,7 @@ const links = [
   { href: "/sur-mesure", label: "Sur-mesure" },
   { href: "/contact", label: "Contact" },
   { href: "/faq", label: "FAQ" },
+  { href: "/mon-espace", label: "Mon espace" },
 ];
 
 export function MainNav() {
