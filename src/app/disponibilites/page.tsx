@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { FadeIn } from "@/components/fade-in";
+import { ScrollToCurrentMonth } from "@/components/scroll-to-month";
 import { SiteHeader } from "@/components/site-header";
 import Link from "next/link";
 
@@ -70,7 +71,9 @@ export default async function DisponibilitesPage({
   const bookedMap = new Map(booked.map((b) => [b.date, b.label]));
 
   const params = await searchParams;
-  const currentYear = new Date().getFullYear();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
   const years = [currentYear, currentYear + 1, currentYear + 2];
   const selectedYear = years.includes(Number(params.annee))
     ? Number(params.annee)
@@ -86,6 +89,7 @@ export default async function DisponibilitesPage({
     <>
       <SiteHeader />
       <main className="relative mx-auto w-full max-w-5xl px-4 py-10">
+        <ScrollToCurrentMonth />
         <FadeIn>
           <h1 className="text-3xl font-medium tracking-tight">
             Disponibilités
@@ -123,7 +127,14 @@ export default async function DisponibilitesPage({
             const cells = buildMonthGrid(year, month);
             return (
               <FadeIn key={`${year}-${month}`} delay={0.04 * mi}>
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <div
+                  id={
+                    year === currentYear && month === currentMonth
+                      ? "mois-courant"
+                      : undefined
+                  }
+                  className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
+                >
                   <p className="mb-3 text-center font-medium">
                     {MONTH_NAMES[month]} {year}
                   </p>

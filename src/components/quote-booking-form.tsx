@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { format } from "date-fns";
+import { fr as frLocale } from "date-fns/locale";
 import { fr } from "react-day-picker/locale";
 import { toast } from "sonner";
 import { estimateTravelFee, getUnavailableDates, searchAddresses, submitQuoteAndBooking } from "@/app/actions";
@@ -93,6 +96,20 @@ export function QuoteBookingForm({
   const [wantCocktail, setWantCocktail] = useState(false);
   const [travelPending, startTravelTransition] = useTransition();
   const [pending, startTransition] = useTransition();
+
+  // Mini récap flottant : visible quand le grand récapitulatif est hors écran.
+  const recapRef = useRef<HTMLDivElement>(null);
+  const [recapVisible, setRecapVisible] = useState(true);
+  useEffect(() => {
+    const el = recapRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setRecapVisible(entry.isIntersecting),
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Pré-sélection depuis la section "Nos Formules & Tarifs" (bouton d'un pack).
   // Pré-remplissage de la date depuis /disponibilites (?date=YYYY-MM-DD).
@@ -585,7 +602,8 @@ export function QuoteBookingForm({
         </FadeIn>
       </div>
 
-      <FadeIn as="aside" delay={0.2} className="lg:sticky lg:top-6 h-fit">
+      <FadeIn as="aside" delay={0.2} className="lg:sticky lg:top-24 h-fit">
+        <div ref={recapRef}>
         <Card className="border border-accent/20 shadow-[0_0_40px_-15px_var(--accent)]">
           <CardHeader>
             <CardTitle>Récapitulatif</CardTitle>
@@ -643,7 +661,48 @@ export function QuoteBookingForm({
             </Button>
           </CardContent>
         </Card>
+        </div>
       </FadeIn>
+
+      {/* Mini récapitulatif flottant : apparaît quand le récap complet est hors écran. */}
+      <AnimatePresence>
+        {!recapVisible && pack ? (
+          <motion.div
+            initial={{ opacity: 0, y: 32, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: 32, x: "-50%" }}
+            transition={{ duration: 0.35, ease: [0.21, 0.47, 0.32, 0.98] }}
+            className="fixed bottom-4 left-1/2 z-50 w-max max-w-[calc(100vw-1.5rem)]"
+          >
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-full border border-accent/30 bg-background/90 px-5 py-2.5 text-sm shadow-[0_0_40px_-10px_var(--accent)] backdrop-blur-md">
+              <span className="font-medium">{pack.name}</span>
+              {selectedDate ? (
+                <span className="text-muted-foreground">
+                  {format(selectedDate, "d MMM", { locale: frLocale })}
+                </span>
+              ) : null}
+              {selectedOptions.length > 0 ? (
+                <span className="text-muted-foreground">
+                  {selectedOptions.length} option{selectedOptions.length > 1 ? "s" : ""}
+                </span>
+              ) : null}
+              <span className="h-1 w-1 rounded-full bg-accent" />
+              <span className="font-semibold text-accent">{formatEuros(total)}</span>
+              <button
+                type="button"
+                onClick={() =>
+                  document
+                    .getElementById("formulaire-devis")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+                className="rounded-full border border-accent/40 px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/15"
+              >
+                Voir le récap
+              </button>
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </form>
   );
 }
