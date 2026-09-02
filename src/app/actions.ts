@@ -223,6 +223,7 @@ export async function submitQuoteAndBooking(formData: FormData) {
     .single();
 
   if (quoteError || !quote) {
+    console.error("[submitQuote] Erreur Supabase:", quoteError);
     return { ok: false as const, error: "Impossible d’enregistrer le devis. Réessaie dans un instant." };
   }
 
