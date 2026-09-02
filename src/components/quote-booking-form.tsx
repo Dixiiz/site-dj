@@ -604,7 +604,7 @@ export function QuoteBookingForm({
       </div>
 
       <FadeIn as="aside" delay={0.2} className="lg:sticky lg:top-24 h-fit">
-        <div ref={recapRef}>
+        <div id="recap-devis" ref={recapRef} className="scroll-mt-24">
         <Card className="border border-accent/20 shadow-[0_0_40px_-15px_var(--accent)]">
           <CardHeader>
             <CardTitle>Récapitulatif</CardTitle>
@@ -695,7 +695,7 @@ export function QuoteBookingForm({
                 type="button"
                 onClick={() =>
                   document
-                    .getElementById("formulaire-devis")
+                    .getElementById("recap-devis")
                     ?.scrollIntoView({ behavior: "smooth", block: "start" })
                 }
                 className="rounded-full border border-accent/40 px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/15"
