@@ -30,11 +30,17 @@ export default async function ClientQuotePage({
   ]);
 
   const supabase = createAdminClient();
-  const { data: options } = await supabase
+  const { data: allOptions } = await supabase
     .from("options")
     .select("*")
     .eq("is_active", true)
     .order("sort_order");
+
+  // Seules les vraies options FX sont modifiables par le client
+  // (fumée lourde, étincelles froides, pistolet CO2).
+  const options = (allOptions ?? []).filter((option) =>
+    /fumée|fumee|étincelles|etincelles|co2/i.test(option.name)
+  );
 
   const selectedOptions = (quote.selected_options ?? []) as SelectedOption[];
   const editable = optionsEditable(quote.status);

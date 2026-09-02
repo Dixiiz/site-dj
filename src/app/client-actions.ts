@@ -244,6 +244,49 @@ export async function getAdminPlaylist() {
   return data ?? [];
 }
 
+// ---------- Recherche de titres (suggestions iTunes) ----------
+
+export type TrackSuggestion = {
+  key: string;
+  title: string;
+  artist: string;
+  previewUrl: string | null;
+  artworkUrl: string | null;
+};
+
+export async function searchTrackSuggestions(
+  term: string
+): Promise<TrackSuggestion[]> {
+  const query = term.trim();
+  if (query.length < 3) return [];
+  try {
+    const res = await fetch(
+      `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=6`,
+      { cache: "no-store" }
+    );
+    if (!res.ok) return [];
+    const json = (await res.json()) as {
+      results?: {
+        trackName?: string;
+        artistName?: string;
+        previewUrl?: string;
+        artworkUrl100?: string;
+      }[];
+    };
+    return (json.results ?? [])
+      .filter((r) => r.trackName)
+      .map((r, i) => ({
+        key: `${r.trackName}-${i}`,
+        title: r.trackName ?? "",
+        artist: r.artistName ?? "",
+        previewUrl: r.previewUrl ?? null,
+        artworkUrl: r.artworkUrl100 ?? null,
+      }));
+  } catch {
+    return [];
+  }
+}
+
 export async function addPlaylistTrack(formData: FormData) {
   const quoteId = String(formData.get("quote_id") ?? "");
   const moment = String(formData.get("moment") ?? "").trim();
@@ -257,24 +300,27 @@ export async function addPlaylistTrack(formData: FormData) {
   const { user } = await getOwnedQuote(quoteId);
   if (!user) return;
 
-  // Recherche d'un extrait audio + pochette via l'API iTunes (gratuite, sans clé).
-  let previewUrl: string | null = null;
-  let artworkUrl: string | null = null;
-  try {
-    const term = [title, artist].filter(Boolean).join(" ");
-    const res = await fetch(
-      `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&limit=1`,
-      { cache: "no-store" }
-    );
-    if (res.ok) {
-      const json = (await res.json()) as {
-        results?: { previewUrl?: string; artworkUrl100?: string }[];
-      };
-      previewUrl = json.results?.[0]?.previewUrl ?? null;
-      artworkUrl = json.results?.[0]?.artworkUrl100 ?? null;
+  // Extrait + pochette : fournis par la suggestion sélectionnée, sinon
+  // recherche via l'API iTunes (gratuite, sans clé).
+  let previewUrl = String(formData.get("preview_url") ?? "") || null;
+  let artworkUrl = String(formData.get("artwork_url") ?? "") || null;
+  if (!previewUrl) {
+    try {
+      const term = [title, artist].filter(Boolean).join(" ");
+      const res = await fetch(
+        `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&limit=1`,
+        { cache: "no-store" }
+      );
+      if (res.ok) {
+        const json = (await res.json()) as {
+          results?: { previewUrl?: string; artworkUrl100?: string }[];
+        };
+        previewUrl = json.results?.[0]?.previewUrl ?? null;
+        artworkUrl = json.results?.[0]?.artworkUrl100 ?? null;
+      }
+    } catch {
+      // Pas d'extrait trouvé : la musique est quand même enregistrée.
     }
-  } catch {
-    // Pas d'extrait trouvé : la musique est quand même enregistrée.
   }
 
   const supabase = createAdminClient();
