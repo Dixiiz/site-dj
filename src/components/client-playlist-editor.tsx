@@ -52,13 +52,13 @@ export function ClientPlaylistEditor({
 
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
-    if (query.trim().length < 3) {
-      setSuggestions([]);
-      setSearching(false);
-      return;
-    }
-    setSearching(true);
     searchTimer.current = setTimeout(async () => {
+      if (query.trim().length < 3) {
+        setSuggestions([]);
+        setSearching(false);
+        return;
+      }
+      setSearching(true);
       const results = await searchTrackSuggestions(query);
       setSuggestions(results);
       setSearching(false);
