@@ -569,8 +569,11 @@ export function PricingSection() {
               tabIndex={0}
               aria-pressed={fxSelected}
               onMouseEnter={(event) => {
-                event.currentTarget
-                  .querySelector("video[data-fx-video]")
+                (
+                  event.currentTarget.querySelector(
+                    "video[data-fx-video]"
+                  ) as HTMLVideoElement | null
+                )
                   ?.play()
                   .catch(() => {});
               }}
@@ -581,8 +584,11 @@ export function PricingSection() {
                 if (video) video.pause();
               }}
               onTouchStart={(event) => {
-                event.currentTarget
-                  .querySelector("video[data-fx-video]")
+                (
+                  event.currentTarget.querySelector(
+                    "video[data-fx-video]"
+                  ) as HTMLVideoElement | null
+                )
                   ?.play()
                   .catch(() => {});
               }}
