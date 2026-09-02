@@ -48,7 +48,7 @@ const CATEGORIES: Category[] = [
       {
         name: "Pack Standard",
         price: 58000,
-        image: "/galerie/5.jpg",
+        image: "/galerie/standard.jpg",
         baseMinutes: 360,
         extraRateCents: 8000,
         defaultStart: "20:00",
@@ -63,7 +63,7 @@ const CATEGORIES: Category[] = [
         name: "Pack Premium",
         price: 68000,
         highlight: "populaire",
-        image: "/galerie/4.jpg",
+        image: "/galerie/Premium.jpg",
         baseMinutes: 360,
         extraRateCents: 8000,
         defaultStart: "20:00",
@@ -93,7 +93,7 @@ const CATEGORIES: Category[] = [
       {
         name: "Pack Essential",
         price: 106000,
-        image: "/galerie/gwendoline-remi-soiree-et-diner-210625-13.jpg",
+        image: "/galerie/5.jpg",
         baseMinutes: 480,
         extraRateCents: 12000,
         defaultStart: "20:00",
@@ -108,7 +108,7 @@ const CATEGORIES: Category[] = [
         name: "Pack Deluxe",
         price: 116000,
         highlight: "populaire",
-        image: "/galerie/leanivet-clemence-neal-810.jpg",
+        image: "/galerie/4.jpg",
         baseMinutes: 480,
         extraRateCents: 12000,
         defaultStart: "20:00",
@@ -155,7 +155,7 @@ const CATEGORIES: Category[] = [
       {
         name: "Set DJ (matériel & son sur place)",
         price: 11000,
-        image: "/galerie/4.jpg",
+        image: "/galerie/setdj.jpg",
         baseMinutes: 120,
         extraRateCents: 5500,
         defaultStart: "20:00",
@@ -169,7 +169,7 @@ const CATEGORIES: Category[] = [
       {
         name: "Clé en main Standard",
         price: 37000,
-        image: "/galerie/jeannebastien-1367.jpg",
+        image: "/galerie/cle.jpg",
         baseMinutes: 180,
         extraRateCents: 9000,
         defaultStart: "20:00",
