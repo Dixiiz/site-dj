@@ -45,7 +45,8 @@ export function ClientPlaylistEditor({
   const [suggestions, setSuggestions] = useState<TrackSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selected, setSelected] = useState<TrackSuggestion | null>(null);
+  const [moment, setMoment] = useState(PLAYLIST_MOMENTS[0]);
+  const [kind, setKind] = useState<"souhait" | "blacklist">("souhait");
   const [previewing, setPreviewing] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -83,14 +84,29 @@ export function ClientPlaylistEditor({
     audio.onended = () => setPreviewing(null);
   }
 
-  function chooseSuggestion(suggestion: TrackSuggestion) {
-    setSelected(suggestion);
-    setQuery(suggestion.title);
-    setShowSuggestions(false);
+  // Ajout en un clic sur la suggestion (avec le temps fort et le type choisis).
+  function addSuggestion(suggestion: TrackSuggestion) {
+    const formData = new FormData();
+    formData.set("quote_id", quoteId);
+    formData.set("moment", moment);
+    formData.set("title", suggestion.title);
+    formData.set("artist", suggestion.artist);
+    formData.set("kind", kind);
+    if (suggestion.previewUrl) formData.set("preview_url", suggestion.previewUrl);
+    if (suggestion.artworkUrl) formData.set("artwork_url", suggestion.artworkUrl);
+    startAdd(async () => void (await addPlaylistTrack(formData)));
+    setQuery("");
     setSuggestions([]);
+    setShowSuggestions(false);
   }
 
-  const wishes = tracks.filter((t) => t.kind === "souhait");
+  function removeTrack(trackId: string) {
+    const formData = new FormData();
+    formData.set("quote_id", quoteId);
+    formData.set("track_id", trackId);
+    startRemove(async () => void (await removePlaylistTrack(formData)));
+  }
+
   const blacklist = tracks.filter((t) => t.kind === "blacklist");
 
   return (
@@ -101,43 +117,61 @@ export function ClientPlaylistEditor({
         puis ajoutez.
       </p>
 
-      {/* Ajout */}
-      <form
-        action={(formData) => {
-          startAdd(async () => void (await addPlaylistTrack(formData)));
-          setSelected(null);
-          setQuery("");
-        }}
-        className="mt-4 grid gap-3 sm:grid-cols-2"
-      >
-        <input type="hidden" name="quote_id" value={quoteId} />
-        <input type="hidden" name="preview_url" value={selected?.previewUrl ?? ""} />
-        <input type="hidden" name="artwork_url" value={selected?.artworkUrl ?? ""} />
-        <input type="hidden" name="artist" value={selected?.artist ?? ""} />
+      {/* Choix du contexte d'ajout */}
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="kind">Type d&apos;ajout</Label>
+          <select
+            id="kind"
+            value={kind}
+            onChange={(e) => setKind(e.target.value === "blacklist" ? "blacklist" : "souhait")}
+            className="w-full rounded-md border border-white/10 bg-background px-3 py-2 text-sm"
+          >
+            <option value="souhait">Souhait (à passer)</option>
+            <option value="blacklist">À ne PAS passer</option>
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="moment">Temps fort</Label>
+          <select
+            id="moment"
+            value={moment}
+            onChange={(e) => setMoment(e.target.value)}
+            className="w-full rounded-md border border-white/10 bg-background px-3 py-2 text-sm"
+          >
+            {PLAYLIST_MOMENTS.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <div className="relative sm:col-span-2">
-          <Label htmlFor="title">Titre *</Label>
+        {/* Recherche : un clic sur une suggestion l'ajoute directement */}
+        <div
+          className="relative sm:col-span-2"
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              setShowSuggestions(false);
+            }
+          }}
+        >
+          <Label htmlFor="title">Titre</Label>
           <div className="relative">
             <Input
               id="title"
-              name="title"
-              required
               value={query}
               autoComplete="off"
               inputMode="search"
-              placeholder="Ex : Can't Help Falling in Love"
+              placeholder="Tapez un titre…"
               className="pr-10"
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setSelected(null);
-              }}
+              onChange={(e) => setQuery(e.target.value)}
               onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               onKeyDown={(e) => {
                 if (e.key === "Escape") setShowSuggestions(false);
               }}
             />
-            {query && !selected ? (
+            {query && !pendingAdd ? (
               <button
                 type="button"
                 aria-label="Effacer la recherche"
@@ -154,9 +188,9 @@ export function ClientPlaylistEditor({
           </div>
 
           {showSuggestions && (searching || suggestions.length > 0) ? (
-            <ul className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-lg border border-white/10 bg-background shadow-xl">
+            <ul className="absolute inset-x-0 top-full z-20 mt-1 max-h-80 overflow-y-auto rounded-lg border border-white/10 bg-background shadow-xl">
               {searching ? (
-                <li className="px-3 py-2 text-sm text-muted-foreground">Recherche…</li>
+                <li className="px-3 py-2.5 text-sm text-muted-foreground">Recherche…</li>
               ) : null}
               {suggestions.map((suggestion) => (
                 <li
@@ -173,127 +207,79 @@ export function ClientPlaylistEditor({
                       className="h-9 w-9 shrink-0 rounded-md object-cover"
                     />
                   ) : null}
-                  <div className="min-w-0 flex-1 basis-40">
-                    <p className="truncate text-sm font-medium">{suggestion.title}</p>
+                  {/* Clic sur le nom = ajout direct dans la catégorie choisie */}
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => addSuggestion(suggestion)}
+                    disabled={pendingAdd}
+                    className="min-w-0 flex-1 basis-40 rounded-md py-0.5 text-left transition-colors hover:text-accent"
+                    title={`Ajouter « ${suggestion.title} » — ${moment}`}
+                  >
+                    <p className="truncate text-sm font-medium underline decoration-accent/40 underline-offset-2">
+                      {suggestion.title}
+                      {pendingAdd ? (
+                        <span className="ml-2 text-xs font-normal text-accent">Ajout…</span>
+                      ) : null}
+                    </p>
                     <p className="truncate text-xs text-muted-foreground">{suggestion.artist}</p>
-                  </div>
+                  </button>
                   <div className="flex shrink-0 items-center gap-2">
                     {suggestion.previewUrl ? (
                       <button
                         type="button"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => playPreview(suggestion.previewUrl, suggestion.key)}
                         className="rounded-full border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
                       >
                         {previewing === suggestion.key ? "■ Stop" : "▶ Écouter"}
                       </button>
                     ) : null}
-                    <button
-                      type="button"
-                      onClick={() => chooseSuggestion(suggestion)}
-                      className="rounded-full bg-accent/15 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/25"
-                    >
-                      Choisir
-                    </button>
                   </div>
                 </li>
               ))}
             </ul>
           ) : null}
-
-          {selected ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-sm sm:gap-3">
-              {selected.artworkUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={selected.artworkUrl}
-                  alt=""
-                  width={36}
-                  height={36}
-                  className="h-9 w-9 shrink-0 rounded-md object-cover"
-                />
-              ) : null}
-              <div className="min-w-0 flex-1 basis-40">
-                <p className="truncate font-medium">{selected.title}</p>
-                <p className="truncate text-xs text-muted-foreground">{selected.artist}</p>
-              </div>
-              {selected.previewUrl ? (
-                <button
-                  type="button"
-                  onClick={() => playPreview(selected.previewUrl, selected.key)}
-                  className="shrink-0 rounded-full border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
-                >
-                  {previewing === selected.key ? "■ Stop" : "▶ Réécouter"}
-                </button>
-              ) : null}
-            </div>
-          ) : null}
         </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="kind">Type</Label>
-          <select
-            id="kind"
-            name="kind"
-            className="w-full rounded-md border border-white/10 bg-background px-3 py-2 text-sm"
-          >
-            <option value="souhait">Souhait (à passer)</option>
-            <option value="blacklist">À ne PAS passer</option>
-          </select>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="moment">Temps fort</Label>
-          <select
-            id="moment"
-            name="moment"
-            className="w-full rounded-md border border-white/10 bg-background px-3 py-2 text-sm"
-          >
-            {PLAYLIST_MOMENTS.map((moment) => (
-              <option key={moment} value={moment}>
-                {moment}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="sm:col-span-2">
-          <Button type="submit" size="sm" disabled={pendingAdd || !selected}>
-            {pendingAdd ? "Ajout…" : "Ajouter à ma playlist"}
-          </Button>
-          {!selected ? (
-            <span className="ml-3 text-xs text-muted-foreground">
-              Choisissez une suggestion pour activer l&apos;ajout
-            </span>
-          ) : null}
-        </div>
-      </form>
-
-      {/* Souhaits */}
-      <div className="mt-6">
-        <h3 className="text-sm font-medium text-accent">
-          Mes souhaits ({wishes.length})
-        </h3>
-        <ul className="mt-2 space-y-2">
-          {wishes.length === 0 ? (
-            <li className="text-sm text-muted-foreground">Aucun souhait pour le moment.</li>
-          ) : null}
-          {wishes.map((track) => (
-            <TrackRow key={track.id} track={track} quoteId={quoteId} onRemove={startRemove} />
-          ))}
-        </ul>
       </div>
 
-      {/* Blacklist */}
-      <div className="mt-6">
-        <h3 className="text-sm font-medium text-red-400">
-          À ne PAS passer ({blacklist.length})
-        </h3>
-        <ul className="mt-2 space-y-2">
-          {blacklist.length === 0 ? (
-            <li className="text-sm text-muted-foreground">Aucune musique blacklistée.</li>
-          ) : null}
-          {blacklist.map((track) => (
-            <TrackRow key={track.id} track={track} quoteId={quoteId} onRemove={startRemove} />
-          ))}
-        </ul>
+      {/* Catégories par temps fort */}
+      <div className="mt-8 space-y-6">
+        {PLAYLIST_MOMENTS.map((m) => {
+          const momentTracks = tracks.filter((t) => t.kind === "souhait" && t.moment === m);
+          if (momentTracks.length === 0) return null;
+          return (
+            <div key={m}>
+              <h3 className="text-sm font-medium text-accent">
+                {m} <span className="text-muted-foreground">({momentTracks.length})</span>
+              </h3>
+              <ul className="mt-2 space-y-2">
+                {momentTracks.map((track) => (
+                  <TrackRow key={track.id} track={track} onRemove={() => removeTrack(track.id)} />
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+
+        {blacklist.length > 0 ? (
+          <div>
+            <h3 className="text-sm font-medium text-red-400">
+              À ne PAS passer ({blacklist.length})
+            </h3>
+            <ul className="mt-2 space-y-2">
+              {blacklist.map((track) => (
+                <TrackRow key={track.id} track={track} onRemove={() => removeTrack(track.id)} />
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {tracks.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Aucune musique pour le moment — ajoutez votre premier titre ci-dessus.
+          </p>
+        ) : null}
       </div>
     </section>
   );
@@ -301,12 +287,10 @@ export function ClientPlaylistEditor({
 
 function TrackRow({
   track,
-  quoteId,
   onRemove,
 }: {
   track: Track;
-  quoteId: string;
-  onRemove: (cb: () => Promise<void>) => void;
+  onRemove: () => void;
 }) {
   return (
     <li className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm sm:gap-3">
@@ -335,12 +319,7 @@ function TrackRow({
           className="h-8 w-full min-w-0 sm:w-44"
         />
       ) : null}
-      <form
-        action={(formData) => onRemove(async () => void (await removePlaylistTrack(formData)))}
-        className="ml-auto sm:ml-0"
-      >
-        <input type="hidden" name="quote_id" value={quoteId} />
-        <input type="hidden" name="track_id" value={track.id} />
+      <form action={onRemove} className="ml-auto sm:ml-0">
         <Button type="submit" variant="outline" size="sm">
           Retirer
         </Button>
