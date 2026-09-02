@@ -529,7 +529,7 @@ export function QuoteBookingForm({
         </FadeIn>
 
         <FadeIn delay={0.15} className="grid gap-3 sm:grid-cols-2">
-          <h2 className="sm:col-span-2 text-xl font-medium">Tes coordonnées</h2>
+          <h2 className="sm:col-span-2 text-xl font-medium">Mes coordonnées</h2>
           <div className="space-y-1.5">
             <Label htmlFor="customer_name">Nom</Label>
             <Input id="customer_name" name="customer_name" required />
@@ -611,9 +611,6 @@ export function QuoteBookingForm({
             >
               {pending ? "Enregistrement…" : "Envoyer ma demande de devis"}
             </Button>
-            <p className="text-xs text-muted-foreground">
-              Tu pourras modifier formules et prix plus tard dans Supabase.
-            </p>
           </CardContent>
         </Card>
       </FadeIn>
