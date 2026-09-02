@@ -95,6 +95,15 @@ export function QuoteBookingForm({
   const [pending, startTransition] = useTransition();
 
   // Pré-sélection depuis la section "Nos Formules & Tarifs" (bouton d'un pack).
+  // Pré-remplissage de la date depuis /disponibilites (?date=YYYY-MM-DD).
+  useEffect(() => {
+    const iso = new URLSearchParams(window.location.search).get("date");
+    if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+    const d = new Date(`${iso}T12:00:00`);
+    if (!Number.isNaN(d.getTime())) setSelectedDate(d);
+  }, []);
+
+  // Pré-sélection depuis la section "Nos Formules & Tarifs" (bouton d'un pack).
   useEffect(() => {
     function onSelectPack(event: Event) {
       const detail = (event as CustomEvent<Partial<PackInfo> & { pack?: string }>).detail;

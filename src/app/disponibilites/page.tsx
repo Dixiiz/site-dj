@@ -139,17 +139,27 @@ export default async function DisponibilitesPage({
                       const isBooked = bookedMap.has(iso);
                       const isPast = iso < todayIso;
                       const isToday = iso === todayIso;
+                      if (!isBooked && !isPast) {
+                        return (
+                          <Link
+                            key={i}
+                            href={`/formules?date=${iso}`}
+                            title="Réserver cette date — créer un devis"
+                            className={`flex h-8 items-center justify-center rounded-md transition-colors hover:bg-accent/20 hover:font-medium ${
+                              isToday ? "border border-accent/50" : ""
+                            }`}
+                          >
+                            {day}
+                          </Link>
+                        );
+                      }
                       return (
                         <span
                           key={i}
                           className={`flex h-8 items-center justify-center rounded-md ${
                             isBooked
                               ? "bg-destructive/20 font-semibold text-destructive line-through"
-                              : isPast
-                                ? "text-muted-foreground/30"
-                                : isToday
-                                  ? "border border-accent/50"
-                                  : ""
+                              : "text-muted-foreground/30"
                           }`}
                         >
                           {day}
