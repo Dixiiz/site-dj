@@ -97,9 +97,10 @@ export function QuoteBookingForm({
   const [travelPending, startTravelTransition] = useTransition();
   const [pending, startTransition] = useTransition();
 
-  // Mini récap flottant : visible quand le grand récapitulatif est hors écran.
+  // Mini récap flottant : visible dès qu'une sélection est faite,
+  // tant que le grand récapitulatif n'est pas à l'écran.
   const recapRef = useRef<HTMLDivElement>(null);
-  const [recapVisible, setRecapVisible] = useState(true);
+  const [recapVisible, setRecapVisible] = useState(false);
   useEffect(() => {
     const el = recapRef.current;
     if (!el) return;
@@ -666,7 +667,7 @@ export function QuoteBookingForm({
 
       {/* Mini récapitulatif flottant : apparaît quand le récap complet est hors écran. */}
       <AnimatePresence>
-        {!recapVisible && pack ? (
+        {!recapVisible && (pack || selectedOptions.length > 0) ? (
           <motion.div
             initial={{ opacity: 0, y: 32, x: "-50%" }}
             animate={{ opacity: 1, y: 0, x: "-50%" }}
@@ -675,7 +676,9 @@ export function QuoteBookingForm({
             className="fixed bottom-4 left-1/2 z-50 w-max max-w-[calc(100vw-1.5rem)]"
           >
             <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-full border border-accent/30 bg-background/90 px-5 py-2.5 text-sm shadow-[0_0_40px_-10px_var(--accent)] backdrop-blur-md">
-              <span className="font-medium">{pack.name}</span>
+              <span className="font-medium">
+                {pack?.name ?? (selectedOptions.length > 0 ? "Votre sélection" : "Devis")}
+              </span>
               {selectedDate ? (
                 <span className="text-muted-foreground">
                   {format(selectedDate, "d MMM", { locale: frLocale })}
