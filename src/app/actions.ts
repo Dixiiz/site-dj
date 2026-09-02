@@ -25,6 +25,7 @@ async function sendQuoteNotification(lines: string[]) {
     const resend = new Resend(RESEND_API_KEY);
     await resend.emails.send({
       from: "Propul'Sound DJ <contact@propulsounddj.fr>",
+      reply_to: NOTIF_EMAIL,
       to: NOTIF_EMAIL,
       subject: "🎧 Nouveau devis reçu",
       text: lines.join("\n"),
