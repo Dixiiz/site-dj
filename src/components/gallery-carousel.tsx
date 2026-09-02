@@ -23,11 +23,11 @@ export function GalleryCarousel({ photos }: { photos: string[] }) {
   }, []);
 
   const next = useCallback(() => {
-    setIndex((i) => (i + 1) % photos.length);
+    setRawIndex((i) => (i + 1) % photos.length);
   }, [photos.length]);
 
   const prev = useCallback(() => {
-    setIndex((i) => (i - 1 + photos.length) % photos.length);
+    setRawIndex((i) => (i - 1 + photos.length) % photos.length);
   }, [photos.length]);
 
   useEffect(() => {
