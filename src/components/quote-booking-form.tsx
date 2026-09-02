@@ -172,7 +172,7 @@ export function QuoteBookingForm({
   // Heure de fin incluse dans le forfait : 03:00 (anniversaire) ou 04:00 (mariage).
   // Le seuil est toujours après minuit : on le ramène lui aussi après 20 h (jour suivant).
   const isMariage = pack
-    ? isMariageFormula(pack.name)
+    ? pack.baseMinutes >= 480 || isMariageFormula(pack.name)
     : (formula?.name.toLowerCase().includes("mariage") ?? false);
   const isBarClub = pack
     ? /set dj|clé en main|bar|club|pro/i.test(pack.name)
