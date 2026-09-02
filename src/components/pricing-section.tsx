@@ -515,27 +515,24 @@ export function PricingSection() {
       </p>
       <div className="mt-6 grid gap-5 sm:grid-cols-3">
         {FX_OPTIONS.map((option) => (
-          <Card key={option.name} className="overflow-hidden border-white/10">
-            <div className="relative aspect-video w-full overflow-hidden">
-              <Image
-                src={option.image}
-                alt={`Aperçu : ${option.name}`}
-                fill
-                sizes="(max-width: 768px) 100vw, 33vw"
-                className="object-cover"
-              />
-              <span className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
-              <span className="absolute bottom-2 left-3 rounded-full bg-accent/90 px-2.5 py-0.5 text-xs font-semibold text-background">
-                {option.badge}
-              </span>
-            </div>
-            <CardHeader>
+          <Card key={option.name} className="group relative overflow-hidden border-white/10">
+            {/* Aperçu en fond, fané derrière le texte — nette au survol */}
+            <Image
+              src={option.image}
+              alt={`Aperçu : ${option.name}`}
+              fill
+              sizes="(max-width: 768px) 100vw, 33vw"
+              className="object-cover opacity-15 transition-all duration-700 ease-out group-hover:scale-105 group-hover:opacity-50"
+            />
+            <span className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background/90 transition-opacity duration-700 group-hover:opacity-40" />
+            <CardHeader className="relative">
               <CardTitle className="text-base">{option.name}</CardTitle>
               <CardDescription className="text-sm">{option.detail}</CardDescription>
             </CardHeader>
-            <CardContent className="flex items-center justify-between gap-3">
+            <CardContent className="relative flex items-center justify-between gap-3">
               <div>
                 <p className="text-xl font-semibold">{formatEuros(option.price)}</p>
+                <p className="text-xs text-accent">{option.badge}</p>
               </div>
               <Button
                 variant="outline"
