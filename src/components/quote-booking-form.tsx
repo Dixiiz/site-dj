@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { format } from "date-fns";
 import { fr as frLocale } from "date-fns/locale";
@@ -96,6 +97,11 @@ export function QuoteBookingForm({
   const [wantCocktail, setWantCocktail] = useState(false);
   const [travelPending, startTravelTransition] = useTransition();
   const [pending, startTransition] = useTransition();
+
+  // Le mini récap est rendu dans un portail : il ne doit apparaître qu'après
+  // le montage (document.body n'existe pas côté serveur).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // Mini récap flottant : visible dès qu'une sélection est faite,
   // tant que le grand récapitulatif n'est pas à l'écran.
@@ -667,47 +673,52 @@ export function QuoteBookingForm({
         </div>
       </FadeIn>
 
-      {/* Mini récapitulatif flottant : apparaît quand le récap complet est hors écran. */}
-      <AnimatePresence>
-        {!recapVisible && (pack || selectedOptions.length > 0) ? (
-          <motion.div
-            initial={{ opacity: 0, y: 32, x: "-50%" }}
-            animate={{ opacity: 1, y: 0, x: "-50%" }}
-            exit={{ opacity: 0, y: 32, x: "-50%" }}
-            transition={{ duration: 0.35, ease: [0.21, 0.47, 0.32, 0.98] }}
-            className="fixed bottom-4 left-1/2 z-50 w-max max-w-[calc(100vw-1.5rem)]"
-          >
-            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-full border border-accent/30 bg-background/90 px-5 py-2.5 text-sm shadow-[0_0_40px_-10px_var(--accent)] backdrop-blur-md">
-              <span className="font-medium">
-                {pack?.name ?? (selectedOptions.length > 0 ? "Votre sélection" : "Devis")}
-              </span>
-              {selectedDate ? (
-                <span className="text-muted-foreground">
-                  {format(selectedDate, "d MMM", { locale: frLocale })}
-                </span>
-              ) : null}
-              {selectedOptions.length > 0 ? (
-                <span className="text-muted-foreground">
-                  {selectedOptions.length} option{selectedOptions.length > 1 ? "s" : ""}
-                </span>
-              ) : null}
-              <span className="h-1 w-1 rounded-full bg-accent" />
-              <span className="font-semibold text-accent">{formatEuros(total)}</span>
-              <button
-                type="button"
-                onClick={() =>
-                  document
-                    .getElementById("recap-devis")
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                }
-                className="rounded-full border border-accent/40 px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/15"
+      {/* Mini récapitulatif flottant, rendu hors du FadeIn parent (sinon il
+          hérite de son opacité 0 tant que la page n'a pas été défilée). */}
+      {mounted &&
+        createPortal(
+          <AnimatePresence>
+            {!recapVisible && (pack || selectedOptions.length > 0) ? (
+              <motion.div
+                initial={{ opacity: 0, y: 32, x: "-50%" }}
+                animate={{ opacity: 1, y: 0, x: "-50%" }}
+                exit={{ opacity: 0, y: 32, x: "-50%" }}
+                transition={{ duration: 0.35, ease: [0.21, 0.47, 0.32, 0.98] }}
+                className="fixed bottom-4 left-1/2 z-50 w-max max-w-[calc(100vw-1.5rem)]"
               >
-                Voir le récap
-              </button>
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-full border border-accent/30 bg-background/90 px-5 py-2.5 text-sm shadow-[0_0_40px_-10px_var(--accent)] backdrop-blur-md">
+                  <span className="font-medium">
+                    {pack?.name ?? (selectedOptions.length > 0 ? "Votre sélection" : "Devis")}
+                  </span>
+                  {selectedDate ? (
+                    <span className="text-muted-foreground">
+                      {format(selectedDate, "d MMM", { locale: frLocale })}
+                    </span>
+                  ) : null}
+                  {selectedOptions.length > 0 ? (
+                    <span className="text-muted-foreground">
+                      {selectedOptions.length} option{selectedOptions.length > 1 ? "s" : ""}
+                    </span>
+                  ) : null}
+                  <span className="h-1 w-1 rounded-full bg-accent" />
+                  <span className="font-semibold text-accent">{formatEuros(total)}</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      document
+                        .getElementById("recap-devis")
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                    }
+                    className="rounded-full border border-accent/40 px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/15"
+                  >
+                    Voir le récap
+                  </button>
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>,
+          document.body
+        )}
     </form>
   );
 }
