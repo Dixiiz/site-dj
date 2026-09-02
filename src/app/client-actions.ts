@@ -132,8 +132,8 @@ export async function sendQuoteMessage(formData: FormData) {
   const body = String(formData.get("body") ?? "").trim();
   if (!quoteId || !body) return;
 
-  const { user } = await getOwnedQuote(quoteId);
-  if (!user) return;
+  const { user, quote } = await getOwnedQuote(quoteId);
+  if (!user || !quote) return;
 
   const supabase = createAdminClient();
   await supabase.from("quote_messages").insert({
@@ -143,8 +143,82 @@ export async function sendQuoteMessage(formData: FormData) {
     body,
   });
 
+  // Notification e-mail à l'admin (best effort).
+  try {
+    const { Resend } = await import("resend");
+    const apiKey = process.env.RESEND_API_KEY;
+    const to = process.env.NOTIF_EMAIL;
+    if (apiKey && to) {
+      const resend = new Resend(apiKey);
+      await resend.emails.send({
+        from: "Propul'Sound DJ <contact@propulsounddj.fr>",
+        replyTo: user.email ?? undefined,
+        to,
+        subject: `💬 Nouveau message client — ${quote.formula_name}`,
+        text: `Message de ${quote.customer_name} (${quote.event_date ?? "date à définir"}) :\n\n${body}\n\nRépondre : /admin/messages`,
+      });
+    }
+  } catch (err) {
+    console.error("[notif] Echec envoi e-mail message client:", err);
+  }
+
   revalidatePath(`/mon-espace/devis/${quoteId}`);
 }
+
+// ---------- Côté admin ----------
+
+export async function getAdminThreads() {
+  const supabase = createAdminClient();
+  const { data: messages } = await supabase
+    .from("quote_messages")
+    .select("id, quote_id, sender, body, created_at")
+    .order("created_at", { ascending: true });
+
+  if (!messages || messages.length === 0) return [];
+
+  const quoteIds = [...new Set(messages.map((m) => m.quote_id))];
+  const { data: quotes } = await supabase
+    .from("quotes")
+    .select("id, customer_name, formula_name, event_date, customer_email")
+    .in("id", quoteIds);
+
+  const quoteMap = new Map((quotes ?? []).map((q) => [q.id, q]));
+  return messages.map((m) => ({ ...m, quote: quoteMap.get(m.quote_id) ?? null }));
+}
+
+export async function sendAdminMessage(formData: FormData) {
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const body = String(formData.get("body") ?? "").trim();
+  if (!quoteId || !body) return;
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("customer_email")
+    .eq("id", quoteId)
+    .single();
+
+  // Le user_id de référence : le propriétaire du devis (client).
+  const { data: firstMessage } = await supabase
+    .from("quote_messages")
+    .select("user_id")
+    .eq("quote_id", quoteId)
+    .limit(1)
+    .single();
+
+  if (!quote?.customer_email || !firstMessage?.user_id) return;
+
+  await supabase.from("quote_messages").insert({
+    quote_id: quoteId,
+    user_id: firstMessage.user_id,
+    sender: "admin",
+    body,
+  });
+
+  revalidatePath("/admin/messages");
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+}
+
 
 // ---------- Playlist : souhaits par temps fort + blacklist ----------
 
