@@ -40,6 +40,7 @@ function toMinutes(time: string) {
 const END_TIMES = [
   "23:00", "23:30", "00:00", "00:30", "01:00", "01:30",
   "02:00", "02:30", "03:00", "03:30", "04:00", "04:30", "05:00",
+  "05:30", "06:00",
 ];
 
 function isMariageFormula(name: string) {
@@ -181,7 +182,7 @@ export function QuoteBookingForm({
   const cutoffMinutes = toMinutes(cutoffLabel) + 24 * 60;
   // Départ dès 14 h pour les mariages, 17 h pour le reste (20 h dernier départ).
   const startTimes = useMemo(() => {
-    const first = isMariage ? 14 : 18;
+    const first = isMariage ? 15 : 18;
     return Array.from({ length: (20 - first) * 2 + 1 }, (_, i) => {
       const minutes = first * 60 + i * 30;
       return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
