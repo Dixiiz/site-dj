@@ -23,11 +23,23 @@ const faqs = [
   },
   {
     q: "Que se passe-t-il en cas d'annulation ?",
-    a: "Les conditions d'annulation sont précisées lors de la confirmation de votre réservation. En règle générale, l'acompte reste dû en cas d'annulation à moins de 30 jours de l'événement ; au-delà, il est remboursable.",
+    a: "L'acompte versé à la signature du contrat matérialise un engagement ferme et définitif des deux parties. Aucune annulation ne peut intervenir, sauf en cas de force majeure dûment justifiée (dans ce cas, l'acompte est intégralement restitué). Tout changement de date fait office d'annulation ; si la nouvelle date est disponible, un nouveau contrat vous sera proposé. À noter : la loi vous accorde un délai de rétractation de 14 jours après la signature du contrat — l'acompte est alors intégralement remboursé.",
+  },
+  {
+    q: "Comment se déroule le paiement ?",
+    a: "Un acompte (montant précisé sur votre devis) est demandé à la signature du contrat : il fixe définitivement votre date. Le solde est réglé au plus tard le jour du montage du matériel. Si vous ajoutez des options avant l'événement, chaque supplément fait l'objet d'une facture séparée. Les prix du devis sont garantis 15 jours.",
   },
   {
     q: "De quoi avez-vous besoin sur place ?",
-    a: "Une prise électrique standard (230 V) à proximité de l'emplacement et un espace d'environ 3 × 2 m pour l'installation. Nous arrivons en avance pour tout installer et faire une balance du son avant l'arrivée des invités.",
+    a: "Quatre prises de courant 220 V / 16-20 A disponibles à moins de 10 mètres de l'emplacement, un espace suffisant pour l'installation, une place de parking à proximité, et l'accès aux lieux 2 heures avant le début de la prestation pour le montage et les réglages. Merci aussi de prévoir un repas pour le DJ pendant la manifestation.",
+  },
+  {
+    q: "Et si la soirée est en extérieur ?",
+    a: "Le DJ et son matériel ne peuvent en aucun cas être exposés aux intempéries (pluie, froid, chaleur, neige, grêle). Pour une réception en extérieur, un abri (barnum, chapiteau, préau) est indispensable.",
+  },
+  {
+    q: "Qui est responsable du matériel et des autorisations ?",
+    a: "Le client est responsable du matériel mis à disposition dès son installation et doit disposer d'une assurance responsabilité civile. Les déclarations administratives (SACEM, SPRE pour un événement public) sont à la charge de l'organisateur — bonne nouvelle : les manifestations strictement privées (mariage, anniversaire, baptême) sont exonérées de SACEM. Les dégâts causés par les invités sont à la charge du client.",
   },
   {
     q: "Pouvez-vous sonoriser la cérémonie ou le cocktail ?",
