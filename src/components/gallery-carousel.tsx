@@ -85,26 +85,37 @@ export function GalleryCarousel({ photos }: { photos: string[] }) {
           </div>
         </div>
 
-        {/* Flèches */}
+        {/* Zones tactiles invisibles : toucher le côté gauche/droit pour naviguer,
+            avec une fine flèche discrète en indicateur. */}
         <button
           type="button"
           onClick={prev}
           aria-label="Photo précédente"
-          className="absolute top-1/2 left-3 -translate-y-1/2 rounded-full border border-border bg-background/80 p-2.5 backdrop-blur transition hover:border-accent hover:text-accent"
+          className="group absolute inset-y-0 left-0 z-10 flex w-1/4 items-center justify-start pl-2 sm:pl-4"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <span
+            aria-hidden
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-background/40 text-foreground/70 backdrop-blur-sm transition-opacity duration-300 group-hover:bg-background/70 group-hover:text-foreground group-active:bg-background/70 sm:opacity-40 sm:group-hover:opacity-100"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
         </button>
         <button
           type="button"
           onClick={next}
           aria-label="Photo suivante"
-          className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full border border-border bg-background/80 p-2.5 backdrop-blur transition hover:border-accent hover:text-accent"
+          className="group absolute inset-y-0 right-0 z-10 flex w-1/4 items-center justify-end pr-2 sm:pr-4"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <span
+            aria-hidden
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-background/40 text-foreground/70 backdrop-blur-sm transition-opacity duration-300 group-hover:bg-background/70 group-hover:text-foreground group-active:bg-background/70 sm:opacity-40 sm:group-hover:opacity-100"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
         </button>
       </FadeIn>
     </section>
