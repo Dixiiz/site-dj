@@ -20,22 +20,35 @@ const DAY_NAMES = ["L", "M", "M", "J", "V", "S", "D"];
 type BookedDate = { date: string; label: string };
 
 async function getBookedDates(): Promise<BookedDate[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const out: BookedDate[] = [];
   try {
     const supabase = createAdminClient();
-    const now = new Date().toISOString().slice(0, 10);
     const { data, error } = await supabase
       .from("quotes")
       .select("event_date")
       .eq("status", "confirme")
-      .gte("event_date", now)
+      .gte("event_date", today)
       .order("event_date", { ascending: true });
-    if (error || !data) return [];
-    return data
-      .filter((r) => r.event_date)
-      .map((r) => ({ date: String(r.event_date), label: "Événement" }));
+    if (data) {
+      for (const r of data) {
+        if (r.event_date) out.push({ date: String(r.event_date), label: "Événement" });
+      }
+    }
+    // Dates bloquées manuellement depuis le planning admin
+    const { data: blocked } = await supabase
+      .from("blocked_dates")
+      .select("date")
+      .gte("date", today);
+    if (blocked) {
+      for (const r of blocked) {
+        out.push({ date: String(r.date), label: "Indisponible" });
+      }
+    }
   } catch {
-    return [];
+    // ignore
   }
+  return out;
 }
 
 function buildMonthGrid(year: number, month: number) {
