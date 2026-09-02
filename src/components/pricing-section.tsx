@@ -1,10 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { FadeIn } from "@/components/fade-in";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatEuros } from "@/lib/money";
 
 type Pack = {
@@ -12,6 +20,7 @@ type Pack = {
   price: number; // centimes
   highlight?: "populaire" | "show";
   equipment: string[];
+  image: string; // aperçu scénographie (remplaçable via public/images/packs/)
 };
 
 type Category = {
@@ -40,6 +49,7 @@ const CATEGORIES: Category[] = [
       {
         name: "Pack Standard",
         price: 58000,
+        image: "/galerie/jeannebastien-1320.jpg",
         equipment: [
           "2 Lyres Beam (monotubes)",
           "2 Bars LED",
@@ -50,6 +60,7 @@ const CATEGORIES: Category[] = [
         name: "Pack Premium",
         price: 68000,
         highlight: "populaire",
+        image: "/galerie/jeannebastien-1348.jpg",
         equipment: [
           "4 Lyres Beam",
           "4 Bars LED",
@@ -74,6 +85,7 @@ const CATEGORIES: Category[] = [
       {
         name: "Pack Essential",
         price: 106000,
+        image: "/galerie/gwendoline-remi-soiree-et-diner-210625-13.jpg",
         equipment: [
           "2 Lyres Beam (monotubes)",
           "2 Bars LED",
@@ -84,6 +96,7 @@ const CATEGORIES: Category[] = [
         name: "Pack Deluxe",
         price: 116000,
         highlight: "populaire",
+        image: "/galerie/leanivet-clemence-neal-810.jpg",
         equipment: [
           "4 Lyres Beam",
           "4 Bars LED",
@@ -95,6 +108,7 @@ const CATEGORIES: Category[] = [
         name: "Pack L'Ultime Show",
         price: 121000,
         highlight: "show",
+        image: "/galerie/manolieraphael-0910.jpg",
         equipment: [
           "6 Lyres Beam",
           "2 Lyres Spot",
@@ -120,6 +134,7 @@ const CATEGORIES: Category[] = [
       {
         name: "Set DJ (matériel & son sur place)",
         price: 11000,
+        image: "/galerie/dsc-8110.jpg",
         equipment: [
           "Minimum 2 h de mix (55 €/h)",
           "Platines DJ + ordinateur portable",
@@ -129,6 +144,7 @@ const CATEGORIES: Category[] = [
       {
         name: "Clé en main Standard",
         price: 37000,
+        image: "/galerie/jeannebastien-1367.jpg",
         equipment: [
           "Minimum 3 h de mix (90 €/h) + installation 100 €",
           "Régie DJ + Sono Audiophony Modjo2000",
@@ -140,6 +156,7 @@ const CATEGORIES: Category[] = [
         name: "Clé en main Premium",
         price: 47000,
         highlight: "show",
+        image: "/galerie/jeannebastien-1328.jpg",
         equipment: [
           "Minimum 3 h de mix (90 €/h) + installation 100 €",
           "Régie DJ + Sono Audiophony Modjo2000",
@@ -173,25 +190,132 @@ const FX_OPTIONS = [
   },
 ];
 
+// Vulgarisation : bénéfice client associé à chaque matériel technique.
+const EXPLANATIONS: [RegExp, string][] = [
+  [/lyres beam/i, "Jets de lumière puissants et dynamiques style club/discothèque"],
+  [/lyres spot/i, "Projection de motifs lumineux et effets d'impact au sol/plafond"],
+  [/bars led/i, "Éclairage d'ambiance dynamique pour le dancefloor"],
+  [/par led/i, "Projecteurs autonomes pour illuminer et colorer les murs de votre salle"],
+  [/geyser|fumée/i, "Colonnes de fumée verticales éclairées pour marquer les climax"],
+  [/sono audiophony/i, "Système son haute définition puissant et cristallin (jusqu'à 250 personnes)"],
+  [/synchronisé/i, "Toutes les lumières pilotées en temps réel pour coller au rythme de la musique"],
+  [/platines|régie dj/i, "Le poste de mixage professionnel, au standard des clubs"],
+];
+
+function explain(item: string) {
+  return EXPLANATIONS.find(([pattern]) => pattern.test(item))?.[1];
+}
+
 function EquipmentLine({ item }: { item: string }) {
   // Met en évidence les quantités d'éclairage pour comparer d'un coup d'œil.
-  const match = item.match(/^(\d+)\s+(Lyres|Bars|PAR|Machines)/);
+  const match = item.match(/(\d+)\s+(Lyres|Bars|PAR|Machines)/);
+  const benefit = explain(item);
   return (
     <li className="flex items-start gap-2">
       {match ? (
-        <span className="mt-0.5 inline-flex min-w-12 justify-center rounded-md bg-accent/15 px-1.5 py-0.5 text-xs font-semibold text-accent">
+        <span className="mt-0.5 inline-flex min-w-12 shrink-0 justify-center rounded-md bg-accent/15 px-1.5 py-0.5 text-xs font-semibold text-accent">
           {match[1]}×
         </span>
       ) : (
-        <span className="mt-0.5 text-accent">✓</span>
+        <span className="mt-0.5 shrink-0 text-accent">✓</span>
       )}
-      <span className="text-sm text-muted-foreground">{item}</span>
+      <span>
+        <span className="text-sm text-foreground/90">{item}</span>
+        {benefit ? (
+          <span className="block text-xs leading-snug text-muted-foreground">{benefit}</span>
+        ) : null}
+      </span>
     </li>
+  );
+}
+
+function selectPack(packName: string) {
+  window.dispatchEvent(
+    new CustomEvent("propul:select-pack", { detail: { pack: packName } })
+  );
+  document
+    .getElementById("formulaire-devis")
+    ?.scrollIntoView({ behavior: "smooth" });
+}
+
+function PackCard({
+  pack,
+  previousEquipment,
+  onOpenImage,
+}: {
+  pack: Pack;
+  previousEquipment: string[] | null;
+  onOpenImage: () => void;
+}) {
+  return (
+    <Card
+      className={`group relative flex flex-col overflow-hidden ${
+        pack.highlight
+          ? "border-accent/60 shadow-[0_0_35px_-10px] shadow-accent/40"
+          : "border-white/10"
+      }`}
+    >
+      {pack.highlight ? (
+        <span className="absolute top-12 left-1/2 z-10 -translate-x-1/2 rounded-full bg-accent px-3 py-0.5 text-xs font-semibold text-background">
+          {pack.highlight === "show" ? "Show complet" : "Le plus populaire"}
+        </span>
+      ) : null}
+
+      {/* Aperçu scénographie : zoom au survol (desktop), clic = lightbox */}
+      <button
+        type="button"
+        onClick={onOpenImage}
+        aria-label={`Voir le rendu visuel du ${pack.name} en grand`}
+        className="relative block aspect-video w-full cursor-zoom-in overflow-hidden"
+      >
+        <Image
+          src={pack.image}
+          alt={`Ambiance lumineuse du ${pack.name}`}
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+        />
+        <span className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+        <span className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-background/70 px-3 py-1 text-xs text-foreground opacity-0 backdrop-blur transition-opacity duration-300 group-hover:opacity-100 focus-visible:opacity-100">
+          🔍 Voir le rendu visuel
+        </span>
+      </button>
+
+      <CardHeader>
+        <CardTitle className="text-lg">{pack.name}</CardTitle>
+        <p className="mt-1 text-3xl font-semibold text-glow">
+          {formatEuros(pack.price)}
+        </p>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col">
+        <ul className="flex-1 space-y-2.5">
+          {pack.equipment.map((item) => (
+            <EquipmentLine key={item} item={item} />
+          ))}
+        </ul>
+        {previousEquipment ? (
+          <p className="mt-4 rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent">
+            En plus du pack précédent :
+            {pack.equipment
+              .filter((item) => !previousEquipment.includes(item))
+              .map((item) => (
+                <span key={item} className="ml-1 font-medium">
+                  {" "}+ {item}
+                </span>
+              ))}
+          </p>
+        ) : null}
+        <Button className="mt-5 w-full" onClick={() => selectPack(pack.name)}>
+          Sélectionner ce pack
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
 export function PricingSection() {
   const [activeId, setActiveId] = useState(CATEGORIES[0].id);
+  const [lightbox, setLightbox] = useState<Pack | null>(null);
   const active = CATEGORIES.find((c) => c.id === activeId) ?? CATEGORIES[0];
 
   return (
@@ -253,47 +377,12 @@ export function PricingSection() {
           }`}
         >
           {active.packs.map((pack, index) => (
-            <Card
+            <PackCard
               key={pack.name}
-              className={`relative flex flex-col ${
-                pack.highlight
-                  ? "border-accent/60 shadow-[0_0_35px_-10px] shadow-accent/40"
-                  : "border-white/10"
-              }`}
-            >
-              {pack.highlight ? (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent px-3 py-0.5 text-xs font-semibold text-background">
-                  {pack.highlight === "show" ? "Show complet" : "Le plus populaire"}
-                </span>
-              ) : null}
-              <CardHeader>
-                <CardTitle className="text-lg">{pack.name}</CardTitle>
-                <p className="mt-1 text-3xl font-semibold text-glow">
-                  {formatEuros(pack.price)}
-                </p>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col">
-                <ul className="flex-1 space-y-2.5">
-                  {pack.equipment.map((item) => (
-                    <EquipmentLine key={item} item={item} />
-                  ))}
-                </ul>
-                {index > 0 ? (
-                  <p className="mt-4 rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent">
-                    En plus du pack précédent :
-                    {pack.equipment
-                      .filter(
-                        (item) => !active.packs[index - 1].equipment.includes(item)
-                      )
-                      .map((item) => (
-                        <span key={item} className="ml-1 font-medium">
-                          {" "}+ {item}
-                        </span>
-                      ))}
-                  </p>
-                ) : null}
-              </CardContent>
-            </Card>
+              pack={pack}
+              previousEquipment={index > 0 ? active.packs[index - 1].equipment : null}
+              onOpenImage={() => setLightbox(pack)}
+            />
           ))}
         </div>
 
@@ -306,6 +395,29 @@ export function PricingSection() {
           ))}
         </p>
       </div>
+
+      {/* Lightbox : aperçu de la scénographie en grand (clic, idéal mobile) */}
+      <Dialog open={lightbox !== null} onOpenChange={(open) => !open && setLightbox(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{lightbox?.name} — rendu visuel</DialogTitle>
+            <DialogDescription>
+              Un aperçu de l&apos;ambiance son &amp; lumière de ce pack.
+            </DialogDescription>
+          </DialogHeader>
+          {lightbox ? (
+            <div className="relative aspect-video overflow-hidden rounded-lg">
+              <Image
+                src={lightbox.image}
+                alt={`Scénographie du ${lightbox.name}`}
+                fill
+                sizes="(max-width: 768px) 100vw, 672px"
+                className="object-cover"
+              />
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       {/* Options FX */}
       <h3 className="mt-14 text-xl font-medium">Options FX — Effets spéciaux</h3>

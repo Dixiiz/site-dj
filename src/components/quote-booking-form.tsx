@@ -54,6 +54,7 @@ export function QuoteBookingForm({
   options: QuoteOption[];
 }) {
   const [formulaId, setFormulaId] = useState(formulas[0]?.id ?? "");
+  const [notes, setNotes] = useState("");
   const [optionIds, setOptionIds] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [startTime, setStartTime] = useState(
@@ -66,6 +67,36 @@ export function QuoteBookingForm({
   const [travel, setTravel] = useState<TravelState>(null);
   const [travelPending, startTravelTransition] = useTransition();
   const [pending, startTransition] = useTransition();
+
+  // Pré-sélection depuis la section "Nos Formules & Tarifs" (bouton d'un pack).
+  useEffect(() => {
+    function onSelectPack(event: Event) {
+      const packName = (event as CustomEvent<{ pack: string }>).detail?.pack;
+      if (!packName) return;
+      const pack = packName.toLowerCase();
+      const categoryPatterns: RegExp[] = [
+        /set dj|clé en main|bar|club|pro/,
+        /mariage|essential|deluxe|ultime/,
+        /anniversaire|standard|premium/,
+      ];
+      const match = formulas.find((formula) => {
+        const name = formula.name.toLowerCase();
+        return (
+          (categoryPatterns[0].test(pack) && categoryPatterns[0].test(name)) ||
+          (categoryPatterns[1].test(pack) && categoryPatterns[1].test(name)) ||
+          (categoryPatterns[2].test(pack) && categoryPatterns[2].test(name))
+        );
+      });
+      if (match) setFormulaId(match.id);
+      setNotes((current) =>
+        current.includes(packName)
+          ? current
+          : `Pack souhaité : ${packName}${current ? `\n${current}` : ""}`
+      );
+    }
+    window.addEventListener("propul:select-pack", onSelectPack);
+    return () => window.removeEventListener("propul:select-pack", onSelectPack);
+  }, [formulas]);
 
   const visibleOptions = useMemo(
     () =>
@@ -415,7 +446,13 @@ export function QuoteBookingForm({
           </div>
           <div className="sm:col-span-2 space-y-1.5">
             <Label htmlFor="notes">Message</Label>
-            <Textarea id="notes" name="notes" placeholder="Ambiance souhaitée, contraintes…" />
+            <Textarea
+              id="notes"
+              name="notes"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder="Ambiance souhaitée, contraintes…"
+            />
           </div>
         </FadeIn>
       </div>
