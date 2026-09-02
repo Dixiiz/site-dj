@@ -102,7 +102,6 @@ export function QuoteBookingForm({
       });
       if (match) {
         setFormulaId(match.id);
-        setOptionIds([]);
       }
       setPack({
         name: packName,
@@ -112,13 +111,11 @@ export function QuoteBookingForm({
         defaultStart: detail?.defaultStart ?? "20:00",
         defaultEnd: detail?.defaultEnd ?? (isMariageFormula(packName) ? "04:00" : "02:00"),
       });
-      setStartTime(detail?.defaultStart ?? "20:00");
-      setEndTime(detail?.defaultEnd ?? (isMariageFormula(packName) ? "04:00" : "02:00"));
-      setNotes((current) =>
-        current.includes(packName)
-          ? current
-          : `Pack souhaité : ${packName}${current ? `\n${current}` : ""}`
-      );
+      // On ne touche ni aux horaires déjà choisis, ni aux options, ni à la date :
+      // le client ne repart pas de zéro quand il change de pack. Les horaires par
+      // défaut ne s'appliquent que si aucun choix n'a encore été fait.
+      setStartTime((current) => current || detail?.defaultStart || "20:00");
+      setEndTime((current) => current || detail?.defaultEnd || (isMariageFormula(packName) ? "04:00" : "02:00"));
     }
     window.addEventListener("propul:select-pack", onSelectPack);
     function onToggleOption(event: Event) {

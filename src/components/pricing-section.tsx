@@ -309,18 +309,24 @@ function PackCard({
         </span>
       ) : null}
 
-      {/* Aperçu scénographie : zoom au survol, sans clic possible */}
-      <div className="relative aspect-video w-full overflow-hidden">
+      {/* Aperçu scénographie : fondu en arrière-plan du texte, net au survol */}
+      <div className="pointer-events-none absolute inset-0">
         <Image
           src={pack.image}
-          alt={`Ambiance lumineuse du ${pack.name}`}
+          alt=""
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+          className={`object-cover transition-all duration-700 ease-out group-hover:scale-105 ${
+            selected ? "opacity-40" : "opacity-15 group-hover:opacity-45"
+          }`}
         />
-        <span className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+        <span
+          className={`absolute inset-0 transition-opacity duration-700 ${
+            selected ? "opacity-0" : "opacity-100 group-hover:opacity-0"
+          } bg-gradient-to-t from-background via-background/70 to-background/40`}
+        />
       </div>
-
+      <div className="relative">
       <CardHeader>
         <CardTitle className="text-lg">{pack.name}</CardTitle>
         <p className="mt-1 text-3xl font-semibold text-glow">
@@ -360,6 +366,7 @@ function PackCard({
           {selected ? "✓ Ajouté au devis — continuez ci-dessous" : "Cliquer pour sélectionner ce pack"}
         </p>
       </CardContent>
+      </div>
     </Card>
   );
 }
