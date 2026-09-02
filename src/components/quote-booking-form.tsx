@@ -130,11 +130,14 @@ export function QuoteBookingForm({
         (option) => option.name.toLowerCase() === optionName.toLowerCase()
       );
       if (!match) return;
-      setOptionIds((current) =>
-        current.includes(match.id)
+      setOptionIds((current) => {
+        const isPresent = current.includes(match.id);
+        // Changement de quantité CO2 : on ne désélectionne pas, on garde coché.
+        if (typeof detail?.qty === "number" && isPresent) return current;
+        return isPresent
           ? current.filter((id) => id !== match.id)
-          : [...current, match.id]
-      );
+          : [...current, match.id];
+      });
     }
     window.addEventListener("propul:toggle-option", onToggleOption);
     return () => {
@@ -314,49 +317,8 @@ export function QuoteBookingForm({
       <input type="hidden" name="travel_fee_cents" value={travel?.feeCents ?? ""} />
 
       <div className="space-y-6">
-        <FadeIn>
-          <h2 className="mb-3 text-xl font-medium">1. Votre pack</h2>
-          {pack ? (
-            <div className="glow-hover rounded-xl border border-accent/60 bg-primary/10 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-medium">
-                  <span className="mr-2 text-accent">✓</span>
-                  {pack.name}
-                </p>
-                <Badge>{formatEuros(pack.priceCents)}</Badge>
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {isMariage
-                  ? "Soirée dansante — 8 h minimum. Début avant 18 h : sonorisation de la cérémonie laïque et/ou du cocktail à cocher ci-dessous."
-                  : isBarClub
-                    ? "Set DJ — durée minimum selon l'option choisie."
-                    : "Soirée dansante — 6 h minimum. Début à 18 h : sonorisation de l'apéritif à cocher ci-dessous."}
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Modifiable en cliquant sur un autre pack ci-dessus.
-              </p>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() =>
-                document
-                  .getElementById("formules-tarifs")
-                  ?.scrollIntoView({ behavior: "smooth" })
-              }
-              className="glow-hover w-full rounded-xl border border-dashed border-accent/50 p-5 text-left transition-colors hover:border-accent"
-            >
-              <p className="font-medium">Aucun pack sélectionné pour l&apos;instant</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Cliquez ici ou choisissez directement un pack dans la section
-                « Nos Formules &amp; Tarifs » ci-dessus.
-              </p>
-            </button>
-          )}
-        </FadeIn>
-
         <FadeIn delay={0.1}>
-          <h2 className="mb-3 text-xl font-medium">2. Lieu de réception</h2>
+          <h2 className="mb-3 text-xl font-medium">Lieu de réception</h2>
           <Card>
             <CardContent className="space-y-2 pt-1">
               <div className="space-y-1.5 relative">
@@ -417,7 +379,7 @@ export function QuoteBookingForm({
         </FadeIn>
 
         <FadeIn delay={0.1}>
-          <h2 className="mb-3 text-xl font-medium">3. Horaires &amp; date</h2>
+          <h2 className="mb-3 text-xl font-medium">Horaires &amp; date</h2>
           <Card>
             <CardContent className="space-y-4 pt-1">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -540,7 +502,7 @@ export function QuoteBookingForm({
         </FadeIn>
 
         <FadeIn delay={0.15} className="grid gap-3 sm:grid-cols-2">
-          <h2 className="sm:col-span-2 text-xl font-medium">4. Tes coordonnées</h2>
+          <h2 className="sm:col-span-2 text-xl font-medium">Tes coordonnées</h2>
           <div className="space-y-1.5">
             <Label htmlFor="customer_name">Nom</Label>
             <Input id="customer_name" name="customer_name" required />
