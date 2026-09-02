@@ -208,6 +208,11 @@ export default function Home() {
       <footer className="border-t border-white/10 py-8 text-center text-sm text-muted-foreground">
         Propul&apos;Sound DJ — Huisseau-sur-Cosson (41350) · Déplacement offert dans un rayon de
         30 km
+        <div className="mt-2">
+          <Link href="/mentions-legales" className="text-xs transition-colors hover:text-accent">
+            Mentions légales
+          </Link>
+        </div>
       </footer>
     </>
   );

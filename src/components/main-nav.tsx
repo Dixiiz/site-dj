@@ -8,6 +8,8 @@ const links = [
   { href: "/", label: "Accueil" },
   { href: "/formules", label: "Formules" },
   { href: "/sur-mesure", label: "Sur-mesure" },
+  { href: "/contact", label: "Contact" },
+  { href: "/faq", label: "FAQ" },
 ];
 
 export function MainNav() {
