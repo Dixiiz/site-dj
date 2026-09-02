@@ -382,6 +382,15 @@ function PackCard({
   );
 }
 
+export const ADMIN_PACK_LIST = CATEGORIES.flatMap((category) =>
+  category.packs.map((pack) => ({ id: pack.name, name: pack.name, price: pack.price })),
+);
+
+export const ADMIN_FX_OPTIONS = FX_OPTIONS.map((option) => ({
+  name: option.name,
+  price: option.price,
+}));
+
 export function PricingSection() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [selectedPack, setSelectedPack] = useState<string | null>(null);

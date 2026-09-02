@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { updateQuoteAdmin } from "@/app/actions";
+import { ADMIN_PACK_LIST, ADMIN_FX_OPTIONS } from "@/components/pricing-section";
 import type { SelectedOption } from "@/lib/types";
 
 type Quote = {
@@ -32,7 +33,36 @@ export function AdminQuoteEdit({
   options: SelectedOption[];
 }) {
   const [open, setOpen] = useState(false);
-  const optionsRaw = options.map((o) => `${o.name} | ${euros(o.price_cents)}`).join("\n");
+  const [packId, setPackId] = useState(
+    ADMIN_PACK_LIST.find((p) => p.name === quote.formula_name)?.id ?? "custom"
+  );
+  const [packPrice, setPackPrice] = useState(euros(quote.formula_price_cents));
+  const [checked, setChecked] = useState<string[]>(
+    options.map((o) => o.name).filter((n) => ADMIN_FX_OPTIONS.some((f) => f.name === n))
+  );
+  const [co2Qty, setCo2Qty] = useState(
+    options.find((o) => o.name.startsWith("Pistolet"))?.name.includes("× 2") ? 2 : 1
+  );
+  const [travelDist, setTravelDist] = useState(String(quote.travel_distance_km ?? ""));
+  const [travelFee, setTravelFee] = useState(euros(quote.travel_fee_cents));
+  const [extraFee, setExtraFee] = useState(euros(quote.extra_fee_cents));
+
+  // Options cochées -> format "Nom | prix"
+  const selectedOptions = checked
+    .map((name) => {
+      const fx = ADMIN_FX_OPTIONS.find((f) => f.name === name);
+      if (!fx) return null;
+      const qty = name.includes("CO2") ? co2Qty : 1;
+      const label = name.includes("CO2") && qty > 1 ? `${name} × ${qty}` : name;
+      return { name: label, price: fx.price * qty };
+    })
+    .filter((o): o is { name: string; price: number } => o !== null);
+
+  const total =
+    Math.round(Number.parseFloat(packPrice.replace(",", ".")) * 100 || 0) +
+    Math.round(Number.parseFloat(travelFee.replace(",", ".")) * 100 || 0) +
+    Math.round(Number.parseFloat(extraFee.replace(",", ".")) * 100 || 0) +
+    selectedOptions.reduce((sum, o) => sum + o.price, 0);
 
   if (!open) {
     return (
@@ -82,35 +112,141 @@ export function AdminQuoteEdit({
           <input name="notes" defaultValue={quote.notes ?? ""} className={input} />
         </div>
         <div>
-          <label className={label}>Pack</label>
-          <input name="formula_name" defaultValue={quote.formula_name} className={input} />
-        </div>
-        <div>
-          <label className={label}>Prix du pack (€)</label>
-          <input name="formula_price" defaultValue={euros(quote.formula_price_cents)} className={input} />
-        </div>
-        <div>
           <label className={label}>Déplacement — distance (km)</label>
-          <input name="travel_distance_km" defaultValue={quote.travel_distance_km ?? ""} className={input} />
+          <input
+            name="travel_distance_km"
+            value={travelDist}
+            onChange={(e) => setTravelDist(e.target.value)}
+            className={input}
+          />
         </div>
         <div>
           <label className={label}>Frais de déplacement (€)</label>
-          <input name="travel_fee" defaultValue={euros(quote.travel_fee_cents)} className={input} />
+          <input
+            name="travel_fee"
+            value={travelFee}
+            onChange={(e) => setTravelFee(e.target.value)}
+            className={input}
+          />
         </div>
         <div>
           <label className={label}>Suppléments (heures supp…) (€)</label>
-          <input name="extra_fee" defaultValue={euros(quote.extra_fee_cents)} className={input} />
-        </div>
-        <div>
-          <label className={label}>Total (€)</label>
-          <input name="total" defaultValue={euros(quote.total_cents)} className={input} />
+          <input
+            name="extra_fee"
+            value={extraFee}
+            onChange={(e) => setExtraFee(e.target.value)}
+            className={input}
+          />
         </div>
       </div>
+
+      {/* Pack : clic pour choisir */}
       <div>
-        <label className={label}>
-          Options — une par ligne, format « Nom | prix »
-        </label>
-        <textarea name="options_raw" defaultValue={optionsRaw} rows={3} className={input} />
+        <label className={label}>Pack (cliquez pour sélectionner)</label>
+        <div className="flex flex-wrap gap-2">
+          {ADMIN_PACK_LIST.map((p) => {
+            const active = packId === p.id;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  setPackId(p.id);
+                  setPackPrice(euros(p.price));
+                }}
+                className={`rounded-lg border px-3 py-1.5 text-sm transition-all ${
+                  active
+                    ? "border-accent bg-accent/15 text-foreground shadow-[0_0_12px_rgba(96,165,250,0.35)] scale-105"
+                    : "border-border text-muted-foreground hover:border-accent/60"
+                }`}
+              >
+                {active && <span className="mr-1 text-accent">✓</span>}
+                {p.name} · {euros(p.price)} €
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setPackId("custom")}
+            className={`rounded-lg border px-3 py-1.5 text-sm transition-all ${
+              packId === "custom"
+                ? "border-accent bg-accent/15 text-foreground scale-105"
+                : "border-border text-muted-foreground hover:border-accent/60"
+            }`}
+          >
+            Autre / prix libre
+          </button>
+        </div>
+        {packId === "custom" && (
+          <input
+            name="formula_name"
+            placeholder="Nom du pack"
+            defaultValue={quote.formula_name}
+            className={`${input} mt-2`}
+          />
+        )}
+        <input
+          name="formula_name_hidden"
+          type="hidden"
+          value={ADMIN_PACK_LIST.find((p) => p.id === packId)?.name ?? ""}
+        />
+        <div className="mt-2 w-40">
+          <label className={label}>Prix du pack (€)</label>
+          <input
+            name="formula_price"
+            value={packPrice}
+            onChange={(e) => setPackPrice(e.target.value)}
+            className={input}
+          />
+        </div>
+      </div>
+
+      {/* Options : cases à cocher */}
+      <div>
+        <label className={label}>Options (cochez / décochez)</label>
+        <div className="space-y-1.5">
+          {ADMIN_FX_OPTIONS.map((fx) => {
+            const active = checked.includes(fx.name);
+            return (
+              <div key={fx.name} className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setChecked((prev) =>
+                      active ? prev.filter((n) => n !== fx.name) : [...prev, fx.name]
+                    )
+                  }
+                  className={`flex-1 rounded-lg border px-3 py-2 text-left text-sm transition-all ${
+                    active
+                      ? "border-accent bg-accent/15 text-foreground"
+                      : "border-border text-muted-foreground hover:border-accent/60"
+                  }`}
+                >
+                  <span className={`mr-2 ${active ? "text-accent" : "text-transparent"}`}>✓</span>
+                  {fx.name} — {euros(fx.price)} €
+                </button>
+                {fx.name.includes("CO2") && active && (
+                  <select
+                    value={co2Qty}
+                    onChange={(e) => setCo2Qty(Number(e.target.value))}
+                    className={`${input} w-36`}
+                  >
+                    <option value={1}>1 pistolet</option>
+                    <option value={2}>2 pistolets</option>
+                  </select>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Total auto */}
+      <div className="flex items-center justify-between rounded-lg border border-accent/40 bg-primary/10 px-4 py-2">
+        <span className="text-sm text-muted-foreground">Total recalculé automatiquement</span>
+        <span className="text-lg font-medium text-accent">
+          {(total / 100).toFixed(2).replace(".", ",")} €
+        </span>
       </div>
       <div>
         <label className={label}>Statut</label>
@@ -119,8 +255,11 @@ export function AdminQuoteEdit({
           <option value="contacte">Contacté</option>
           <option value="confirme">Confirmé</option>
           <option value="refuse">Refusé</option>
+          <option value="annule">Annulé</option>
         </select>
       </div>
+      <input type="hidden" name="options_raw" value={selectedOptions.map((o) => `${o.name} | ${(o.price / 100).toFixed(2).replace(".", ",")}`).join("\n")} />
+      <input type="hidden" name="total" value={(total / 100).toFixed(2).replace(".", ",")} />
       <div className="flex gap-2">
         <button
           type="submit"

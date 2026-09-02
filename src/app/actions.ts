@@ -307,7 +307,10 @@ export async function updateQuoteAdmin(formData: FormData) {
       event_location: String(formData.get("event_location") ?? "").trim() || null,
       event_date: String(formData.get("event_date") ?? "").trim() || null,
       notes: String(formData.get("notes") ?? "").trim() || null,
-      formula_name: String(formData.get("formula_name") ?? "").trim(),
+      formula_name:
+        String(formData.get("formula_name_hidden") ?? "").trim() ||
+        String(formData.get("formula_name") ?? "").trim() ||
+        "Pack",
       formula_price_cents: toCents(formData.get("formula_price")),
       travel_distance_km: Number.parseFloat(String(formData.get("travel_distance_km") ?? "")) || null,
       travel_fee_cents: toCents(formData.get("travel_fee")),
