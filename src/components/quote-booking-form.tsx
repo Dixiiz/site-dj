@@ -294,11 +294,12 @@ export function QuoteBookingForm({
                 <Badge>{formatEuros(pack.priceCents)}</Badge>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                {formula?.description}
+                {isMariage
+                  ? "Soirée dansante — 8 h minimum. Début avant 18 h : cérémonie laïque et cocktail inclus dans la prestation."
+                  : `${Math.round(pack.baseMinutes / 60)} h de prestation minimum — soirée dansante.`}
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
-                {Math.round(pack.baseMinutes / 60)} h de prestation incluses —
-                modifiable en cliquant sur un autre pack ci-dessus.
+                Modifiable en cliquant sur un autre pack ci-dessus.
               </p>
             </div>
           ) : (
