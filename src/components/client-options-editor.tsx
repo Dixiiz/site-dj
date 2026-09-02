@@ -58,7 +58,7 @@ export function ClientOptionsEditor({
                     : "border-white/10 hover:border-accent/40"
                 } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
               >
-                <span>
+                <span className="min-w-0">
                   {checked ? "✓ " : ""}
                   {option.name}
                 </span>

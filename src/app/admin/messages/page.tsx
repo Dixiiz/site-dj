@@ -119,7 +119,7 @@ export default async function AdminMessagesPage() {
                       {(tracksByQuote.get(quoteId) ?? []).map((track) => (
                         <li
                           key={track.id}
-                          className="flex items-center gap-3 rounded-lg border border-white/10 px-3 py-2 text-sm"
+                          className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm sm:gap-3"
                         >
                           {track.artwork_url ? (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -131,7 +131,7 @@ export default async function AdminMessagesPage() {
                               className="h-9 w-9 shrink-0 rounded-md object-cover"
                             />
                           ) : null}
-                          <div className="min-w-0 flex-1">
+                          <div className="min-w-0 flex-1 basis-40">
                             <p className="truncate">
                               <span className="font-medium">{track.title}</span>
                               {track.artist ? (
@@ -152,7 +152,7 @@ export default async function AdminMessagesPage() {
                               controls
                               preload="none"
                               src={track.preview_url}
-                              className="h-8 w-44 shrink-0"
+                              className="h-8 w-full min-w-0 sm:w-44"
                             />
                           ) : null}
                         </li>

@@ -87,6 +87,7 @@ export function ClientPlaylistEditor({
     setSelected(suggestion);
     setQuery(suggestion.title);
     setShowSuggestions(false);
+    setSuggestions([]);
   }
 
   const wishes = tracks.filter((t) => t.kind === "souhait");
@@ -116,20 +117,41 @@ export function ClientPlaylistEditor({
 
         <div className="relative sm:col-span-2">
           <Label htmlFor="title">Titre *</Label>
-          <Input
-            id="title"
-            name="title"
-            required
-            value={query}
-            autoComplete="off"
-            placeholder="Ex : Can't Help Falling in Love"
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setSelected(null);
-            }}
-            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-          />
+          <div className="relative">
+            <Input
+              id="title"
+              name="title"
+              required
+              value={query}
+              autoComplete="off"
+              inputMode="search"
+              placeholder="Ex : Can't Help Falling in Love"
+              className="pr-10"
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setSelected(null);
+              }}
+              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setShowSuggestions(false);
+              }}
+            />
+            {query && !selected ? (
+              <button
+                type="button"
+                aria-label="Effacer la recherche"
+                onClick={() => {
+                  setQuery("");
+                  setSuggestions([]);
+                  setShowSuggestions(false);
+                }}
+                className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+              >
+                ✕
+              </button>
+            ) : null}
+          </div>
 
           {showSuggestions && (searching || suggestions.length > 0) ? (
             <ul className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-lg border border-white/10 bg-background shadow-xl">
@@ -139,7 +161,7 @@ export function ClientPlaylistEditor({
               {suggestions.map((suggestion) => (
                 <li
                   key={suggestion.key}
-                  className="flex items-center gap-3 border-b border-white/5 px-3 py-2 last:border-0"
+                  className="flex flex-wrap items-center gap-2 border-b border-white/5 px-3 py-2.5 last:border-0 sm:gap-3"
                 >
                   {suggestion.artworkUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -151,33 +173,35 @@ export function ClientPlaylistEditor({
                       className="h-9 w-9 shrink-0 rounded-md object-cover"
                     />
                   ) : null}
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 basis-40">
                     <p className="truncate text-sm font-medium">{suggestion.title}</p>
                     <p className="truncate text-xs text-muted-foreground">{suggestion.artist}</p>
                   </div>
-                  {suggestion.previewUrl ? (
+                  <div className="flex shrink-0 items-center gap-2">
+                    {suggestion.previewUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => playPreview(suggestion.previewUrl, suggestion.key)}
+                        className="rounded-full border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
+                      >
+                        {previewing === suggestion.key ? "■ Stop" : "▶ Écouter"}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
-                      onClick={() => playPreview(suggestion.previewUrl, suggestion.key)}
-                      className="shrink-0 rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent transition-colors hover:bg-accent/15"
+                      onClick={() => chooseSuggestion(suggestion)}
+                      className="rounded-full bg-accent/15 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/25"
                     >
-                      {previewing === suggestion.key ? "■ Stop" : "▶ Écouter"}
+                      Choisir
                     </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={() => chooseSuggestion(suggestion)}
-                    className="shrink-0 rounded-full bg-accent/15 px-2.5 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent/25"
-                  >
-                    Choisir
-                  </button>
+                  </div>
                 </li>
               ))}
             </ul>
           ) : null}
 
           {selected ? (
-            <div className="mt-2 flex items-center gap-3 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-sm">
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-sm sm:gap-3">
               {selected.artworkUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -188,7 +212,7 @@ export function ClientPlaylistEditor({
                   className="h-9 w-9 shrink-0 rounded-md object-cover"
                 />
               ) : null}
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 basis-40">
                 <p className="truncate font-medium">{selected.title}</p>
                 <p className="truncate text-xs text-muted-foreground">{selected.artist}</p>
               </div>
@@ -196,7 +220,7 @@ export function ClientPlaylistEditor({
                 <button
                   type="button"
                   onClick={() => playPreview(selected.previewUrl, selected.key)}
-                  className="shrink-0 rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent transition-colors hover:bg-accent/15"
+                  className="shrink-0 rounded-full border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
                 >
                   {previewing === selected.key ? "■ Stop" : "▶ Réécouter"}
                 </button>
@@ -285,7 +309,7 @@ function TrackRow({
   onRemove: (cb: () => Promise<void>) => void;
 }) {
   return (
-    <li className="flex items-center gap-3 rounded-lg border border-white/10 px-3 py-2 text-sm">
+    <li className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm sm:gap-3">
       {track.artwork_url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -296,7 +320,7 @@ function TrackRow({
           className="h-10 w-10 shrink-0 rounded-md object-cover"
         />
       ) : null}
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 basis-40">
         <p className="truncate">
           <span className="font-medium">{track.title}</span>
           {track.artist ? <span className="text-muted-foreground"> — {track.artist}</span> : null}
@@ -304,10 +328,16 @@ function TrackRow({
         <p className="text-xs text-muted-foreground">{track.moment}</p>
       </div>
       {track.preview_url ? (
-        <audio controls preload="none" src={track.preview_url} className="h-8 w-44 shrink-0" />
+        <audio
+          controls
+          preload="none"
+          src={track.preview_url}
+          className="h-8 w-full min-w-0 sm:w-44"
+        />
       ) : null}
       <form
         action={(formData) => onRemove(async () => void (await removePlaylistTrack(formData)))}
+        className="ml-auto sm:ml-0"
       >
         <input type="hidden" name="quote_id" value={quoteId} />
         <input type="hidden" name="track_id" value={track.id} />
