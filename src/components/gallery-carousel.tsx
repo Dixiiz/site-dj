@@ -8,11 +8,10 @@ const AUTOPLAY_MS = 5000;
 const VISIBLE_DESKTOP = 3; // photos visibles simultanément sur desktop
 
 export function GalleryCarousel({ photos }: { photos: string[] }) {
-  const [index, setIndex] = useState(0);
+  const [rawIndex, setRawIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [visible, setVisible] = useState(VISIBLE_DESKTOP);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const touchStartX = useRef<number | null>(null);
 
   // 1 photo visible en mobile, 3 sur écran large (cohérent avec les largeurs w-1/3).
   useEffect(() => {
@@ -39,10 +38,8 @@ export function GalleryCarousel({ photos }: { photos: string[] }) {
     };
   }, [paused, next, photos.length, visible]);
 
-  // Réinitialise l'index si on change de mode (évite un décalage hors limites).
-  useEffect(() => {
-    setIndex((i) => i % photos.length);
-  }, [visible, photos.length]);
+  // Index toujours valide, quel que soit le mode (1 ou 3 photos visibles).
+  const index = rawIndex % photos.length;
 
   if (photos.length === 0) return null;
 
@@ -60,21 +57,9 @@ export function GalleryCarousel({ photos }: { photos: string[] }) {
 
       <FadeIn delay={0.1} className="relative mt-8 sm:mt-10">
         <div
-          className="overflow-hidden rounded-2xl"
+          className="touch-pan-y overflow-hidden rounded-2xl"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
-          onTouchStart={(e) => {
-            touchStartX.current = e.touches[0].clientX;
-            setPaused(true);
-          }}
-          onTouchEnd={(e) => {
-            if (touchStartX.current != null) {
-              const delta = e.changedTouches[0].clientX - touchStartX.current;
-              if (Math.abs(delta) > 40) (delta < 0 ? next : prev)();
-            }
-            touchStartX.current = null;
-            setPaused(false);
-          }}
         >
           <div
             className="flex transition-transform ease-in-out"

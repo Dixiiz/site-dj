@@ -70,7 +70,7 @@ export function VideoShowcase({ videos, orientation = "landscape" }: VideoShowca
 
   return (
     <div
-      className="relative mt-10"
+      className="touch-pan-y relative mt-10"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >

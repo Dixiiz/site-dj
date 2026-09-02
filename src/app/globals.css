@@ -151,3 +151,10 @@
     display: none;
   }
 }
+
+/* Interdit tout déplacement horizontal de la page (mobile) */
+html,
+body {
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
