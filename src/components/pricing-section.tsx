@@ -224,7 +224,7 @@ const FX_OPTIONS = [
   },
   {
     name: "Pistolet à fumée effet CO2",
-    detail: "Gun CO2 — jet de fumée glacée qui explose sur les beats.",
+    detail: "Jet de fumée glacée jusqu'à 9 mètres — pour vos plus belles entrées en salle ou vos plus beaux shows.",
     price: 7500,
     badge: "Prix promo : au lieu de 150 €",
     image: "/images/fx/co2.jpg",
