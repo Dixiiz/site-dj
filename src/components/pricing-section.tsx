@@ -227,7 +227,8 @@ const FX_OPTIONS = [
     detail: "Gun CO2 — jet de fumée glacée qui explose sur les beats.",
     price: 7500,
     badge: "Prix promo : au lieu de 150 €",
-    image: "/galerie/manolieraphael-0910.jpg",
+    image: "/images/fx/co2.jpg",
+    video: "/videos/fx/co2.mp4",
   },
 ] satisfies {
   name: string;
