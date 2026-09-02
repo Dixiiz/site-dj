@@ -22,7 +22,7 @@ const services = [
   {
     title: "Mariages",
     description:
-      "Une ambiance sur-mesure pour le plus beau jour de votre vie : cocktail, dîner et piste de danse jusqu'au bout de la nuit.",
+      "Une ambiance sur-mesure pour le plus beau jour de votre vie : cérémonie, cocktail, dîner et piste de danse jusqu'au bout de la nuit.",
   },
   {
     title: "Anniversaires & soirées privées",
@@ -35,9 +35,9 @@ const services = [
       "Séminaires, soirées de gala, arbres de Noël : une prestation professionnelle et adaptée à votre image.",
   },
   {
-    title: "Son & lumière",
+    title: "Bars, clubs & soirées pro",
     description:
-      "Matériel professionnel : sonorisation, éclairages dynamiques et machine à fumée pour une ambiance immersive.",
+      "Sets adaptés à votre public : électro, house, hits du moment — je m'adapte à l'ambiance de votre établissement et de votre clientèle.",
   },
 ];
 
