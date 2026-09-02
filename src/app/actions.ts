@@ -95,6 +95,7 @@ export async function submitQuoteAndBooking(formData: FormData) {
   const pack_base_minutes = Number(formData.get("pack_base_minutes") ?? 0) || 0;
   const pack_extra_rate_cents = Number(formData.get("pack_extra_rate_cents") ?? 0) || 0;
   const optionIds = formData.getAll("option_ids").map(String);
+  const co2_qty = Number(formData.get("co2_qty") ?? 1) || 1;
   const event_date = String(formData.get("event_date") ?? "").trim();
   const start_time = String(formData.get("start_time") ?? "").trim();
   const end_time = String(formData.get("end_time") ?? "").trim();
@@ -136,11 +137,17 @@ export async function submitQuoteAndBooking(formData: FormData) {
         optionIds.includes(option.id) &&
         (option.formula_id === null || option.formula_id === formula_id)
     )
-    .map((option) => ({
-      id: option.id,
-      name: option.name,
-      price_cents: option.price_cents,
-    }));
+    .map((option) => {
+      // Pistolet CO2 vendu à l'unité : quantité 1 ou 2 choisie par le client.
+      const isCo2 = /co2/i.test(option.name);
+      const qty = isCo2 ? Math.min(2, Math.max(1, co2_qty)) : 1;
+      return {
+        id: option.id,
+        name: option.name,
+        price_cents: option.price_cents * qty,
+        qty,
+      };
+    });
 
   const travelResult = await estimateTravelFromAddress(event_location);
   const confirmedTravelFeeCents = travelResult.ok ? travelResult.estimate.feeCents : travel_fee_cents || 0;
@@ -184,6 +191,7 @@ export async function submitQuoteAndBooking(formData: FormData) {
     `Début : ${start_time}`,
     `Fin : ${end_time}`,
     extra_hours > 0 ? `Heures supplémentaires : ${extra_hours} (${(extra_fee_cents / 100).toFixed(2)} €)` : null,
+    co2_qty > 1 ? `Pistolets CO2 : ${co2_qty} unités` : null,
     notes ? `Message : ${notes}` : null,
   ]
     .filter(Boolean)

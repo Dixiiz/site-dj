@@ -26,6 +26,7 @@ export type SelectedOption = {
   id: string;
   name: string;
   price_cents: number;
+  qty?: number;
 };
 
 export type TravelInfo = {

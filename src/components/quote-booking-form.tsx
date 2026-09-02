@@ -66,6 +66,7 @@ export function QuoteBookingForm({
   const [pack, setPack] = useState<PackInfo | null>(null);
   const [notes, setNotes] = useState("");
   const [optionIds, setOptionIds] = useState<string[]>([]);
+  const [co2Qty, setCo2Qty] = useState<1 | 2>(1);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [startTime, setStartTime] = useState(
     formulas[0] && isMariageFormula(formulas[0].name) ? "15:00" : "18:00"
@@ -119,8 +120,12 @@ export function QuoteBookingForm({
     }
     window.addEventListener("propul:select-pack", onSelectPack);
     function onToggleOption(event: Event) {
-      const optionName = (event as CustomEvent<{ name: string }>).detail?.name;
+      const detail = (event as CustomEvent<{ name: string; qty?: number }>).detail;
+      const optionName = detail?.name;
       if (!optionName) return;
+      if (typeof detail?.qty === "number") {
+        setCo2Qty(detail.qty === 2 ? 2 : 1);
+      }
       const match = options.find(
         (option) => option.name.toLowerCase() === optionName.toLowerCase()
       );
@@ -207,9 +212,13 @@ export function QuoteBookingForm({
     return rest > 0 ? `${h} h ${rest}` : `${h} heure${h > 1 ? "s" : ""}`;
   }
 
+  const co2Option = selectedOptions.find((option) => /co2/i.test(option.name));
+  const co2ExtraCents = co2Option ? (co2Qty - 1) * co2Option.price_cents : 0;
+
   const total =
     (pack?.priceCents ?? 0) +
     selectedOptions.reduce((sum, option) => sum + option.price_cents, 0) +
+    co2ExtraCents +
     extraFeeCents +
     (travel?.feeCents ?? 0);
 
@@ -300,6 +309,7 @@ export function QuoteBookingForm({
       {optionIds.map((id) => (
         <input key={id} type="hidden" name="option_ids" value={id} />
       ))}
+      <input type="hidden" name="co2_qty" value={co2Qty} />
       <input type="hidden" name="travel_distance_km" value={travel?.distanceKm ?? ""} />
       <input type="hidden" name="travel_fee_cents" value={travel?.feeCents ?? ""} />
 
@@ -569,12 +579,23 @@ export function QuoteBookingForm({
               <span>{pack?.name ?? "Aucun pack sélectionné"}</span>
               <span>{formatEuros(pack?.priceCents ?? 0)}</span>
             </div>
-            {selectedOptions.map((option) => (
-              <div key={option.id} className="flex justify-between gap-4 text-muted-foreground">
-                <span>{option.name}</span>
-                <span>{formatEuros(option.price_cents)}</span>
-              </div>
-            ))}
+            {selectedOptions.map((option) => {
+              const isCo2 = /co2/i.test(option.name);
+              return (
+                <div
+                  key={option.id}
+                  className="flex justify-between gap-4 text-muted-foreground"
+                >
+                  <span>
+                    {option.name}
+                    {isCo2 && co2Qty === 2 ? " × 2" : ""}
+                  </span>
+                  <span>
+                    {formatEuros(option.price_cents * (isCo2 ? co2Qty : 1))}
+                  </span>
+                </div>
+              );
+            })}
             {extraHours > 0 ? (
               <div className="flex justify-between gap-4 text-muted-foreground">
                 <span>
@@ -585,7 +606,7 @@ export function QuoteBookingForm({
             ) : null}
             {travel && travel.feeCents > 0 ? (
               <div className="flex justify-between gap-4 text-muted-foreground">
-                <span>Frais de déplacement ({travel.distanceKm} km)</span>
+                <span>Frais de déplacement aller-retour ({travel.distanceKm} km)</span>
                 <span>{formatEuros(travel.feeCents)}</span>
               </div>
             ) : null}

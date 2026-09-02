@@ -376,6 +376,7 @@ export function PricingSection() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [selectedPack, setSelectedPack] = useState<string | null>(null);
   const [selectedFx, setSelectedFx] = useState<string[]>([]);
+  const [co2Qty, setCo2Qty] = useState<1 | 2>(1);
   const active = CATEGORIES.find((c) => c.id === categoryId) ?? null;
 
   function choosePack(pack: Pack) {
@@ -415,10 +416,10 @@ export function PricingSection() {
     return () => window.removeEventListener("propul:options-changed", onOptionsChanged);
   }, []);
 
-  function toggleFx(optionName: string) {
+  function toggleFx(optionName: string, qty?: number) {
     window.dispatchEvent(
       new CustomEvent("propul:toggle-option", {
-        detail: { name: OPTION_TO_FORM[optionName] ?? optionName },
+        detail: { name: OPTION_TO_FORM[optionName] ?? optionName, qty },
       })
     );
   }
@@ -588,8 +589,42 @@ export function PricingSection() {
             </CardHeader>
             <CardContent className="relative flex items-center justify-between gap-3">
               <div>
-                <p className="text-xl font-semibold">{formatEuros(option.price)}</p>
+                <p className="text-xl font-semibold">
+                  {formatEuros(option.price)}
+                  {/co2/i.test(option.name) ? (
+                    <span className="text-sm text-muted-foreground"> / unité</span>
+                  ) : null}
+                </p>
                 <p className="text-xs text-accent">{option.badge}</p>
+                {/co2/i.test(option.name) && fxSelected ? (
+                  <div
+                    className="mt-2 flex items-center gap-2"
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
+                    <label className="text-xs text-muted-foreground">Quantité :</label>
+                    <select
+                      value={co2Qty}
+                      onChange={(event) => {
+                        const qty = Number(event.target.value) === 2 ? 2 : 1;
+                        setCo2Qty(qty);
+                        // Sélection déjà cochée : on met juste à jour la quantité.
+                        window.dispatchEvent(
+                          new CustomEvent("propul:toggle-option", {
+                            detail: {
+                              name: OPTION_TO_FORM[option.name] ?? option.name,
+                              qty,
+                            },
+                          })
+                        );
+                      }}
+                      className="rounded-md border border-white/10 bg-background px-2 py-1 text-xs"
+                    >
+                      <option value={1}>1 pistolet</option>
+                      <option value={2}>2 pistolets</option>
+                    </select>
+                  </div>
+                ) : null}
               </div>
               <Button
                 variant={fxSelected ? "default" : "outline"}

@@ -3,7 +3,7 @@
 // pour géocoder l'adresse et estimer la distance routière.
 // Les frais sont calculés sur l'aller-RETOUR (distance x2).
 
-const ORIGIN = { lat: 47.5920919, lon: 1.4540356 }; // Huisseau-sur-Cosson
+const ORIGIN = { lat: 47.5776490, lon: 1.4115210 }; // Huisseau-sur-Cosson (41350)
 export const FREE_KM = 30;
 export const RATE_PER_KM_CENTS = 80; // 0,80 €/km
 
