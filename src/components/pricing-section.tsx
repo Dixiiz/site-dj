@@ -639,15 +639,6 @@ export function PricingSection() {
           );
         })}
       </div>
-
-      {/* Conditions & déplacements */}
-      <div className="mt-10 rounded-xl border border-white/10 bg-white/[0.03] p-5 text-sm text-muted-foreground">
-        <h3 className="font-medium text-foreground">Déplacements</h3>
-        <p className="mt-1">
-          30 km offerts autour du siège. Au-delà : 0,80 €/km (aller-retour),
-          calculés automatiquement dans le devis. Péages en sus au réel.
-        </p>
-      </div>
     </FadeIn>
   );
 }

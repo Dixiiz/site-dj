@@ -445,42 +445,62 @@ export function QuoteBookingForm({
                   <p className="text-sm font-medium">
                     Vous commencez avant 18 h — souhaitez-vous de la sonorisation en plus ?
                   </p>
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={wantCeremony}
-                      onCheckedChange={(v) => setWantCeremony(v === true)}
-                    />
-                    Sonorisation de la cérémonie laïque
-                  </label>
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={wantCocktail}
-                      onCheckedChange={(v) => setWantCocktail(v === true)}
-                    />
-                    Sonorisation du cocktail / vin d&apos;honneur
-                  </label>
+                  <button
+                    type="button"
+                    aria-pressed={wantCeremony}
+                    onClick={() => setWantCeremony((v) => !v)}
+                    className={`w-full rounded-md border px-3 py-2.5 text-left text-sm transition-colors ${
+                      wantCeremony
+                        ? "border-accent bg-accent/15 text-foreground"
+                        : "border-white/10 hover:border-accent/60 hover:bg-accent/10"
+                    }`}
+                  >
+                    {wantCeremony ? "✓ " : ""}Sonorisation de la cérémonie laïque
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={wantCocktail}
+                    onClick={() => setWantCocktail((v) => !v)}
+                    className={`w-full rounded-md border px-3 py-2.5 text-left text-sm transition-colors ${
+                      wantCocktail
+                        ? "border-accent bg-accent/15 text-foreground"
+                        : "border-white/10 hover:border-accent/60 hover:bg-accent/10"
+                    }`}
+                  >
+                    {wantCocktail ? "✓ " : ""}Sonorisation du cocktail / vin d&apos;honneur
+                  </button>
                 </div>
               ) : isMariage && startMinutes === toMinutes("18:00") ? (
                 <div className="space-y-2 rounded-lg border border-white/10 p-3">
                   <p className="text-sm font-medium">Début à 18 h</p>
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={wantCocktail}
-                      onCheckedChange={(v) => setWantCocktail(v === true)}
-                    />
-                    Sonorisation du cocktail / vin d&apos;honneur
-                  </label>
+                  <button
+                    type="button"
+                    aria-pressed={wantCocktail}
+                    onClick={() => setWantCocktail((v) => !v)}
+                    className={`w-full rounded-md border px-3 py-2.5 text-left text-sm transition-colors ${
+                      wantCocktail
+                        ? "border-accent bg-accent/15 text-foreground"
+                        : "border-white/10 hover:border-accent/60 hover:bg-accent/10"
+                    }`}
+                  >
+                    {wantCocktail ? "✓ " : ""}Sonorisation du cocktail / vin d&apos;honneur
+                  </button>
                 </div>
               ) : !isMariage && !isBarClub && startMinutes === toMinutes("18:00") ? (
                 <div className="space-y-2 rounded-lg border border-white/10 p-3">
                   <p className="text-sm font-medium">Début à 18 h</p>
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={wantCocktail}
-                      onCheckedChange={(v) => setWantCocktail(v === true)}
-                    />
-                    Sonorisation de l&apos;apéritif / cocktail
-                  </label>
+                  <button
+                    type="button"
+                    aria-pressed={wantCocktail}
+                    onClick={() => setWantCocktail((v) => !v)}
+                    className={`w-full rounded-md border px-3 py-2.5 text-left text-sm transition-colors ${
+                      wantCocktail
+                        ? "border-accent bg-accent/15 text-foreground"
+                        : "border-white/10 hover:border-accent/60 hover:bg-accent/10"
+                    }`}
+                  >
+                    {wantCocktail ? "✓ " : ""}Sonorisation de l&apos;apéritif / cocktail
+                  </button>
                 </div>
               ) : null}
 
