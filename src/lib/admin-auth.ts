@@ -1,5 +1,5 @@
 import { createHmac } from "crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 const COOKIE = "dj_admin";
 
@@ -22,10 +22,11 @@ export async function setAdminSession() {
     throw new Error("ADMIN_PASSWORD manquant dans .env.local");
   }
   const store = await cookies();
+  const proto = (await headers()).get("x-forwarded-proto") ?? "http";
   store.set(COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: proto === "https",
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
   });

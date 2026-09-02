@@ -131,7 +131,7 @@ export default async function DisponibilitesPage({
                           key={i}
                           className={`flex h-8 items-center justify-center rounded-md ${
                             isBooked
-                              ? "bg-accent/20 font-semibold text-accent line-through"
+                              ? "bg-destructive/20 font-semibold text-destructive line-through"
                               : isPast
                                 ? "text-muted-foreground/30"
                                 : isToday
