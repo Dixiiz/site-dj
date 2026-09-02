@@ -1,4 +1,5 @@
 import { FadeIn } from "@/components/fade-in";
+import { PricingSection } from "@/components/pricing-section";
 import { QuoteBookingForm } from "@/components/quote-booking-form";
 import { SiteHeader } from "@/components/site-header";
 import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/admin";
@@ -47,7 +48,9 @@ export default async function FormulesPage() {
             Choisissez le type d&apos;événement, les options, la date, vos coordonnées, et envoyez !
           </p>
         </FadeIn>
-        <FadeIn delay={0.15} className="mt-10">
+        <PricingSection />
+        <FadeIn delay={0.15} className="mt-16">
+          <div id="formulaire-devis" className="scroll-mt-24" />
           <QuoteBookingForm
             formulas={(formulas ?? []) as Formula[]}
             options={(options ?? []) as QuoteOption[]}
