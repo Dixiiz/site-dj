@@ -51,15 +51,26 @@ function buildMonthGrid(year: number, month: number) {
   return cells;
 }
 
-export default async function DisponibilitesPage() {
+export default async function DisponibilitesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ annee?: string }>;
+}) {
   const booked = await getBookedDates();
   const bookedMap = new Map(booked.map((b) => [b.date, b.label]));
 
-  const today = new Date();
-  const months = Array.from({ length: 9 }, (_, i) => {
-    const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
-    return { year: d.getFullYear(), month: d.getMonth() };
-  });
+  const params = await searchParams;
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear, currentYear + 1, currentYear + 2];
+  const selectedYear = years.includes(Number(params.annee))
+    ? Number(params.annee)
+    : currentYear;
+
+  const months = Array.from({ length: 12 }, (_, m) => ({
+    year: selectedYear,
+    month: m,
+  }));
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   return (
     <>
@@ -80,6 +91,21 @@ export default async function DisponibilitesPage() {
             </Link>{" "}
             et nous vous confirmons sous 48 h.
           </p>
+          <div className="mt-6 flex items-center gap-2">
+            {years.map((y) => (
+              <Link
+                key={y}
+                href={`/disponibilites?annee=${y}`}
+                className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${
+                  y === selectedYear
+                    ? "border-accent bg-accent/15 font-medium text-accent"
+                    : "border-white/10 text-muted-foreground hover:border-accent/40"
+                }`}
+              >
+                {y}
+              </Link>
+            ))}
+          </div>
         </FadeIn>
 
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -101,7 +127,7 @@ export default async function DisponibilitesPage() {
                       if (day === null) return <span key={i} />;
                       const iso = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                       const isBooked = bookedMap.has(iso);
-                      const isToday = iso === today.toISOString().slice(0, 10);
+                      const isToday = iso === todayIso;
                       return (
                         <span
                           key={i}
