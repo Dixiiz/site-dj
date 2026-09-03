@@ -1,7 +1,10 @@
 import { deleteQuote } from "@/app/actions";
 import { markQuoteSeen, resolveQuoteOptions } from "@/app/client-actions";
 import { QuickStatusForm } from "@/components/quick-status-form";
+import { AdminQuoteConversation } from "@/components/admin-quote-conversation";
 import { AdminQuoteDetails } from "@/components/admin-quote-details";
+import { AdminQuoteFiles } from "@/components/admin-quote-files";
+import { AdminQuotePlaylist } from "@/components/admin-quote-playlist";
 import { updateQuoteStatus } from "@/app/actions";
 
 import { QuoteStatusSelect } from "@/components/quote-status-select";
@@ -242,6 +245,12 @@ export default async function DevisPage({
                   </div>
                 ) : null}
                 <AdminQuoteDetails quote={quote} options={options} />
+                {/* Dossier complet : conversation, musiques et fichiers du client */}
+                <div className="space-y-6 border-t border-border px-4 pb-5 pt-4">
+                  <AdminQuoteConversation quoteId={quote.id} />
+                  <AdminQuotePlaylist quoteId={quote.id} />
+                  <AdminQuoteFiles quoteId={quote.id} />
+                </div>
               </details>
             );
           })}

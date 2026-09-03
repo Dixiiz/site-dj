@@ -41,3 +41,19 @@ alter table playlist_tracks add column if not exists artwork_url text;
 alter table quotes add column if not exists pending_options jsonb;
 alter table quotes add column if not exists has_unread_updates boolean not null default false;
 
+-- Fichiers envoyés par les clients (MP3, MP4, documents…)
+create table if not exists quote_files (
+  id uuid primary key default gen_random_uuid(),
+  quote_id uuid not null references quotes(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  storage_path text not null,
+  mime_type text,
+  size_bytes bigint,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists quote_files_quote_idx on quote_files (quote_id, created_at);
+
+alter table quote_files enable row level security;
+

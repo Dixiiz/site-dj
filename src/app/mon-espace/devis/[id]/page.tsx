@@ -2,8 +2,10 @@ import { notFound } from "next/navigation";
 import {
   getMyQuote,
   getPlaylistTracks,
+  getQuoteFiles,
   getQuoteMessages,
 } from "@/app/client-actions";
+import { ClientQuoteFiles as ClientFiles } from "@/components/client-files";
 import { ClientOptionsEditor } from "@/components/client-options-editor";
 import { ClientPlaylistEditor } from "@/components/client-playlist-editor";
 import { ClientQuoteMessages } from "@/components/client-quote-messages";
@@ -25,9 +27,10 @@ export default async function ClientQuotePage({
   const quote = await getMyQuote(id);
   if (!quote) notFound();
 
-  const [messages, tracks] = await Promise.all([
+  const [messages, tracks, files] = await Promise.all([
     getQuoteMessages(id),
     getPlaylistTracks(id),
+    getQuoteFiles(id),
   ]);
 
   const supabase = createAdminClient();
@@ -144,6 +147,9 @@ export default async function ClientQuotePage({
 
       {/* Playlist */}
       <ClientPlaylistEditor quoteId={id} tracks={tracks} />
+
+      {/* Fichiers */}
+      <ClientFiles quoteId={id} files={files} />
 
       {/* Messagerie */}
       <ClientQuoteMessages quoteId={id} messages={messages} />

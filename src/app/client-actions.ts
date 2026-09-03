@@ -486,3 +486,137 @@ export async function markQuoteSeen(formData: FormData) {
   revalidatePath("/admin/devis");
 }
 
+// ---------- Fichiers clients (MP3, MP4, documents…) ----------
+
+const FILES_BUCKET = "client-files";
+const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 Mo par fichier
+
+// Crée le bucket privé s'il n'existe pas encore (idempotent).
+async function ensureBucket(supabase: ReturnType<typeof createAdminClient>) {
+  const { data: buckets } = await supabase.storage.listBuckets();
+  if (buckets?.some((b) => b.name === FILES_BUCKET)) return;
+  await supabase.storage.createBucket(FILES_BUCKET, { public: false });
+}
+
+export async function uploadClientFile(formData: FormData) {
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const file = formData.get("file");
+  if (!quoteId || !(file instanceof File) || file.size === 0) {
+    return { ok: false as const, error: "Aucun fichier sélectionné." };
+  }
+  if (file.size > MAX_FILE_BYTES) {
+    return { ok: false as const, error: "Fichier trop volumineux (50 Mo max)." };
+  }
+
+  const { user, quote } = await getOwnedQuote(quoteId);
+  if (!user || !quote) return { ok: false as const, error: "Devis introuvable." };
+
+  const supabase = createAdminClient();
+  await ensureBucket(supabase);
+
+  const safeName = file.name.replace(/[^\w.\-()À-ÿ ]+/g, "_");
+  const storagePath = `${quoteId}/${Date.now()}-${safeName}`;
+  const { error: uploadError } = await supabase.storage
+    .from(FILES_BUCKET)
+    .upload(storagePath, file, { contentType: file.type || undefined });
+
+  if (uploadError) {
+    console.error("[upload] Erreur:", uploadError);
+    return { ok: false as const, error: "Échec de l'envoi. Réessayez dans un instant." };
+  }
+
+  await supabase.from("quote_files").insert({
+    quote_id: quoteId,
+    user_id: user.id,
+    name: file.name,
+    storage_path: storagePath,
+    mime_type: file.type || null,
+    size_bytes: file.size,
+  });
+
+  // Pastille nouveautés côté admin.
+  await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
+
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  revalidatePath("/admin/devis");
+  return { ok: true as const, message: "Fichier envoyé ✓" };
+}
+
+export async function getQuoteFiles(quoteId: string) {
+  const { user } = await getOwnedQuote(quoteId);
+  if (!user) return [];
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("quote_files")
+    .select("id, name, storage_path, mime_type, size_bytes, created_at")
+    .eq("quote_id", quoteId)
+    .order("created_at", { ascending: true });
+  return data ?? [];
+}
+
+// Variante admin (accès à n'importe quel devis).
+export async function getQuoteFilesAdmin(quoteId: string) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return [];
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("quote_files")
+    .select("id, name, storage_path, mime_type, size_bytes, created_at")
+    .eq("quote_id", quoteId)
+    .order("created_at", { ascending: true });
+  return data ?? [];
+}
+
+// Téléchargement : génère une URL signée courte et y redirige.
+export async function downloadQuoteFile(formData: FormData) {
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const fileId = String(formData.get("file_id") ?? "");
+  if (!quoteId || !fileId) return;
+
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) {
+    const { user } = await getOwnedQuote(quoteId);
+    if (!user) return;
+  }
+
+  const supabase = createAdminClient();
+  const { data: file } = await supabase
+    .from("quote_files")
+    .select("storage_path, name")
+    .eq("id", fileId)
+    .eq("quote_id", quoteId)
+    .single();
+  if (!file) return;
+
+  const { data: signed } = await supabase.storage
+    .from(FILES_BUCKET)
+    .createSignedUrl(file.storage_path, 600, {
+      download: file.name,
+    });
+  if (signed?.signedUrl) redirect(signed.signedUrl);
+}
+
+export async function deleteQuoteFile(formData: FormData) {
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const fileId = String(formData.get("file_id") ?? "");
+  if (!quoteId || !fileId) return;
+
+  const { user } = await getOwnedQuote(quoteId);
+  if (!user) return;
+
+  const supabase = createAdminClient();
+  const { data: file } = await supabase
+    .from("quote_files")
+    .select("storage_path")
+    .eq("id", fileId)
+    .eq("quote_id", quoteId)
+    .eq("user_id", user.id)
+    .single();
+  if (!file) return;
+
+  await supabase.storage.from(FILES_BUCKET).remove([file.storage_path]);
+  await supabase.from("quote_files").delete().eq("id", fileId);
+
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+}
+
