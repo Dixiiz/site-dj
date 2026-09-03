@@ -18,7 +18,7 @@ export function QuoteStatusSelect({
 }) {
   return (
     <Select
-      defaultValue={status}
+      value={status}
       onValueChange={(value) => {
         if (!value) return;
         const data = new FormData();
