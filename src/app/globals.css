@@ -125,6 +125,12 @@
   * {
     @apply border-border outline-ring/50;
   }
+  h1,
+  h2 {
+    font-family: var(--font-fjalla), var(--font-poppins), sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+  }
   body {
     @apply bg-background text-foreground;
   }

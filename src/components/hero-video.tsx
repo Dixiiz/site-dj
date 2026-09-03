@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 const FADE_MS = 700; // durée du fondu de boucle
-const PARALLAX = 0.55; // la vidéo descend à 55% de la vitesse du scroll
-const MAX_SHIFT_RATIO = 0.2; // course maximale de la vidéo (proportion du héro)
+const PARALLAX = 0.5; // la vidéo descend à 50% de la vitesse du scroll
+const MAX_SHIFT_RATIO = 0.3; // course maximale de la vidéo (proportion du héro)
 
 // Vidéo de fond du héro : boucle avec fondu enchaîné, bords estompés par des
 // masques FIXES (la vidéo glisse dessous au scroll → aucun bord jamais visible).
@@ -36,22 +36,27 @@ export function HeroVideo({ src = "/videos/hero.mp4" }: { src?: string }) {
   // Parallaxe : la vidéo glisse sous les masques fixes
   useEffect(() => {
     let raf = 0;
-    const onScroll = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const video = videoRef.current;
-        if (!video) return;
-        const hero = video.closest("section");
-        const maxShift = (hero ? hero.offsetHeight : 600) * MAX_SHIFT_RATIO;
-        const shift = Math.min(window.scrollY * PARALLAX, maxShift);
-        video.style.transform = `translateY(${shift}px) scale(1.15)`;
-      });
+    const update = () => {
+      raf = 0;
+      const video = videoRef.current;
+      if (!video) return;
+      const box = video.parentElement;
+      if (!box) return;
+      const hero = box.closest("section") ?? box;
+      const maxShift = Math.max(hero.clientHeight, 600) * MAX_SHIFT_RATIO;
+      const shift = Math.min(window.scrollY * PARALLAX, maxShift);
+      box.style.transform = `translate3d(0, ${shift}px, 0)`;
     };
-    onScroll();
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    update();
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
     return () => {
       window.removeEventListener("scroll", onScroll);
-      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onScroll);
+      if (raf) cancelAnimationFrame(raf);
     };
   }, []);
 
