@@ -431,6 +431,34 @@ export async function updateQuoteStatus(formData: FormData) {
   const allowed = ["nouveau", "contacte", "confirme", "refuse", "annule"];
   if (!id || !allowed.includes(status)) return;
   const supabase = createAdminClient();
+
+  // Notification e-mail au client quand le devis est confirmé.
+  if (status === "confirme") {
+    const { data: quote } = await supabase
+      .from("quotes")
+      .select("customer_email, event_date")
+      .eq("id", id)
+      .single();
+    try {
+      if (quote?.customer_email) {
+        const { Resend } = await import("resend");
+        const apiKey = process.env.RESEND_API_KEY;
+        const from = process.env.NOTIF_EMAIL;
+        if (apiKey && from) {
+          const resend = new Resend(apiKey);
+          await resend.emails.send({
+            from: `Propul'Sound DJ <${from}>`,
+            to: quote.customer_email,
+            subject: "🎉 Votre devis est confirmé !",
+            text: `Bonjour,\n\nExcellente nouvelle : votre devis${quote.event_date ? ` pour le ${quote.event_date}` : ""} est confirmé !\n\nConnectez-vous à votre espace client pour retrouver tous les détails, votre playlist et les documents à signer.\n\n— Propul'Sound DJ`,
+          });
+        }
+      }
+    } catch {
+      // best effort
+    }
+  }
+
   await supabase.from("quotes").update({ status }).eq("id", id);
   revalidatePath("/admin/devis");
   revalidatePath("/admin/planning");

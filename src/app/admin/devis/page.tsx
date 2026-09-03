@@ -27,9 +27,10 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
 
 function optionShort(name: string): string {
   const n = name.toLowerCase();
+  if (n.includes("fumée lourde") || n.includes("fumee lourde")) return "Fumée lourde";
   if (n.includes("fumée")) return "Fumée";
-  if (n.includes("étincelles")) return "Étincelles";
-  if (n.includes("co2")) return "CO2";
+  if (n.includes("étincelles") || n.includes("etincelles")) return "Étincelles";
+  if (n.includes("co2")) return "Pistolet CO2";
   if (n.includes("cérémonie")) return "Cérémonie";
   if (n.includes("light+")) return "Light+";
   return name.length > 14 ? `${name.slice(0, 12)}…` : name;
