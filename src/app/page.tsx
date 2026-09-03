@@ -317,6 +317,27 @@ export default async function Home() {
         )}
 
         <GoogleReviews />
+
+        {/* Badge Linkaband « Réservation confirmée » */}
+        <div className="flex justify-center pb-8 -mt-2">
+          <a
+            href="https://linkaband.com/propulsound-dj?utm_source=badge&utm_campaign=161495"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Réservation confirmée sur Linkaband"
+            className="transition-transform hover:scale-105"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://linkaband.com/assets/images/validation/reservation-noir.png"
+              alt="Propul'Sound DJ — Réservation confirmée sur Linkaband"
+              width={130}
+              height={130}
+              loading="lazy"
+              className="rounded-lg"
+            />
+          </a>
+        </div>
       </main>
       <footer className="border-t border-white/10 py-8 text-center text-sm text-muted-foreground">
         Propul&apos;Sound DJ — Huisseau-sur-Cosson (41350) · Déplacement offert dans un rayon de
