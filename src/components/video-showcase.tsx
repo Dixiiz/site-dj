@@ -85,7 +85,9 @@ export function VideoShowcase({ videos, orientation = "landscape" }: VideoShowca
               className="shrink-0"
               style={{ width: `calc(${100 / visible}% - ${visible > 1 ? "1rem" : "0px"})` }}
             >
-              <div className="group relative overflow-hidden rounded-xl border border-border bg-card/60">
+              {/* max-w + mx-auto : sur mobile la vignette reste centrée,
+                  jamais coupée par le bord droit de l'écran */}
+              <div className="group relative mx-auto w-full max-w-[300px] overflow-hidden rounded-xl border border-border bg-card/60 sm:max-w-none">
                 <video
                   ref={(el) => {
                     refs.current[src] = el;
