@@ -39,6 +39,7 @@ export function ClientPlaylistEditor({
   quoteId: string;
   tracks: Track[];
 }) {
+  const [activeMoment, setActiveMoment] = useState(FIXED_MOMENTS[0]);
   const [pendingRemove, startRemove] = useTransition();
 
   function removeTrack(trackId: string) {
@@ -58,28 +59,46 @@ export function ClientPlaylistEditor({
         pour l&apos;ajouter. Écoutez avant d&apos;ajouter si vous voulez.
       </p>
 
-      {/* Temps forts : 1 à 4 musiques, une section chacun */}
-      <div className="mt-6 space-y-4">
-        {FIXED_MOMENTS.map((moment) => (
+      {/* Deux colonnes : danse à gauche, temps forts à droite */}
+      <div className="mt-6 grid items-start gap-4 lg:grid-cols-2">
+        <DanceSection
+          quoteId={quoteId}
+          danceTracks={tracks.filter(
+            (t) => t.moment === DANCE_MOMENT && t.kind === "souhait"
+          )}
+          blacklist={blacklist}
+          onRemove={removeTrack}
+        />
+
+        <div className="rounded-xl border border-white/10 p-4">
+          <h3 className="font-medium text-accent">Temps forts</h3>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {FIXED_MOMENTS.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setActiveMoment(m)}
+                className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                  activeMoment === m
+                    ? "border-accent bg-accent/15 font-medium text-accent"
+                    : "border-white/10 text-muted-foreground hover:border-accent/40"
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
           <MomentSection
-            key={moment}
+            key={activeMoment}
             quoteId={quoteId}
-            moment={moment}
-            tracks={tracks.filter((t) => t.kind === "souhait" && t.moment === moment)}
+            moment={activeMoment}
+            tracks={tracks.filter(
+              (t) => t.kind === "souhait" && t.moment === activeMoment
+            )}
             onRemove={removeTrack}
           />
-        ))}
+        </div>
       </div>
-
-      {/* Soirée / danse : souhait ou blacklist, sans limite */}
-      <DanceSection
-        quoteId={quoteId}
-        danceTracks={tracks.filter(
-          (t) => t.moment === DANCE_MOMENT && t.kind === "souhait"
-        )}
-        blacklist={blacklist}
-        onRemove={removeTrack}
-      />
     </section>
   );
 }
@@ -287,7 +306,7 @@ function SectionSearch({
   );
 }
 
-// Section d'un temps fort fixe : 1 à 4 musiques maximum.
+// Contenu d'un temps fort fixe : 1 à 4 musiques maximum (affiché via onglets).
 function MomentSection({
   quoteId,
   moment,
@@ -301,9 +320,9 @@ function MomentSection({
 }) {
   const full = tracks.length >= 4;
   return (
-    <div className="rounded-xl border border-white/10 p-4">
+    <div className="mt-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-medium text-accent">{moment}</h3>
+        <h4 className="text-sm font-medium text-foreground">{moment}</h4>
         <span className="text-xs text-muted-foreground">
           {tracks.length}/4 musique{tracks.length > 1 ? "s" : ""}
         </span>
@@ -314,7 +333,11 @@ function MomentSection({
             <TrackRow key={track.id} track={track} onRemove={() => onRemove(track.id)} />
           ))}
         </ul>
-      ) : null}
+      ) : (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Aucune musique pour ce temps fort.
+        </p>
+      )}
       {full ? (
         <p className="mt-3 text-xs text-muted-foreground">
           Complet (4 max) — retirez un titre pour en changer.
@@ -326,7 +349,7 @@ function MomentSection({
   );
 }
 
-// Section danse : souhaits illimités + blacklist, chacune avec sa recherche.
+// Section danse : 30 souhaits max + blacklist, chacune avec sa recherche.
 function DanceSection({
   quoteId,
   danceTracks,
@@ -339,40 +362,51 @@ function DanceSection({
   onRemove: (trackId: string) => void;
 }) {
   const [danceKind, setDanceKind] = useState<"souhait" | "blacklist">("souhait");
+  const full = danceTracks.length >= 30;
 
   return (
-    <div className="mt-4 rounded-xl border border-white/10 p-4">
+    <div className="rounded-xl border border-white/10 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-medium text-accent">Soirée / Piste de danse</h3>
-        <div className="flex gap-1 rounded-lg border border-white/10 p-1 text-xs">
-          <button
-            type="button"
-            onClick={() => setDanceKind("souhait")}
-            className={`rounded-md px-3 py-1 transition-colors ${
-              danceKind === "souhait"
-                ? "bg-accent/15 font-medium text-accent"
-                : "text-muted-foreground"
-            }`}
-          >
-            ▶ À passer
-          </button>
-          <button
-            type="button"
-            onClick={() => setDanceKind("blacklist")}
-            className={`rounded-md px-3 py-1 transition-colors ${
-              danceKind === "blacklist"
-                ? "bg-red-500/15 font-medium text-red-400"
-                : "text-muted-foreground"
-            }`}
-          >
-            🚫 Blacklist
-          </button>
-        </div>
+        <h3 className="font-medium text-accent">🎵 Soirée / Piste de danse</h3>
+        <span className="text-xs text-muted-foreground">
+          {danceTracks.length}/30 titres
+        </span>
+      </div>
+
+      <div className="mt-3 flex gap-1 rounded-lg border border-white/10 p-1 text-xs">
+        <button
+          type="button"
+          onClick={() => setDanceKind("souhait")}
+          className={`flex-1 rounded-md px-3 py-1.5 transition-colors ${
+            danceKind === "souhait"
+              ? "bg-accent/15 font-medium text-accent"
+              : "text-muted-foreground"
+          }`}
+        >
+          ▶ À passer
+        </button>
+        <button
+          type="button"
+          onClick={() => setDanceKind("blacklist")}
+          className={`flex-1 rounded-md px-3 py-1.5 font-medium transition-colors ${
+            danceKind === "blacklist"
+              ? "bg-red-500/20 text-red-400"
+              : "text-red-400/70"
+          }`}
+        >
+          🚫 À ne PAS passer
+        </button>
       </div>
 
       {danceKind === "souhait" ? (
         <>
-          <SectionSearch quoteId={quoteId} moment={DANCE_MOMENT} kind="souhait" />
+          <SectionSearch
+            quoteId={quoteId}
+            moment={DANCE_MOMENT}
+            kind="souhait"
+            disabled={full}
+            disabledLabel="Complet (30 titres max)"
+          />
           {danceTracks.length > 0 ? (
             <ul className="mt-3 space-y-2">
               {danceTracks.map((track) => (
@@ -381,7 +415,7 @@ function DanceSection({
             </ul>
           ) : (
             <p className="mt-3 text-xs text-muted-foreground">
-              Aucun titre pour la piste de danse — ajoutez-en autant que vous voulez !
+              Aucun titre pour la piste de danse — ajoutez-en jusqu&apos;à 30 !
             </p>
           )}
         </>
@@ -401,7 +435,7 @@ function DanceSection({
             </ul>
           ) : (
             <p className="mt-3 text-xs text-red-400/80">
-              Aucune musique blacklistée — ajoutez celles à éviter absolument.
+              Aucune musique à ne PAS passer — ajoutez celles à éviter absolument.
             </p>
           )}
         </>
