@@ -3,11 +3,9 @@
 import { useRef, useState, useTransition } from "react";
 import {
   deleteQuoteFile,
-  downloadQuoteFile,
   uploadClientFile,
 } from "@/app/client-actions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 type ClientFile = {
   id: string;
