@@ -129,6 +129,19 @@ export async function getQuoteMessages(quoteId: string) {
   return data ?? [];
 }
 
+// Récupère les messages d'un devis pour l'admin (rafraîchissement).
+export async function getQuoteMessagesAdmin(quoteId: string) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return [];
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("quote_messages")
+    .select("id, sender, body, created_at")
+    .eq("quote_id", quoteId)
+    .order("created_at", { ascending: true });
+  return data ?? [];
+}
+
 export async function sendQuoteMessage(formData: FormData) {
   const quoteId = String(formData.get("quote_id") ?? "");
   const body = String(formData.get("body") ?? "").trim();

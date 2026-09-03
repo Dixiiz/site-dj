@@ -1,11 +1,13 @@
 "use client";
 
-import { useRef, useTransition } from "react";
-import { sendQuoteMessage } from "@/app/client-actions";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { getQuoteMessages, sendQuoteMessage } from "@/app/client-actions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
 type Message = { id: string; sender: string; body: string; created_at: string };
+
+const POLL_MS = 4000;
 
 function timeLabel(iso: string) {
   return new Date(iso).toLocaleString("fr-FR", {
@@ -18,26 +20,63 @@ function timeLabel(iso: string) {
 
 export function ClientQuoteMessages({
   quoteId,
-  messages,
+  messages: initialMessages,
 }: {
   quoteId: string;
   messages: Message[];
 }) {
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
+  const lastSent = useRef<string>("");
+
+  // Synchronisation avec les props après revalidation serveur (pattern React).
+  const initialJson = JSON.stringify(initialMessages);
+  const [syncedJson, setSyncedJson] = useState(initialJson);
+  if (syncedJson !== initialJson) {
+    setSyncedJson(initialJson);
+    setMessages(initialMessages);
+  }
+
+  // Messagerie "live" : rafraîchit les nouveaux messages toutes les 4 s.
+  useEffect(() => {
+    const id = setInterval(async () => {
+      const fresh = await getQuoteMessages(quoteId);
+      setMessages((current) =>
+        JSON.stringify(current) === JSON.stringify(fresh) ? current : fresh
+      );
+    }, POLL_MS);
+    return () => clearInterval(id);
+  }, [quoteId]);
 
   function onSubmit(formData: FormData) {
     formRef.current?.reset();
     startTransition(async () => {
       await sendQuoteMessage(formData);
+      // Affiche immédiatement son propre message (optimiste).
+      const body = String(formData.get("body") ?? "").trim();
+      if (body) {
+        lastSent.current = body;
+        const fresh = await getQuoteMessages(quoteId);
+        setMessages((current) =>
+          JSON.stringify(current) === JSON.stringify(fresh) ? current : fresh
+        );
+      }
     });
   }
 
   return (
     <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-      <h2 className="font-medium">Messagerie</h2>
+      <h2 className="font-medium">
+        Messagerie
+        <span
+          className="ml-2 inline-block h-2 w-2 rounded-full bg-green-500 align-middle"
+          title="Messagerie en direct"
+        />
+      </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Une question, un changement ? Écrivez-nous ici.
+        Une question, un changement ? Écrivez-nous ici — la conversation se met à
+        jour automatiquement.
       </p>
 
       <ul className="mt-4 space-y-3">
@@ -78,3 +117,4 @@ export function ClientQuoteMessages({
     </section>
   );
 }
+

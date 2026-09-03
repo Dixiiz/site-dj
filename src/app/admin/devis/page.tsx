@@ -55,6 +55,18 @@ export default async function DevisPage({
     .select("*")
     .order("created_at", { ascending: false });
 
+  // Messages regroupés par devis (conversation initiale ; ensuite rafraîchie en direct).
+  const { data: allMessages } = await supabase
+    .from("quote_messages")
+    .select("id, quote_id, sender, body, created_at")
+    .order("created_at", { ascending: true });
+  const initialMessagesByQuote = new Map<string, typeof allMessages>();
+  for (const message of allMessages ?? []) {
+    const list = initialMessagesByQuote.get(message.quote_id) ?? [];
+    list.push(message);
+    initialMessagesByQuote.set(message.quote_id, list);
+  }
+
   const filtered = (quotes ?? []).filter((quote) => {
     if (!query) return true;
     const haystack = [
@@ -247,7 +259,17 @@ export default async function DevisPage({
                 <AdminQuoteDetails quote={quote} options={options} />
                 {/* Dossier complet : conversation, musiques et fichiers du client */}
                 <div className="space-y-6 border-t border-border px-4 pb-5 pt-4">
-                  <AdminQuoteConversation quoteId={quote.id} />
+                  <AdminQuoteConversation
+                    quoteId={quote.id}
+                    initialMessages={
+                      (initialMessagesByQuote.get(quote.id) ?? []) as {
+                        id: string;
+                        sender: string;
+                        body: string;
+                        created_at: string;
+                      }[]
+                    }
+                  />
                   <AdminQuotePlaylist quoteId={quote.id} />
                   <AdminQuoteFiles quoteId={quote.id} />
                 </div>
