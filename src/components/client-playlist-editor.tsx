@@ -9,16 +9,18 @@ import {
 } from "@/app/client-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
-export const PLAYLIST_MOMENTS = [
+// Les temps forts "fixes" : une section dédiée, 1 à 4 musiques max.
+const FIXED_MOMENTS = [
   "Cérémonie laïque",
+  "Entrée des mariés",
   "Cocktail / Vin d'honneur",
   "Repas",
   "Ouverture de bal",
-  "Soirée / Piste de danse",
   "Anniversaires & temps forts",
 ];
+
+const DANCE_MOMENT = "Soirée / Piste de danse";
 
 type Track = {
   id: string;
@@ -37,16 +39,57 @@ export function ClientPlaylistEditor({
   quoteId: string;
   tracks: Track[];
 }) {
-  const [pendingAdd, startAdd] = useTransition();
   const [pendingRemove, startRemove] = useTransition();
 
-  // Recherche de titres : suggestions avec écoute avant sélection.
+  function removeTrack(trackId: string) {
+    const formData = new FormData();
+    formData.set("quote_id", quoteId);
+    formData.set("track_id", trackId);
+    startRemove(async () => void (await removePlaylistTrack(formData)));
+  }
+
+  const blacklist = tracks.filter((t) => t.kind === "blacklist");
+
+  return (
+    <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+      <h2 className="font-medium">Musiques</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Chaque temps fort a sa section : tapez un titre et touchez la suggestion
+        pour l&apos;ajouter. Écoutez avant d&apos;ajouter si vous voulez.
+      </p>
+
+      {/* Temps forts : 1 à 4 musiques, une section chacun */}
+      <div className="mt-6 space-y-4">
+        {FIXED_MOMENTS.map((moment) => (
+          <MomentSection
+            key={moment}
+            quoteId={quoteId}
+            moment={moment}
+            tracks={tracks.filter((t) => t.kind === "souhait" && t.moment === moment)}
+            onRemove={removeTrack}
+          />
+        ))}
+      </div>
+
+      {/* Soirée / danse : souhait ou blacklist, sans limite */}
+      <DanceSection
+        quoteId={quoteId}
+        danceTracks={tracks.filter(
+          (t) => t.moment === DANCE_MOMENT && t.kind === "souhait"
+        )}
+        blacklist={blacklist}
+        onRemove={removeTrack}
+      />
+    </section>
+  );
+}
+
+// Hook de recherche partagé (suggestions + lecture d'extraits).
+function useTrackSearch() {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<TrackSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [moment, setMoment] = useState(PLAYLIST_MOMENTS[0]);
-  const [kind, setKind] = useState<"souhait" | "blacklist">("souhait");
   const [previewing, setPreviewing] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,7 +107,7 @@ export function ClientPlaylistEditor({
       setSuggestions(results);
       setSearching(false);
       setShowSuggestions(true);
-    }, 350);
+    }, 300);
     return () => {
       if (searchTimer.current) clearTimeout(searchTimer.current);
     };
@@ -84,214 +127,290 @@ export function ClientPlaylistEditor({
     audio.onended = () => setPreviewing(null);
   }
 
-  // Ajout en un clic sur la suggestion (avec le temps fort et le type choisis).
-  function addSuggestion(suggestion: TrackSuggestion) {
-    const formData = new FormData();
-    formData.set("quote_id", quoteId);
-    formData.set("moment", moment);
-    formData.set("title", suggestion.title);
-    formData.set("artist", suggestion.artist);
-    formData.set("kind", kind);
-    if (suggestion.previewUrl) formData.set("preview_url", suggestion.previewUrl);
-    if (suggestion.artworkUrl) formData.set("artwork_url", suggestion.artworkUrl);
-    startAdd(async () => void (await addPlaylistTrack(formData)));
+  return {
+    query,
+    setQuery,
+    suggestions,
+    setSuggestions,
+    searching,
+    showSuggestions,
+    setShowSuggestions,
+    previewing,
+    playPreview,
+  };
+}
+
+// Construit le FormData d'ajout pour une suggestion.
+function buildAddFormData(
+  quoteId: string,
+  moment: string,
+  kind: "souhait" | "blacklist",
+  suggestion: TrackSuggestion
+) {
+  const formData = new FormData();
+  formData.set("quote_id", quoteId);
+  formData.set("moment", moment);
+  formData.set("title", suggestion.title);
+  formData.set("artist", suggestion.artist);
+  formData.set("kind", kind);
+  if (suggestion.previewUrl) formData.set("preview_url", suggestion.previewUrl);
+  if (suggestion.artworkUrl) formData.set("artwork_url", suggestion.artworkUrl);
+  return formData;
+}
+
+// Recherche + ajout en un clic, pour une section donnée.
+function SectionSearch({
+  quoteId,
+  moment,
+  kind,
+  disabled,
+  disabledLabel,
+}: {
+  quoteId: string;
+  moment: string;
+  kind: "souhait" | "blacklist";
+  disabled?: boolean;
+  disabledLabel?: string;
+}) {
+  const [pendingAdd, startAdd] = useTransition();
+  const {
+    query,
+    setQuery,
+    suggestions,
+    setSuggestions,
+    searching,
+    showSuggestions,
+    setShowSuggestions,
+    previewing,
+    playPreview,
+  } = useTrackSearch();
+
+  function add(suggestion: TrackSuggestion) {
+    startAdd(async () =>
+      void (await addPlaylistTrack(buildAddFormData(quoteId, moment, kind, suggestion)))
+    );
     setQuery("");
     setSuggestions([]);
     setShowSuggestions(false);
   }
 
-  function removeTrack(trackId: string) {
-    const formData = new FormData();
-    formData.set("quote_id", quoteId);
-    formData.set("track_id", trackId);
-    startRemove(async () => void (await removePlaylistTrack(formData)));
-  }
-
-  const blacklist = tracks.filter((t) => t.kind === "blacklist");
-
   return (
-    <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-      <h2 className="font-medium">Musiques</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Tapez un titre : des suggestions avec extrait audio apparaissent — écoutez,
-        puis ajoutez.
-      </p>
-
-      {/* Choix du contexte d'ajout */}
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="kind">Type d&apos;ajout</Label>
-          <select
-            id="kind"
-            value={kind}
-            onChange={(e) => setKind(e.target.value === "blacklist" ? "blacklist" : "souhait")}
-            className="w-full rounded-md border border-white/10 bg-background px-3 py-2 text-sm"
-          >
-            <option value="souhait">Souhait (à passer)</option>
-            <option value="blacklist">À ne PAS passer</option>
-          </select>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="moment">Temps fort</Label>
-          <select
-            id="moment"
-            value={moment}
-            onChange={(e) => setMoment(e.target.value)}
-            className="w-full rounded-md border border-white/10 bg-background px-3 py-2 text-sm"
-          >
-            {PLAYLIST_MOMENTS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Recherche : un clic sur une suggestion l'ajoute directement */}
-        <div
-          className="relative sm:col-span-2"
-          onBlur={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-              setShowSuggestions(false);
-            }
+    <div
+      className="relative mt-3"
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setShowSuggestions(false);
+        }
+      }}
+    >
+      <div className="relative">
+        <Input
+          value={query}
+          autoComplete="off"
+          inputMode="search"
+          placeholder={disabled ? disabledLabel ?? "Complet" : "Tapez un titre…"}
+          disabled={disabled}
+          className="pr-10"
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setShowSuggestions(false);
           }}
-        >
-          <Label htmlFor="title">Titre</Label>
-          <div className="relative">
-            <Input
-              id="title"
-              value={query}
-              autoComplete="off"
-              inputMode="search"
-              placeholder="Tapez un titre…"
-              className="pr-10"
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") setShowSuggestions(false);
-              }}
-            />
-            {query && !pendingAdd ? (
+        />
+        {query && !pendingAdd ? (
+          <button
+            type="button"
+            aria-label="Effacer"
+            onClick={() => {
+              setQuery("");
+              setSuggestions([]);
+              setShowSuggestions(false);
+            }}
+            className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+          >
+            ✕
+          </button>
+        ) : null}
+      </div>
+      {/* Suggestions : un clic sur le nom ajoute directement */}
+      {showSuggestions && (searching || suggestions.length > 0) && !disabled ? (
+        <ul className="absolute inset-x-0 top-full z-20 mt-1 max-h-80 overflow-y-auto rounded-lg border border-white/10 bg-background shadow-xl">
+          {searching ? (
+            <li className="px-3 py-2.5 text-sm text-muted-foreground">Recherche…</li>
+          ) : null}
+          {suggestions.map((suggestion) => (
+            <li
+              key={suggestion.key}
+              className="flex flex-wrap items-center gap-2 border-b border-white/5 px-3 py-2.5 last:border-0 sm:gap-3"
+            >
+              {suggestion.artworkUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={suggestion.artworkUrl}
+                  alt=""
+                  width={36}
+                  height={36}
+                  className="h-9 w-9 shrink-0 rounded-md object-cover"
+                />
+              ) : null}
               <button
                 type="button"
-                aria-label="Effacer la recherche"
-                onClick={() => {
-                  setQuery("");
-                  setSuggestions([]);
-                  setShowSuggestions(false);
-                }}
-                className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => add(suggestion)}
+                disabled={pendingAdd}
+                className="min-w-0 flex-1 basis-40 rounded-md py-0.5 text-left transition-colors hover:text-accent"
+                title={`Ajouter « ${suggestion.title} »`}
               >
-                ✕
-              </button>
-            ) : null}
-          </div>
-
-          {showSuggestions && (searching || suggestions.length > 0) ? (
-            <ul className="absolute inset-x-0 top-full z-20 mt-1 max-h-80 overflow-y-auto rounded-lg border border-white/10 bg-background shadow-xl">
-              {searching ? (
-                <li className="px-3 py-2.5 text-sm text-muted-foreground">Recherche…</li>
-              ) : null}
-              {suggestions.map((suggestion) => (
-                <li
-                  key={suggestion.key}
-                  className="flex flex-wrap items-center gap-2 border-b border-white/5 px-3 py-2.5 last:border-0 sm:gap-3"
-                >
-                  {suggestion.artworkUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={suggestion.artworkUrl}
-                      alt=""
-                      width={36}
-                      height={36}
-                      className="h-9 w-9 shrink-0 rounded-md object-cover"
-                    />
+                <p className="truncate text-sm font-medium underline decoration-accent/40 underline-offset-2">
+                  {suggestion.title}
+                  {pendingAdd ? (
+                    <span className="ml-2 text-xs font-normal text-accent">Ajout…</span>
                   ) : null}
-                  {/* Clic sur le nom = ajout direct dans la catégorie choisie */}
-                  <button
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => addSuggestion(suggestion)}
-                    disabled={pendingAdd}
-                    className="min-w-0 flex-1 basis-40 rounded-md py-0.5 text-left transition-colors hover:text-accent"
-                    title={`Ajouter « ${suggestion.title} » — ${moment}`}
-                  >
-                    <p className="truncate text-sm font-medium underline decoration-accent/40 underline-offset-2">
-                      {suggestion.title}
-                      {pendingAdd ? (
-                        <span className="ml-2 text-xs font-normal text-accent">Ajout…</span>
-                      ) : null}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">{suggestion.artist}</p>
-                  </button>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {suggestion.previewUrl ? (
-                      <button
-                        type="button"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => playPreview(suggestion.previewUrl, suggestion.key)}
-                        className="rounded-full border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
-                      >
-                        {previewing === suggestion.key ? "■ Stop" : "▶ Écouter"}
-                      </button>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-      </div>
-
-      {/* Catégories par temps fort */}
-      <div className="mt-8 space-y-6">
-        {PLAYLIST_MOMENTS.map((m) => {
-          const momentTracks = tracks.filter((t) => t.kind === "souhait" && t.moment === m);
-          if (momentTracks.length === 0) return null;
-          return (
-            <div key={m}>
-              <h3 className="text-sm font-medium text-accent">
-                {m} <span className="text-muted-foreground">({momentTracks.length})</span>
-              </h3>
-              <ul className="mt-2 space-y-2">
-                {momentTracks.map((track) => (
-                  <TrackRow key={track.id} track={track} onRemove={() => removeTrack(track.id)} />
-                ))}
-              </ul>
-            </div>
-          );
-        })}
-
-        {blacklist.length > 0 ? (
-          <div>
-            <h3 className="text-sm font-medium text-red-400">
-              À ne PAS passer ({blacklist.length})
-            </h3>
-            <ul className="mt-2 space-y-2">
-              {blacklist.map((track) => (
-                <TrackRow key={track.id} track={track} onRemove={() => removeTrack(track.id)} />
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {tracks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Aucune musique pour le moment — ajoutez votre premier titre ci-dessus.
-          </p>
-        ) : null}
-      </div>
-    </section>
+                </p>
+                <p className="truncate text-xs text-muted-foreground">{suggestion.artist}</p>
+              </button>
+              {suggestion.previewUrl ? (
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => playPreview(suggestion.previewUrl, suggestion.key)}
+                  className="shrink-0 rounded-full border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
+                >
+                  {previewing === suggestion.key ? "■ Stop" : "▶ Écouter"}
+                </button>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }
 
-function TrackRow({
-  track,
+// Section d'un temps fort fixe : 1 à 4 musiques maximum.
+function MomentSection({
+  quoteId,
+  moment,
+  tracks,
   onRemove,
 }: {
-  track: Track;
-  onRemove: () => void;
+  quoteId: string;
+  moment: string;
+  tracks: Track[];
+  onRemove: (trackId: string) => void;
 }) {
+  const full = tracks.length >= 4;
+  return (
+    <div className="rounded-xl border border-white/10 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-medium text-accent">{moment}</h3>
+        <span className="text-xs text-muted-foreground">
+          {tracks.length}/4 musique{tracks.length > 1 ? "s" : ""}
+        </span>
+      </div>
+      {tracks.length > 0 ? (
+        <ul className="mt-3 space-y-2">
+          {tracks.map((track) => (
+            <TrackRow key={track.id} track={track} onRemove={() => onRemove(track.id)} />
+          ))}
+        </ul>
+      ) : null}
+      {full ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Complet (4 max) — retirez un titre pour en changer.
+        </p>
+      ) : (
+        <SectionSearch quoteId={quoteId} moment={moment} kind="souhait" />
+      )}
+    </div>
+  );
+}
+
+// Section danse : souhaits illimités + blacklist, chacune avec sa recherche.
+function DanceSection({
+  quoteId,
+  danceTracks,
+  blacklist,
+  onRemove,
+}: {
+  quoteId: string;
+  danceTracks: Track[];
+  blacklist: Track[];
+  onRemove: (trackId: string) => void;
+}) {
+  const [danceKind, setDanceKind] = useState<"souhait" | "blacklist">("souhait");
+
+  return (
+    <div className="mt-4 rounded-xl border border-white/10 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-medium text-accent">Soirée / Piste de danse</h3>
+        <div className="flex gap-1 rounded-lg border border-white/10 p-1 text-xs">
+          <button
+            type="button"
+            onClick={() => setDanceKind("souhait")}
+            className={`rounded-md px-3 py-1 transition-colors ${
+              danceKind === "souhait"
+                ? "bg-accent/15 font-medium text-accent"
+                : "text-muted-foreground"
+            }`}
+          >
+            ▶ À passer
+          </button>
+          <button
+            type="button"
+            onClick={() => setDanceKind("blacklist")}
+            className={`rounded-md px-3 py-1 transition-colors ${
+              danceKind === "blacklist"
+                ? "bg-red-500/15 font-medium text-red-400"
+                : "text-muted-foreground"
+            }`}
+          >
+            🚫 Blacklist
+          </button>
+        </div>
+      </div>
+
+      {danceKind === "souhait" ? (
+        <>
+          <SectionSearch quoteId={quoteId} moment={DANCE_MOMENT} kind="souhait" />
+          {danceTracks.length > 0 ? (
+            <ul className="mt-3 space-y-2">
+              {danceTracks.map((track) => (
+                <TrackRow key={track.id} track={track} onRemove={() => onRemove(track.id)} />
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Aucun titre pour la piste de danse — ajoutez-en autant que vous voulez !
+            </p>
+          )}
+        </>
+      ) : (
+        <>
+          <SectionSearch
+            quoteId={quoteId}
+            moment={DANCE_MOMENT}
+            kind="blacklist"
+            disabledLabel="Blacklist"
+          />
+          {blacklist.length > 0 ? (
+            <ul className="mt-3 space-y-2">
+              {blacklist.map((track) => (
+                <TrackRow key={track.id} track={track} onRemove={() => onRemove(track.id)} />
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-xs text-red-400/80">
+              Aucune musique blacklistée — ajoutez celles à éviter absolument.
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function TrackRow({ track, onRemove }: { track: Track; onRemove: () => void }) {
   return (
     <li className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm sm:gap-3">
       {track.artwork_url ? (
@@ -309,7 +428,6 @@ function TrackRow({
           <span className="font-medium">{track.title}</span>
           {track.artist ? <span className="text-muted-foreground"> — {track.artist}</span> : null}
         </p>
-        <p className="text-xs text-muted-foreground">{track.moment}</p>
       </div>
       {track.preview_url ? (
         <audio
@@ -327,3 +445,4 @@ function TrackRow({
     </li>
   );
 }
+
