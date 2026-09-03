@@ -176,7 +176,7 @@ export default async function Home() {
               DJ &amp; animations — Loir-et-Cher
             </p>
             <h1
-              className="mx-auto mt-4 max-w-3xl text-4xl font-normal tracking-tight text-glow sm:text-6xl"
+              className="mx-auto mt-4 max-w-4xl text-5xl font-normal tracking-tight text-glow sm:text-7xl"
               style={{ fontFamily: "var(--font-fjalla), sans-serif" }}
             >
               Mettez de l&apos;énergie dans vos événements avec{" "}
@@ -237,7 +237,7 @@ export default async function Home() {
             <div className="relative grid items-center gap-10 p-8 sm:p-12 md:grid-cols-2">
               <div>
                 <p className="text-sm tracking-[0.2em] text-accent uppercase">Qui suis-je ?</p>
-                <h2 className="mt-2 text-3xl font-medium tracking-tight">
+                <h2 className="mt-2 text-4xl tracking-tight">
                   Une passion, une exigence
                 </h2>
                 <p className="mt-4 text-muted-foreground">
@@ -269,7 +269,7 @@ export default async function Home() {
         {/* Appel à l'action */}
         <section className="mx-auto w-full max-w-3xl px-4 pb-20 text-center">
           <FadeIn>
-            <h2 className="text-2xl font-medium tracking-tight sm:text-3xl">
+            <h2 className="text-4xl tracking-tight sm:text-5xl">
               Prêt à réserver votre date ?
             </h2>
             <p className="mt-3 text-muted-foreground">
@@ -290,7 +290,7 @@ export default async function Home() {
         {showcaseVideos.length > 0 && (
           <section className="mx-auto w-full max-w-5xl px-4 pb-4 text-center">
             <FadeIn>
-              <h2 className="text-3xl font-medium tracking-tight sm:text-4xl">
+              <h2 className="text-4xl tracking-tight sm:text-5xl">
                 Propul&apos;Sound <span className="text-accent">en action</span>
               </h2>
               <p className="mt-3 text-muted-foreground">
