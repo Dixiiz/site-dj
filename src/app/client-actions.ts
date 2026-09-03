@@ -535,6 +535,81 @@ export async function deleteQuoteMoment(formData: FormData) {
   revalidatePath("/admin/devis");
 }
 
+// ---------- Documents envoyés par l'admin ----------
+
+export async function uploadAdminDocument(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const file = formData.get("file");
+  if (!quoteId || !(file instanceof File) || file.size === 0) {
+    return { ok: false as const, error: "Aucun fichier sélectionné." };
+  }
+  if (file.size > 50 * 1024 * 1024) {
+    return { ok: false as const, error: "Fichier trop volumineux (50 Mo max)." };
+  }
+
+  const supabase = createAdminClient();
+  await ensureBucket(supabase);
+
+  const safeName = file.name.replace(/[^\w.\-()À-ÿ ]+/g, "_");
+  const storagePath = `admin/${quoteId}/${Date.now()}-${safeName}`;
+  const { error: uploadError } = await supabase.storage
+    .from(FILES_BUCKET)
+    .upload(storagePath, file, { contentType: file.type || undefined });
+  if (uploadError) {
+    return { ok: false as const, error: "Échec de l'envoi." };
+  }
+
+  // Propriétaire du devis (pour la clé user_id).
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("customer_email")
+    .eq("id", quoteId)
+    .single();
+  const { data: owner } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const ownerUser = owner?.users?.find(
+    (u) => u.email?.toLowerCase() === quote?.customer_email?.toLowerCase()
+  );
+
+  await supabase.from("quote_files").insert({
+    quote_id: quoteId,
+    user_id: ownerUser?.id ?? crypto.randomUUID(),
+    name: file.name,
+    storage_path: storagePath,
+    mime_type: file.type || null,
+    size_bytes: file.size,
+    from_admin: true,
+  });
+
+  revalidatePath("/admin/devis");
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  return { ok: true as const, message: "Document envoyé au client ✓" };
+}
+
+export async function deleteAdminDocument(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return;
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const fileId = String(formData.get("file_id") ?? "");
+  if (!quoteId || !fileId) return;
+
+  const supabase = createAdminClient();
+  const { data: file } = await supabase
+    .from("quote_files")
+    .select("storage_path")
+    .eq("id", fileId)
+    .eq("quote_id", quoteId)
+    .single();
+  if (!file) return;
+
+  await supabase.storage.from(FILES_BUCKET).remove([file.storage_path]);
+  await supabase.from("quote_files").delete().eq("id", fileId);
+  revalidatePath("/admin/devis");
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+}
+
 // ---------- Fichiers clients (MP3, MP4, documents…) ----------
 
 const FILES_BUCKET = "client-files";
@@ -599,7 +674,7 @@ export async function getQuoteFiles(quoteId: string) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("quote_files")
-    .select("id, name, storage_path, mime_type, size_bytes, created_at, moment")
+    .select("id, name, storage_path, mime_type, size_bytes, created_at, moment, from_admin")
     .eq("quote_id", quoteId)
     .order("created_at", { ascending: true });
   return data ?? [];
@@ -612,7 +687,7 @@ export async function getQuoteFilesAdmin(quoteId: string) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("quote_files")
-    .select("id, name, storage_path, mime_type, size_bytes, created_at, moment")
+    .select("id, name, storage_path, mime_type, size_bytes, created_at, moment, from_admin")
     .eq("quote_id", quoteId)
     .order("created_at", { ascending: true });
   return data ?? [];

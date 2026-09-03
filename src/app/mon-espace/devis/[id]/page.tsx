@@ -6,6 +6,7 @@ import {
   getQuoteMessages,
 } from "@/app/client-actions";
 import { AutoRefresh } from "@/components/auto-refresh";
+import { downloadQuoteFile } from "@/app/client-actions";
 import { eventMoments } from "@/components/admin-quote-playlist";
 import { DiversFiles, MomentFiles } from "@/components/client-files";
 import { ClientOptionsEditor } from "@/components/client-options-editor";
@@ -152,6 +153,38 @@ export default async function ClientQuotePage({
       </section>
 
       {/* Playlist */}
+      {/* Documents officiels envoyés par Propul'Sound DJ */}
+      {files.filter((f) => f.from_admin).length > 0 ? (
+        <section className="rounded-xl border border-accent/30 bg-accent/5 p-5">
+          <h2 className="font-medium">📄 Documents officiels</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Contrat, devis signé et documents importants de votre événement.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {files
+              .filter((f) => f.from_admin)
+              .map((file) => (
+                <li
+                  key={file.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm"
+                >
+                  <span className="min-w-0 truncate font-medium">📄 {file.name}</span>
+                  <form action={downloadQuoteFile}>
+                    <input type="hidden" name="quote_id" value={id} />
+                    <input type="hidden" name="file_id" value={file.id} />
+                    <button
+                      type="submit"
+                      className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
+                    >
+                      Télécharger
+                    </button>
+                  </form>
+                </li>
+              ))}
+          </ul>
+        </section>
+      ) : null}
+
       {/* Musiques + fichiers par catégorie */}
       <ClientPlaylistEditor
         quoteId={id}

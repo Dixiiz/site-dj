@@ -3,6 +3,7 @@ import { markQuoteSeen, resolveQuoteOptions } from "@/app/client-actions";
 import { QuickStatusForm } from "@/components/quick-status-form";
 import { AdminQuoteConversation } from "@/components/admin-quote-conversation";
 import { AdminQuoteDetails } from "@/components/admin-quote-details";
+import { AdminQuoteDocuments } from "@/components/admin-quote-documents";
 import { AdminQuoteFiles } from "@/components/admin-quote-files";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { AdminQuotePlaylist, eventMoments } from "@/components/admin-quote-playlist";
@@ -277,6 +278,7 @@ export default async function DevisPage({
                     moments={eventMoments(quote.formula_name)}
                   />
                   <AdminQuoteFiles quoteId={quote.id} />
+                  <AdminQuoteDocuments quoteId={quote.id} />
                 </div>
               </details>
             );

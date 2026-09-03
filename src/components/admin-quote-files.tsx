@@ -23,6 +23,7 @@ export async function AdminQuoteFiles({ quoteId }: { quoteId: string }) {
     .from("quote_files")
     .select("id, name, mime_type, size_bytes, moment")
     .eq("quote_id", quoteId)
+    .eq("from_admin", false)
     .order("created_at", { ascending: true });
 
   return (

@@ -19,6 +19,7 @@ type PlaylistFile = {
   size_bytes: number | null;
   created_at: string;
   moment: string | null;
+  from_admin?: boolean;
 };
 
 // Le type d'événement (mariage / anniversaire) détermine les temps forts
@@ -124,6 +125,15 @@ export function ClientPlaylistEditor({
             )}
             files={files.filter((f) => f.moment === activeMoment)}
             onRemove={removeTrack}
+            onDelete={() => {
+              if (
+                window.confirm(
+                  `Supprimer le temps fort « ${activeMoment} » ainsi que ses musiques et fichiers ?`
+                )
+              ) {
+                removeCustomMoment(activeMoment);
+              }
+            }}
           />
 
           {/* Temps forts personnalisés (supprimables) */}

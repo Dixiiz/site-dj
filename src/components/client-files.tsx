@@ -16,6 +16,7 @@ type ClientFile = {
   size_bytes: number | null;
   created_at: string;
   moment: string | null;
+  from_admin?: boolean;
 };
 
 function sizeLabel(bytes: number | null) {
@@ -139,7 +140,7 @@ export function MomentFiles({
 
 // Fichiers sans catégorie (anciens envois) — liste lecture seule.
 export function DiversFiles({ quoteId, files }: { quoteId: string; files: ClientFile[] }) {
-  const misc = files.filter((f) => !f.moment);
+  const misc = files.filter((f) => !f.moment && !f.from_admin);
   if (misc.length === 0) return null;
   return (
     <div className="rounded-xl border border-white/10 p-4">
