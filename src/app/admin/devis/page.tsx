@@ -25,12 +25,13 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   annule: { label: "Annulé", className: "border-zinc-500/60 text-zinc-400" },
 };
 
-function optionShort(name: string): string {
+function optionShort(name: string, qty?: number): string {
   const n = name.toLowerCase();
+  // Le CO2 d'abord : son nom contient « fumée » !
+  if (n.includes("co2")) return qty === 2 ? "Pistolets CO2 ×2" : "Pistolet CO2";
   if (n.includes("fumée lourde") || n.includes("fumee lourde")) return "Fumée lourde";
-  if (n.includes("fumée")) return "Fumée";
+  if (n.includes("fumée") || n.includes("fumee")) return "Fumée";
   if (n.includes("étincelles") || n.includes("etincelles")) return "Étincelles";
-  if (n.includes("co2")) return "Pistolet CO2";
   if (n.includes("cérémonie")) return "Cérémonie";
   if (n.includes("light+")) return "Light+";
   return name.length > 14 ? `${name.slice(0, 12)}…` : name;
@@ -199,7 +200,7 @@ export default async function DevisPage({
                       {options.length > 0 ? (
                         <span className="text-muted-foreground">
                           {" · 🎛️ "}
-                          {options.map((o) => optionShort(o.name)).join(" · ")}
+                          {options.map((o) => optionShort(o.name, o.qty)).join(" · ")}
                         </span>
                       ) : null}
                     </div>
