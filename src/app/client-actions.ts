@@ -102,7 +102,7 @@ export async function getMyQuotes() {
   const { data } = await supabase
     .from("quotes")
     .select(
-      "id, event_date, event_type, formula_name, total_cents, status, created_at, pending_options"
+      "id, event_date, event_type, formula_name, total_cents, status, created_at, pending_options, client_label"
     )
     .eq("customer_email", user.email)
     .order("created_at", { ascending: false });
@@ -113,6 +113,28 @@ export async function getMyQuote(quoteId: string) {
   const { user, quote } = await getOwnedQuote(quoteId);
   if (!user || !quote) return null;
   return quote;
+}
+
+// Le client renomme son devis (ex : « Mariage de Julien »).
+export async function renameClientQuote(formData: FormData) {
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const label = String(formData.get("label") ?? "").trim().slice(0, 60);
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  const { user } = await getOwnedQuote(quoteId);
+  if (!user) return { ok: false as const, error: "Devis introuvable." };
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("quotes")
+    .update({ client_label: label || null })
+    .eq("id", quoteId);
+
+  if (error) return { ok: false as const, error: "Impossible de renommer." };
+
+  revalidatePath("/mon-espace");
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  return { ok: true as const, message: "Devis renommé ✓" };
 }
 
 // ---------- Messagerie ----------

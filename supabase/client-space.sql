@@ -59,6 +59,9 @@ alter table quote_files add column if not exists moment text;
 -- Fichiers envoyés par l'admin (contrat, devis signé, documents officiels)
 alter table quote_files add column if not exists from_admin boolean not null default false;
 
+-- Nom personnalisé donné au devis par le client
+alter table quotes add column if not exists client_label text;
+
 create index if not exists quote_files_quote_idx on quote_files (quote_id, created_at);
 
 alter table quote_files enable row level security;

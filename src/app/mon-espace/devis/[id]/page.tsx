@@ -4,6 +4,7 @@ import {
   getPlaylistTracks,
   getQuoteFiles,
   getQuoteMessages,
+  renameClientQuote,
 } from "@/app/client-actions";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { downloadQuoteFile } from "@/app/client-actions";
@@ -68,12 +69,32 @@ export default async function ClientQuotePage({
             className="h-16 w-28 shrink-0 rounded-xl border border-white/10 object-cover sm:h-20 sm:w-36"
           />
         ) : null}
-        <div className="min-w-0">
-          <h1 className="text-2xl font-medium tracking-tight">{quote.formula_name}</h1>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-medium tracking-tight">
+            {quote.client_label || quote.formula_name}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {quote.event_date ?? "Date à définir"} ·{" "}
-            {quote.event_location ?? "Lieu à définir"}
+            {quote.event_location ?? "Lieu à définir"} · Pack : {quote.formula_name}
           </p>
+          {/* Renommage du devis */}
+          <form action={renameClientQuote} className="mt-2 flex max-w-md items-center gap-2">
+            <input type="hidden" name="quote_id" value={id} />
+            <input
+              type="text"
+              name="label"
+              defaultValue={quote.client_label ?? ""}
+              maxLength={60}
+              placeholder="Renommer (ex : Mariage de Julien)"
+              className="w-full rounded-md border border-white/10 bg-background px-2.5 py-1.5 text-xs outline-none focus:border-accent"
+            />
+            <button
+              type="submit"
+              className="shrink-0 rounded-md border border-accent/40 px-2.5 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
+            >
+              Renommer
+            </button>
+          </form>
         </div>
       </div>
 

@@ -49,7 +49,7 @@ export default async function DevisPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, tri } = await searchParams;
   const query = (q ?? "").trim().toLowerCase();
   const supabase = createAdminClient();
   const { data: quotes } = await supabase
@@ -85,6 +85,21 @@ export default async function DevisPage({
     return haystack.includes(query);
   });
 
+  // Tri : réception (récent → ancien), date d'événement, ou prix.
+  const sorters: Record<string, (a: (typeof filtered)[0], b: (typeof filtered)[0]) => number> = {
+    recent: (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    ancien: (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    date_proche: (a, b) =>
+      new Date(a.event_date ?? "9999-12-31").getTime() -
+      new Date(b.event_date ?? "9999-12-31").getTime(),
+    date_loin: (a, b) =>
+      new Date(b.event_date ?? "0000-01-01").getTime() -
+      new Date(a.event_date ?? "0000-01-01").getTime(),
+    cher: (a, b) => (b.total_cents ?? 0) - (a.total_cents ?? 0),
+    moins_cher: (a, b) => (a.total_cents ?? 0) - (b.total_cents ?? 0),
+  };
+  filtered.sort(sorters[tri ?? "recent"] ?? sorters.recent);
+
   return (
     <div className="space-y-6">
       <AutoRefresh />
@@ -95,7 +110,7 @@ export default async function DevisPage({
         </p>
       </div>
 
-      <form method="get" className="flex gap-2">
+      <form method="get" className="flex flex-wrap gap-2">
         <input
           type="search"
           name="q"
@@ -103,11 +118,23 @@ export default async function DevisPage({
           placeholder="Rechercher : nom, e-mail, téléphone, lieu, date…"
           className="w-full max-w-md rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
         />
+        <select
+          name="tri"
+          defaultValue={tri ?? "recent"}
+          className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+        >
+          <option value="recent">Devis : plus récent d&apos;abord</option>
+          <option value="ancien">Devis : plus ancien d&apos;abord</option>
+          <option value="date_proche">Événement : date la plus proche</option>
+          <option value="date_loin">Événement : date la plus lointaine</option>
+          <option value="cher">Prix : du plus cher au moins cher</option>
+          <option value="moins_cher">Prix : du moins cher au plus cher</option>
+        </select>
         <button
           type="submit"
           className="rounded-lg border border-accent/60 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/10"
         >
-          Rechercher
+          Trier
         </button>
         {query ? (
           <a

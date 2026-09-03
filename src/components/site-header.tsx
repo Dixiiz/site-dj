@@ -23,7 +23,8 @@ export async function SiteHeader() {
           </span>
         </Link>
         <div className="flex items-center gap-2">
-          {/* Bouton compte : "Mon espace" (redirige vers /connexion si non connecté) */}
+          <MainNav />
+          {/* Bouton compte en position la plus à droite */}
           <Link
             href={user ? "/mon-espace" : "/connexion"}
             className="flex items-center gap-1.5 rounded-full border border-accent/40 px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent/15"
@@ -43,7 +44,6 @@ export async function SiteHeader() {
             </svg>
             <span>Mon espace</span>
           </Link>
-          <MainNav />
         </div>
       </div>
     </header>

@@ -68,7 +68,9 @@ export default async function MonEspacePage() {
                   className="block rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-colors hover:border-accent/40"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-medium">{quote.formula_name}</span>
+                    <span className="font-medium">
+                      {quote.client_label || quote.formula_name}
+                    </span>
                     <span className="flex flex-wrap items-center gap-1.5">
                       {quote.pending_options ? (
                         <span className="rounded-full bg-yellow-500/10 px-2.5 py-0.5 text-xs font-medium text-yellow-300 border border-yellow-500/40">
