@@ -193,7 +193,7 @@ function useTrackSearch() {
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(async () => {
-      if (query.trim().length < 3) {
+      if (query.trim().length < 2) {
         setSuggestions([]);
         setSearching(false);
         return;
@@ -223,6 +223,13 @@ function useTrackSearch() {
     audio.onended = () => setPreviewing(null);
   }
 
+  // Stoppe la préécoute en cours (ex. quand la suggestion est ajoutée et disparaît).
+  function stopPreview() {
+    audioRef.current?.pause();
+    audioRef.current = null;
+    setPreviewing(null);
+  }
+
   return {
     query,
     setQuery,
@@ -233,6 +240,7 @@ function useTrackSearch() {
     setShowSuggestions,
     previewing,
     playPreview,
+    stopPreview,
   };
 }
 
@@ -279,12 +287,14 @@ function SectionSearch({
     setShowSuggestions,
     previewing,
     playPreview,
+    stopPreview,
   } = useTrackSearch();
 
   function add(suggestion: TrackSuggestion) {
     startAdd(async () =>
       void (await addPlaylistTrack(buildAddFormData(quoteId, moment, kind, suggestion)))
     );
+    stopPreview();
     setQuery("");
     setSuggestions([]);
     setShowSuggestions(false);

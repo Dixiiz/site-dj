@@ -8,7 +8,7 @@ const MAX_SHIFT_RATIO = 0.2; // course maximale de la vidéo (proportion du hér
 
 // Vidéo de fond du héro : boucle avec fondu enchaîné, bords estompés par des
 // masques FIXES (la vidéo glisse dessous au scroll → aucun bord jamais visible).
-export function HeroVideo() {
+export function HeroVideo({ src = "/videos/hero.mp4" }: { src?: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [fading, setFading] = useState(false);
 
@@ -44,7 +44,7 @@ export function HeroVideo() {
         const hero = video.closest("section");
         const maxShift = (hero ? hero.offsetHeight : 600) * MAX_SHIFT_RATIO;
         const shift = Math.min(window.scrollY * PARALLAX, maxShift);
-        video.style.transform = `translateY(${shift}px) scale(1.5)`;
+        video.style.transform = `translateY(${shift}px) scale(1.15)`;
       });
     };
     onScroll();
@@ -89,7 +89,7 @@ export function HeroVideo() {
             playsInline
             preload="auto"
             style={{
-              transform: "scale(1.5)",
+              transform: "scale(1.15)",
               transitionDuration: `${FADE_MS}ms`,
               willChange: "transform",
             }}
@@ -97,7 +97,7 @@ export function HeroVideo() {
               fading ? "opacity-0" : "opacity-75"
             }`}
           >
-            <source src="/videos/hero.mp4" type="video/mp4" />
+            <source src={src} type="video/mp4" />
           </video>
         </div>
       </div>

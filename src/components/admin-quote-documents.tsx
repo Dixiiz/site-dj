@@ -1,12 +1,15 @@
 import {
   deleteAdminDocument,
   downloadQuoteFile,
+  generateContratDocument,
   generateDevisDocument,
+  generateFactureDocument,
   uploadAdminDocument,
 } from "@/app/client-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { InvoiceAdjustments } from "@/components/admin-invoice-adjustments";
 
 type FileRow = {
   id: string;
@@ -32,6 +35,15 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
     .eq("quote_id", quoteId)
     .eq("from_admin", true)
     .order("created_at", { ascending: true });
+
+  const { data: quoteRow } = await supabase
+    .from("quotes")
+    .select("invoice_adjustments")
+    .eq("id", quoteId)
+    .single();
+  const adjustments = Array.isArray(quoteRow?.invoice_adjustments)
+    ? (quoteRow!.invoice_adjustments as { label: string; amount_cents: number }[])
+    : [];
 
   const toSign = (files ?? []).filter((f) => f.doc_kind === "a_signer");
   const info = (files ?? []).filter((f) => f.doc_kind !== "a_signer");
@@ -82,6 +94,7 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
       <div className="rounded-xl border border-orange-500/30 bg-orange-500/[0.04] p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-medium text-orange-400">✍️ Documents à signer</h3>
+          <div className="flex flex-wrap items-start gap-2">
           <form
             action={async (formData: FormData) => {
               "use server";
@@ -89,6 +102,62 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
             }}
           >
             <input type="hidden" name="quote_id" value={quoteId} />
+            {/* Personnalisation du devis (facultatif) */}
+            <details className="mb-2 text-left">
+              <summary className="cursor-pointer text-xs text-muted-foreground hover:text-accent">
+                ⚙️ Personnaliser le devis
+              </summary>
+              <div className="mt-2 space-y-2 rounded-lg border border-white/10 p-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label className="text-xs text-muted-foreground">
+                    Titre
+                    <Input
+                      name="devis_title"
+                      placeholder="DEVIS — Propul'Sound DJ"
+                      className="mt-1 text-xs"
+                    />
+                  </label>
+                  <label className="text-xs text-muted-foreground">
+                    Sous-titre
+                    <Input
+                      name="devis_subtitle"
+                      placeholder="DJ & Show Lumière — Huisseau-sur-Cosson (41350)"
+                      className="mt-1 text-xs"
+                    />
+                  </label>
+                </div>
+                <label className="block text-xs text-muted-foreground">
+                  Conditions (le nombre de jours de validité est remplacé
+                  automatiquement)
+                  <Input
+                    name="devis_conditions"
+                    placeholder="Devis valable 30 jours. Bon pour accord (signature) :"
+                    className="mt-1 text-xs"
+                  />
+                </label>
+                <div className="flex flex-wrap items-end gap-2">
+                  <label className="text-xs text-muted-foreground">
+                    Validité (jours)
+                    <Input
+                      type="number"
+                      name="devis_validity_days"
+                      min={1}
+                      placeholder="30"
+                      className="mt-1 w-24 text-xs"
+                    />
+                  </label>
+                </div>
+                <label className="block text-xs text-muted-foreground">
+                  Notes particulières (ajoutées avant le total, une ligne = une
+                  ligne du PDF)
+                  <textarea
+                    name="devis_notes"
+                    rows={3}
+                    className="mt-1 w-full rounded-md border border-white/10 bg-background px-2 py-1.5 text-xs outline-none focus:border-accent"
+                  />
+                </label>
+              </div>
+            </details>
             <button
               type="submit"
               className="rounded-lg border border-accent/50 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/15"
@@ -96,6 +165,21 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
               ⚡ Générer le devis PDF
             </button>
           </form>
+          <form
+            action={async (formData: FormData) => {
+              "use server";
+              await generateContratDocument(formData);
+            }}
+          >
+            <input type="hidden" name="quote_id" value={quoteId} />
+            <button
+              type="submit"
+              className="rounded-lg border border-cyan-500/50 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:border-cyan-400 hover:bg-cyan-400/25 hover:text-cyan-100"
+            >
+              📝 Générer le contrat PDF
+            </button>
+          </form>
+          </div>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
           Généré automatiquement depuis la prestation choisie — le client le
@@ -113,6 +197,22 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
       {/* Documents simples */}
       <div className="rounded-xl border border-white/10 p-4">
         <h3 className="font-medium text-muted-foreground">📎 Documents simples</h3>
+        <form
+          action={async (formData: FormData) => {
+            "use server";
+            await generateFactureDocument(formData);
+          }}
+          className="mt-2"
+        >
+          <input type="hidden" name="quote_id" value={quoteId} />
+          <button
+            type="submit"
+            className="rounded-lg border border-green-500/50 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-400 transition-colors hover:border-green-400 hover:bg-green-400/25 hover:text-green-200"
+          >
+            🧾 Générer la facture PDF
+          </button>
+        </form>
+        <InvoiceAdjustments quoteId={quoteId} initial={adjustments} />
         {info.length > 0 ? (
           <ul className="mt-3 space-y-2">{info.map((f) => row(f, false))}</ul>
         ) : (

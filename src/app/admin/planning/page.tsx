@@ -14,7 +14,7 @@ export default async function AdminPlanningPage() {
     supabase
       .from("quotes")
       .select("event_date")
-      .eq("status", "confirme")
+      .in("status", ["attente_acompte", "confirme"])
       .gte("event_date", today),
   ]);
 

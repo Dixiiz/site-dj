@@ -46,5 +46,9 @@ export async function GET(
     .createSignedUrl(file.storage_path, 300, { download: file.name });
   if (!signed) return new NextResponse("Erreur", { status: 500 });
 
-  return NextResponse.redirect(signed.signedUrl, 302);
+  // Pas de cache : le PDF peut être remplacé (ex. version signée).
+  return NextResponse.redirect(signed.signedUrl, {
+    status: 302,
+    headers: { "Cache-Control": "no-store" },
+  });
 }

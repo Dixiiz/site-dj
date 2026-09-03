@@ -53,6 +53,9 @@ create table if not exists quotes (
 
 alter table quotes add column if not exists travel_distance_km numeric;
 alter table quotes add column if not exists travel_fee_cents integer not null default 0;
+alter table quotes add column if not exists invoice_adjustments jsonb not null default '[]'::jsonb;
+alter table quotes add column if not exists acompte_declared_at timestamptz;
+alter table quotes add column if not exists acompte_paid_at timestamptz;
 
 create table if not exists custom_requests (
   id uuid primary key default gen_random_uuid(),

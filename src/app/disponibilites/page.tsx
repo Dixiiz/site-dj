@@ -28,7 +28,7 @@ async function getBookedDates(): Promise<BookedDate[]> {
     const { data, error } = await supabase
       .from("quotes")
       .select("event_date")
-      .eq("status", "confirme")
+      .in("status", ["attente_acompte", "confirme"])
       .gte("event_date", today)
       .order("event_date", { ascending: true });
     if (data) {

@@ -124,7 +124,7 @@ export async function AdminQuotePlaylist({
       .order("created_at", { ascending: true }),
     supabase
       .from("quote_files")
-      .select("id, name, mime_type, size_bytes, moment")
+      .select("id, name, mime_type, size_bytes, moment, doc_kind")
       .eq("quote_id", quoteId)
       .order("created_at", { ascending: true }),
   ]);
@@ -137,7 +137,7 @@ export async function AdminQuotePlaylist({
     (t) => t.moment === DANCE && t.kind === "blacklist"
   );
   const danceFiles = allFiles.filter((f) => f.moment === DANCE);
-  const miscFiles = allFiles.filter((f) => !f.moment);
+  const miscFiles = allFiles.filter((f) => !f.moment && f.doc_kind !== "a_signer");
 
   return (
     <div className="grid items-start gap-4 lg:grid-cols-2">

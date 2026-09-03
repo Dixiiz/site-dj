@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getMyQuotes } from "@/app/client-actions";
+import { deleteClientQuote, getMyQuotes } from "@/app/client-actions";
 import { ClientBack } from "@/components/client-back";
 import { RenameInline } from "@/components/rename-inline";
 import { formatEuros } from "@/lib/money";
@@ -20,6 +20,10 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   attente_signature: {
     label: "En attente de signature",
     className: "bg-orange-500/10 text-orange-300 border border-orange-500/40",
+  },
+  attente_acompte: {
+    label: "En attente de l'acompte",
+    className: "bg-cyan-500/10 text-cyan-300 border border-cyan-500/40",
   },
   confirme: {
     label: "Confirmé ✓",
@@ -96,6 +100,23 @@ export default async function MonEspacePage() {
                     <span className="font-medium text-foreground">{formatEuros(quote.total_cents)}</span>
                   </p>
                 </Link>
+                {quote.status === "nouveau" ? (
+                  <form
+                    action={async (formData: FormData) => {
+                      "use server";
+                      await deleteClientQuote(formData);
+                    }}
+                    className="mt-1 text-right"
+                  >
+                    <input type="hidden" name="quote_id" value={quote.id} />
+                    <button
+                      type="submit"
+                      className="text-xs text-muted-foreground transition-colors hover:text-red-400"
+                    >
+                      🗑 Supprimer ce devis
+                    </button>
+                  </form>
+                ) : null}
               </li>
             );
           })}

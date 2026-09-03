@@ -122,7 +122,8 @@ const STATUS_RANK: Record<string, number> = {
   nouveau: 0,
   contacte: 1,
   attente_signature: 2,
-  confirme: 3,
+  attente_acompte: 3,
+  confirme: 4,
 };
 
 export async function advanceQuoteStatus(
@@ -327,7 +328,32 @@ export async function searchTrackSuggestions(
   term: string
 ): Promise<TrackSuggestion[]> {
   const query = term.trim();
-  if (query.length < 3) return [];
+  if (query.length < 2) return [];
+
+  // Recherche tolérante : on tente la requête complète, puis des versions
+  // raccourcies (utile en cas de faute de frappe ou saisie partielle).
+  const attempts = [query];
+  const words = query.split(/\s+/).filter(Boolean);
+  if (words.length > 1) attempts.push(words.slice(0, -1).join(" "));
+  if (words.length > 1) attempts.push(words[0]);
+
+  const seen = new Set<string>();
+  const results: TrackSuggestion[] = [];
+  for (const attempt of attempts) {
+    const found = await searchItunes(attempt);
+    for (const track of found) {
+      const dedupeKey = `${track.title.toLowerCase()}|${track.artist.toLowerCase()}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+      results.push(track);
+      if (results.length >= 6) return results;
+    }
+    if (results.length > 0) break; // assez de résultats, inutile de retenter
+  }
+  return results;
+}
+
+async function searchItunes(query: string): Promise<TrackSuggestion[]> {
   try {
     const res = await fetch(
       `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=6`,
@@ -611,6 +637,20 @@ export async function deleteQuoteMoment(formData: FormData) {
   revalidatePath("/admin/devis");
 }
 
+// Remplace un PDF dans le storage (suppression + ré-upload : le « update »
+// du storage échoue silencieusement sur certains objets).
+async function replaceStoredPdf(
+  supabase: ReturnType<typeof createAdminClient>,
+  storagePath: string,
+  bytes: Uint8Array
+) {
+  await supabase.storage.from("client-files").remove([storagePath]);
+  const { error } = await supabase.storage
+    .from("client-files")
+    .upload(storagePath, bytes, { contentType: "application/pdf", upsert: true });
+  if (error) console.error("Signature : remplacement du PDF impossible", error);
+}
+
 // Le client signe un document en ligne (acceptation nominative et datée,
 // avec consentement explicite et IP — valeur probante renforcée).
 export async function signClientDocument(formData: FormData) {
@@ -641,11 +681,70 @@ export async function signClientDocument(formData: FormData) {
     .eq("quote_id", quoteId);
   if (error) return { ok: false as const, error: "Impossible de signer." };
 
-  // La signature confirme automatiquement le devis.
-  await advanceQuoteStatus(supabase, quoteId, "confirme");
-
-  // E-mail de confirmation au client (best effort).
+  // On régénère le PDF du devis avec la signature apposée (badge SIGNÉ,
+  // nom du client sur la ligne de signature et date du bon pour accord).
   try {
+    const { data: file } = await supabase
+      .from("quote_files")
+      .select("name, storage_path")
+      .eq("id", fileId)
+      .eq("quote_id", quoteId)
+      .single();
+    const { data: fullQuote } = await supabase
+      .from("quotes")
+      .select("*")
+      .eq("id", quoteId)
+      .single();
+    if (file && fullQuote && file.name.startsWith("Devis ")) {
+      const contractNumber = file.name.replace(/^Devis\s+/, "").replace(/\.pdf$/, "");
+      const { DEVIS_TEMPLATE: tpl } = await import("@/lib/devis-template");
+      const { buildDevisPdf } = await import("@/lib/devis-pdf");
+      const sigData = {
+        name,
+        dateIso: new Date().toISOString(),
+        ip,
+        drawnPng: String(formData.get("signature_data") ?? "") || null,
+      };
+      const signedBytes = await buildDevisPdf(fullQuote as never, {
+        contractNumber,
+        validityDays: tpl.validityDays,
+        signature: sigData,
+      });
+      await replaceStoredPdf(supabase, file.storage_path, signedBytes);
+    } else if (file && fullQuote && file.name.startsWith("Contrat ")) {
+      const contractNumber = file.name.replace(/^Contrat\s+/, "").replace(/\.pdf$/, "");
+      const { buildContratPdf } = await import("@/lib/contrat-pdf");
+      const signedBytes = await buildContratPdf(fullQuote as never, {
+        contractNumber,
+        signature: {
+          name,
+          dateIso: new Date().toISOString(),
+          ip,
+          drawnPng: String(formData.get("signature_data") ?? "") || null,
+        },
+      });
+      await replaceStoredPdf(supabase, file.storage_path, signedBytes);
+    }
+  } catch (e) {
+    // Le document reste signé dans la base même si l'incrustation échoue,
+    // mais on journalise l'erreur pour diagnostic.
+    console.error("Signature : incrustation impossible", e);
+  }
+
+  // La signature ne confirme le devis que si TOUS les documents à signer
+  // (devis + contrat) sont signés. Sinon le devis reste « à signer ».
+  const { data: toSignFiles } = await supabase
+    .from("quote_files")
+    .select("signed_name")
+    .eq("quote_id", quoteId)
+    .eq("doc_kind", "a_signer");
+  const allSigned =
+    (toSignFiles ?? []).length > 0 &&
+    (toSignFiles ?? []).every((f) => Boolean(f.signed_name));
+  if (allSigned) await advanceQuoteStatus(supabase, quoteId, "attente_acompte");
+
+  // E-mail de confirmation au client (best effort), uniquement si tout est signé.
+  if (allSigned) try {
     const { data: quote } = await supabase
       .from("quotes")
       .select("customer_email")
@@ -694,67 +793,38 @@ export async function generateDevisDocument(formData: FormData) {
   if (!quote) return { ok: false as const, error: "Devis introuvable." };
 
   const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
-  const doc = await PDFDocument.create();
-  doc.setTitle(`Devis Propul'Sound DJ — ${quote.formula_name}`);
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
 
-  const page = doc.addPage([595, 842]); // A4
-  const M = 50;
-  let y = 792;
-  const line = (text: string, size = 11, b = false, color = rgb(0.1, 0.1, 0.12)) => {
-    page.drawText(text, { x: M, y, size, font: b ? bold : font, color });
-    y -= size + 8;
-  };
+  // Personnalisation : valeurs du formulaire admin, sinon modèle par défaut.
+  const { DEVIS_TEMPLATE } = await import("@/lib/devis-template");
+  const title = String(formData.get("devis_title") ?? "") || DEVIS_TEMPLATE.title;
+  const subtitle =
+    String(formData.get("devis_subtitle") ?? "") || DEVIS_TEMPLATE.subtitle;
+  const conditions =
+    String(formData.get("devis_conditions") ?? "") || DEVIS_TEMPLATE.conditions;
+  const validityDays =
+    Number(formData.get("devis_validity_days") ?? "") || DEVIS_TEMPLATE.validityDays;
+  const customNotes = String(formData.get("devis_notes") ?? "").trim();
 
-  line("DEVIS — Propul'Sound DJ", 20, true, rgb(0.05, 0.35, 0.7));
-  line("DJ & Show Lumière — Huisseau-sur-Cosson (41350)", 10, false, rgb(0.45, 0.45, 0.45));
-  y -= 10;
-
-  line(`Client : ${quote.customer_name ?? "-"}`, 11, true);
-  line(`E-mail : ${quote.customer_email ?? "-"}`);
-  if (quote.customer_phone) line(`Téléphone : ${quote.customer_phone}`);
-  line(`Événement : ${quote.event_type ?? "-"}`);
-  line(
-    `Date : ${quote.event_date ?? "-"}${quote.start_time ? ` — ${quote.start_time} à ${quote.end_time ?? ""}` : ""}`
-  );
-  line(`Lieu : ${quote.event_location ?? "-"}`);
-  y -= 12;
-
-  line("Prestation", 14, true);
-  line(`${quote.formula_name} : ${((quote.formula_price_cents ?? 0) / 100).toFixed(2)} EUR`, 11);
-  const options = (quote.selected_options ?? []) as SelectedOption[];
-  for (const option of options) {
-    line(
-      `  Option : ${option.name}${option.qty && option.qty > 1 ? ` x${option.qty}` : ""} : ${(option.price_cents / 100).toFixed(2)} EUR`,
-      11
-    );
-  }
-  if ((quote.travel_fee_cents ?? 0) > 0) {
-    line(
-      `  Déplacement (${quote.travel_distance_km ?? "?"} km A/R) : ${((quote.travel_fee_cents ?? 0) / 100).toFixed(2)} EUR`,
-      11
-    );
-  }
-  if ((quote.extra_fee_cents ?? 0) > 0) {
-    line(`  Heures supplémentaires : ${(quote.extra_fee_cents / 100).toFixed(2)} EUR`, 11);
-  }
-  y -= 6;
-  line(`TOTAL : ${((quote.total_cents ?? 0) / 100).toFixed(2)} EUR`, 16, true, rgb(0.05, 0.35, 0.7));
-  y -= 20;
-
-  line("Devis valable 30 jours. Bon pour accord (signature) :", 11, true);
-  y -= 30;
-  page.drawLine({
-    start: { x: M, y },
-    end: { x: M + 220, y },
-    thickness: 0.7,
-    color: rgb(0.6, 0.6, 0.6),
+  // Génération du PDF avec le modèle validé (charte anthracite / bleu / cyan).
+  let bytes: Uint8Array;
+  const { buildDevisPdf } = await import("@/lib/devis-pdf");
+  // N° de contrat : date d'émission (AAAAMMJJ) + compteur du jour (-01, -02…)
+  const todayIso = new Date().toLocaleDateString("fr-CA"); // AAAA-MM-JJ
+  const startOfDay = `${todayIso}T00:00:00`;
+  const { count: todayCount } = await supabase
+    .from("quotes")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", startOfDay);
+  const contractNumber = `${todayIso.replace(/-/g, "")}-${String(
+    (todayCount ?? 0) + 1
+  ).padStart(2, "0")}`;
+  bytes = await buildDevisPdf(quote as never, {
+    contractNumber,
+    validityDays,
+    conditions: conditions.includes("valable")
+      ? conditions.replace(/valable\s+\d+\s+jours?/i, `valable ${validityDays} jours`)
+      : conditions || undefined,
   });
-  y -= 14;
-  line("Signature du client — approuver le document dans l'espace client", 9, false, rgb(0.5, 0.5, 0.5));
-
-  const bytes = await doc.save();
 
   // Propriétaire du devis (clé user_id).
   const { data: owner } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
@@ -773,7 +843,7 @@ export async function generateDevisDocument(formData: FormData) {
   await supabase.from("quote_files").insert({
     quote_id: quoteId,
     user_id: ownerUser?.id ?? null,
-    name: `Devis - ${quote.formula_name}.pdf`,
+    name: `Devis ${contractNumber}.pdf`,
     storage_path: storagePath,
     mime_type: "application/pdf",
     size_bytes: bytes.length,
@@ -788,6 +858,285 @@ export async function generateDevisDocument(formData: FormData) {
   revalidatePath("/admin/devis");
   revalidatePath(`/mon-espace/devis/${quoteId}`);
   return { ok: true as const, message: "Devis PDF généré et envoyé à la signature ✓" };
+}
+
+// Génère automatiquement le contrat PDF (même charte que le devis) et le
+// place dans la section « à signer » du client. Réutilise le numéro de
+// contrat du devis si celui-ci a déjà été généré.
+export async function generateContratDocument(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("*")
+    .eq("id", quoteId)
+    .single();
+  if (!quote) return { ok: false as const, error: "Devis introuvable." };
+
+  // Numéro : celui du devis existant s'il y en a un, sinon nouveau compteur.
+  const { data: devisFile } = await supabase
+    .from("quote_files")
+    .select("name")
+    .eq("quote_id", quoteId)
+    .eq("doc_kind", "a_signer")
+    .like("name", "Devis %.pdf")
+    .limit(1)
+    .maybeSingle();
+  let contractNumber = devisFile?.name
+    ?.replace(/^Devis\s+/, "")
+    .replace(/\.pdf$/, "");
+  if (!contractNumber) {
+    const todayIso = new Date().toLocaleDateString("fr-CA");
+    const startOfDay = `${todayIso}T00:00:00`;
+    const { count: todayCount } = await supabase
+      .from("quotes")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", startOfDay);
+    contractNumber = `${todayIso.replace(/-/g, "")}-${String(
+      (todayCount ?? 0) + 1
+    ).padStart(2, "0")}`;
+  }
+
+  const { buildContratPdf } = await import("@/lib/contrat-pdf");
+  let bytes: Uint8Array;
+  try {
+    bytes = await buildContratPdf(quote as never, { contractNumber });
+  } catch (e) {
+    console.error("Génération contrat impossible", e);
+    return { ok: false as const, error: "Échec de la génération du contrat." };
+  }
+
+  // Propriétaire du devis (clé user_id).
+  const { data: owner } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const ownerUser = owner?.users?.find(
+    (u) => u.email?.toLowerCase() === quote.customer_email?.toLowerCase()
+  );
+
+  const storagePath = `admin/${quoteId}/contrat-${Date.now()}.pdf`;
+  const { error: uploadError } = await supabase.storage
+    .from("client-files")
+    .upload(storagePath, bytes, { contentType: "application/pdf" });
+  if (uploadError) {
+    return { ok: false as const, error: "Échec de la génération du contrat." };
+  }
+
+  await supabase.from("quote_files").insert({
+    quote_id: quoteId,
+    user_id: ownerUser?.id ?? null,
+    name: `Contrat ${contractNumber}.pdf`,
+    storage_path: storagePath,
+    mime_type: "application/pdf",
+    size_bytes: bytes.length,
+    from_admin: true,
+    doc_kind: "a_signer",
+  });
+
+  // Pastille nouveautés côté client.
+  await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
+
+  revalidatePath("/admin/devis");
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  return { ok: true as const, message: "Contrat PDF généré et envoyé à la signature ✓" };
+}
+
+// Génère la facture PDF (même charte que le devis, sans signature) et la
+// place dans les documents simples du devis. Numérotation F-AAAA-NNN.
+export async function generateFactureDocument(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  try {
+    const supabase = createAdminClient();
+    const { data: quote } = await supabase
+      .from("quotes")
+      .select("*")
+      .eq("id", quoteId)
+      .single();
+    if (!quote) return { ok: false as const, error: "Devis introuvable." };
+
+    // Numéro de facture : séquence annuelle (F-2026-001, F-2026-002…)
+    const year = new Date().getFullYear();
+    const { count: factureCount } = await supabase
+      .from("quote_files")
+      .select("id", { count: "exact", head: true })
+      .like("name", `Facture F-${year}-%.pdf`);
+    const invoiceNumber = `F-${year}-${String((factureCount ?? 0) + 1).padStart(3, "0")}`;
+
+    const { buildFacturePdf } = await import("@/lib/facture-pdf");
+    let bytes: Uint8Array;
+    try {
+      const adjustments = Array.isArray(quote.invoice_adjustments)
+        ? (quote.invoice_adjustments as { label: string; amount_cents: number }[])
+        : [];
+      bytes = await buildFacturePdf(quote as never, { invoiceNumber, adjustments });
+    } catch (e) {
+      console.error("Génération facture impossible", e);
+      return { ok: false as const, error: "Échec de la génération de la facture." };
+    }
+
+    // Propriétaire du devis (clé user_id).
+    const { data: owner } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const ownerUser = owner?.users?.find(
+      (u) => u.email?.toLowerCase() === quote.customer_email?.toLowerCase()
+    );
+
+    const storagePath = `admin/${quoteId}/facture-${Date.now()}.pdf`;
+    const { error: uploadError } = await supabase.storage
+      .from("client-files")
+      .upload(storagePath, bytes, { contentType: "application/pdf" });
+    if (uploadError) {
+      console.error("Upload facture impossible", uploadError);
+      return { ok: false as const, error: "Échec de la génération de la facture." };
+    }
+
+    await supabase.from("quote_files").insert({
+      quote_id: quoteId,
+      user_id: ownerUser?.id ?? null,
+      name: `Facture ${invoiceNumber}.pdf`,
+      storage_path: storagePath,
+      mime_type: "application/pdf",
+      size_bytes: bytes.length,
+      from_admin: true,
+      doc_kind: "info",
+    });
+
+    revalidatePath("/admin/devis");
+    revalidatePath(`/mon-espace/devis/${quoteId}`);
+    return { ok: true as const, message: `Facture ${invoiceNumber} générée ✓` };
+  } catch (e) {
+    console.error("Erreur inattendue génération facture", e);
+    return {
+      ok: false as const,
+      error: e instanceof Error ? `Erreur : ${e.message}` : "Erreur inattendue.",
+    };
+  }
+}
+
+// Le client supprime un devis encore au stade « nouveau » (erreur de saisie).
+export async function deleteClientQuote(formData: FormData) {
+  const { createAuthClient } = await import("@/lib/supabase/server");
+  const auth = await createAuthClient();
+  const {
+    data: { user },
+  } = await auth.auth.getUser();
+  if (!user?.email) return { ok: false as const, error: "Non autorisé." };
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("customer_email, status")
+    .eq("id", quoteId)
+    .single();
+  if (!quote || quote.customer_email?.toLowerCase() !== user.email.toLowerCase()) {
+    return { ok: false as const, error: "Non autorisé." };
+  }
+  if (quote.status !== "nouveau") {
+    return {
+      ok: false as const,
+      error: "Ce devis est déjà en cours de traitement : contactez le prestataire pour l'annuler.",
+    };
+  }
+
+  // Nettoyage des données liées avant suppression du devis.
+  await supabase.from("quote_files").delete().eq("quote_id", quoteId);
+  await supabase.from("playlist_tracks").delete().eq("quote_id", quoteId);
+  await supabase.from("quote_messages").delete().eq("quote_id", quoteId);
+  const { error } = await supabase.from("quotes").delete().eq("id", quoteId);
+  if (error) return { ok: false as const, error: "Échec de la suppression." };
+
+  revalidatePath("/mon-espace");
+  return { ok: true as const, message: "Devis supprimé ✓" };
+}
+
+// Le client déclare avoir envoyé l'acompte par virement.
+export async function declareAcompteSent(formData: FormData) {
+  const { createAuthClient } = await import("@/lib/supabase/server");
+  const auth = await createAuthClient();
+  const {
+    data: { user },
+  } = await auth.auth.getUser();
+  if (!user?.email) return { ok: false as const, error: "Non autorisé." };
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("customer_email, acompte_declared_at")
+    .eq("id", quoteId)
+    .single();
+  if (!quote || quote.customer_email?.toLowerCase() !== user.email.toLowerCase()) {
+    return { ok: false as const, error: "Non autorisé." };
+  }
+  if (quote.acompte_declared_at) return { ok: true as const, message: "Déjà déclaré ✓" };
+
+  const { error } = await supabase
+    .from("quotes")
+    .update({ acompte_declared_at: new Date().toISOString() })
+    .eq("id", quoteId);
+  if (error) return { ok: false as const, error: "Échec de la déclaration." };
+
+  // Notification admin (email/fire éventuel) : pour l'instant, log serveur.
+  console.log(`[acompte] Le client ${user.email} a déclaré avoir envoyé l'acompte du devis ${quoteId}`);
+
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  revalidatePath("/admin/devis");
+  return { ok: true as const, message: "Merci ! Le prestataire a été prévenu ✓" };
+}
+
+// L'admin confirme la réception de l'acompte.
+export async function confirmAcompteReceived(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("quotes")
+    .update({ acompte_paid_at: new Date().toISOString(), status: "confirme" })
+    .eq("id", quoteId);
+  if (error) return { ok: false as const, error: "Échec." };
+
+  revalidatePath("/admin/devis");
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  return { ok: true as const, message: "Acompte confirmé ✓" };
+}
+
+// Sauvegarde les ajustements de facture (lignes ajoutées/retirées par l'admin).
+export async function saveInvoiceAdjustments(adjustments: { label: string; amount: string }[], quoteId: string) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  const cleaned = adjustments
+    .map((a) => ({
+      label: String(a.label ?? "").trim(),
+      amount_cents: Math.round(parseFloat(String(a.amount ?? "").replace(",", ".")) * 100) || 0,
+    }))
+    .filter((a) => a.label && a.amount_cents !== 0);
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("quotes")
+    .update({ invoice_adjustments: cleaned })
+    .eq("id", quoteId);
+  if (error) return { ok: false as const, error: "Échec de l'enregistrement." };
+  revalidatePath("/admin/devis");
+  return { ok: true as const, message: "Ajustements enregistrés ✓" };
 }
 
 export async function uploadAdminDocument(formData: FormData) {

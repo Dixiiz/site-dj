@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import {
+  declareAcompteSent,
   getMyQuote,
   getPlaylistTracks,
   getQuoteFiles,
@@ -15,6 +16,7 @@ import { ClientOptionsEditor } from "@/components/client-options-editor";
 import { ClientPlaylistEditor } from "@/components/client-playlist-editor";
 import { ClientQuoteMessages } from "@/components/client-quote-messages";
 import { PACK_IMAGES } from "@/components/pricing-section";
+import { SignaturePad } from "@/components/signature-pad";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEuros } from "@/lib/money";
 import type { SelectedOption } from "@/lib/types";
@@ -201,7 +203,7 @@ export default async function ClientQuotePage({
           </p>
           <ul className="mt-3 space-y-2">
             {files
-              .filter((f) => f.from_admin)
+              .filter((f) => f.from_admin && f.doc_kind !== "a_signer")
               .map((file) => (
                 <li
                   key={file.id}
@@ -263,13 +265,15 @@ export default async function ClientQuotePage({
                         ? new Date(file.signed_at).toLocaleDateString("fr-FR")
                         : ""}
                     </p>
-                  ) : confirmed ? (
+                  ) : quote.status === "attente_signature" ||
+                    quote.status === "attente_acompte" ||
+                    confirmed ? (
                     <form
                       action={async (formData: FormData) => {
                         "use server";
                         await signClientDocument(formData);
                       }}
-                      className="mt-2 flex flex-wrap items-center gap-1.5"
+                      className="mt-2"
                     >
                       <input type="hidden" name="quote_id" value={id} />
                       <input type="hidden" name="file_id" value={file.id} />
@@ -277,21 +281,23 @@ export default async function ClientQuotePage({
                         type="text"
                         name="name"
                         required
-                        placeholder="Votre nom pour signer"
-                        className="w-44 rounded-md border border-white/10 bg-background px-2 py-1.5 text-xs outline-none focus:border-accent"
+                        placeholder="Votre prénom et nom"
+                        className="w-56 rounded-md border border-white/10 bg-background px-2 py-1.5 text-xs outline-none focus:border-accent"
                       />
-                      <label className="flex max-w-xs items-start gap-1.5 text-left text-[11px] text-muted-foreground">
+                      <SignaturePad />
+                      <label className="mt-2 flex max-w-md items-start gap-1.5 text-left text-[11px] text-muted-foreground">
                         <input type="checkbox" name="consent" required className="mt-0.5" />
                         <span>
-                          Je reconnais avoir lu et j'accepte le contenu ; ma saisie
-                          vaut signature électronique.
+                          Je reconnais avoir lu et j&apos;accepte le contenu de ce
+                          document ; ma signature vaut bon pour accord et
+                          signature électronique.
                         </span>
                       </label>
                       <button
                         type="submit"
-                        className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-500"
+                        className="mt-2 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-500"
                       >
-                        ✍️ Signer
+                        ✍️ Signer le document
                       </button>
                     </form>
                   ) : (
@@ -305,8 +311,77 @@ export default async function ClientQuotePage({
         </section>
       ) : null}
 
-      {/* Musiques + fichiers par catégorie : réservés aux devis confirmés */}
-      {confirmed ? (
+      {/* Acompte par virement : visible dès que les documents sont signés */}
+      {confirmed || quote.status === "attente_acompte" ? (
+        (() => {
+          const total = (quote.total_cents ?? 0) / 100;
+          const solde = Math.floor((total * 0.8) / 10) * 10;
+          const acompte = total - solde;
+          const libelle = `${quote.customer_name} — ${quote.event_date ?? ""}`;
+          return (
+            <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+              <h2 className="font-medium">💳 Acompte de réservation</h2>
+              {quote.acompte_paid_at ? (
+                <p className="mt-2 text-sm font-medium text-green-400">
+                  ✓ Acompte reçu, merci ! Votre réservation est entièrement validée.
+                </p>
+              ) : quote.acompte_declared_at ? (
+                <p className="mt-2 text-sm text-orange-300">
+                  ⏳ Acompte déclaré envoyé le{" "}
+                  {new Date(quote.acompte_declared_at).toLocaleDateString("fr-FR")} — en
+                  attente de réception par le prestataire.
+                </p>
+              ) : (
+                <>
+                  <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+                    Afin de confirmer définitivement votre réservation, merci de
+                    régler l&apos;acompte de{" "}
+                    <span className="font-semibold text-accent">
+                      {formatEuros(Math.round(acompte * 100))}
+                    </span>{" "}
+                    par virement avec le libellé&nbsp;:{" "}
+                    <span className="font-mono text-xs text-foreground">{libelle}</span>
+                  </p>
+                  <div className="mt-3 space-y-0.5 rounded-lg border border-white/10 bg-white/5 p-3 text-sm">
+                    <p>
+                      <span className="text-muted-foreground">Titulaire :</span>{" "}
+                      SOULAINE Maxime
+                    </p>
+                    <p className="break-all">
+                      <span className="text-muted-foreground">IBAN :</span>{" "}
+                      <span className="font-mono text-xs">
+                        FR76 1027 8374 6200 0110 8580 173
+                      </span>
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground">BIC :</span>{" "}
+                      <span className="font-mono text-xs">CMCIFR2A</span>
+                    </p>
+                  </div>
+                  <form
+                    action={async (formData: FormData) => {
+                      "use server";
+                      await declareAcompteSent(formData);
+                    }}
+                    className="mt-3"
+                  >
+                    <input type="hidden" name="quote_id" value={id} />
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white transition-colors hover:opacity-90"
+                    >
+                      ✅ J&apos;ai envoyé l&apos;acompte
+                    </button>
+                  </form>
+                </>
+              )}
+            </section>
+          );
+        })()
+      ) : null}
+
+      {/* Musiques + fichiers par catégorie : ouverts dès les documents signés */}
+      {confirmed || quote.status === "attente_acompte" ? (
         <ClientPlaylistEditor
           quoteId={id}
           tracks={tracks}
@@ -317,8 +392,8 @@ export default async function ClientQuotePage({
         <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5 text-center">
           <h2 className="font-medium">🎵 Musiques &amp; fichiers</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            Cette section s&apos;ouvrira dès que votre devis sera{" "}
-            <span className="font-medium text-green-400">confirmé</span> :
+            Cette section s&apos;ouvrira dès que vos documents (devis et contrat)
+            seront <span className="font-medium text-green-400">signés</span> :
             vous pourrez alors choisir vos musiques par temps fort, votre
             blacklist et joindre vos fichiers.
           </p>

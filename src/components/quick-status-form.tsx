@@ -14,6 +14,7 @@ export function QuickStatusForm({
   const statuses: [string, string][] = [
     ["nouveau", "Nouveau"],
     ["contacte", "Contacté"],
+    ["attente_acompte", "En attente de l'acompte"],
     ["confirme", "Confirmé"],
     ["refuse", "Refusé"],
     ["annule", "Annulé"],
@@ -48,7 +49,12 @@ export function QuickStatusForm({
         onSubmit={(e) => {
           if (!window.confirm("Supprimer définitivement ce devis ? Cette action est irréversible.")) {
             e.preventDefault();
+            return;
           }
+          // Safari/WebKit : une sélection de texte active sur l'élément qui va
+          // être retiré du DOM fait planter la mise à jour (« EmptyRanges »).
+          window.getSelection()?.removeAllRanges();
+          (document.activeElement as HTMLElement | null)?.blur();
         }}
       >
         <input type="hidden" name="id" value={quoteId} />

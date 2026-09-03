@@ -9,6 +9,7 @@ import { Gallery } from "@/components/gallery";
 import { HeroVideo } from "@/components/hero-video";
 import { VideoShowcase } from "@/components/video-showcase";
 import { TIKTOK_PROFILE_URL } from "@/config/tiktok";
+import { getOrder, listMedia } from "@/lib/site-media";
 import Link from "next/link";
 
 
@@ -41,15 +42,37 @@ const services = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
   const hasHeroVideo = existsSync(join(process.cwd(), "public", "videos", "hero.mp4"));
   const showcaseDir = join(process.cwd(), "public", "videos", "showcase");
-  const showcaseVideos = existsSync(showcaseDir)
+  const localShowcase = existsSync(showcaseDir)
     ? readdirSync(showcaseDir)
         .filter((f) => /\.(mp4|webm|mov)$/i.test(f))
         .sort()
         .map((f) => `/videos/showcase/${encodeURIComponent(f)}`)
     : [];
+  const storageShowcase = await listMedia("videos/showcase")
+    .then((files) => files.map((f) => f.url))
+    .catch(() => [] as string[]);
+  const showcaseAll = [...storageShowcase, ...localShowcase.filter((src) => !storageShowcase.some((u) => u.endsWith(src.split("/").pop() ?? "")))];
+  const showcaseOrder = await getOrder("videos/showcase").catch(() => [] as string[]);
+  let showcaseVideos: string[];
+  if (showcaseOrder.length > 0) {
+    const byName = new Map(
+      showcaseAll.map((url) => [decodeURIComponent(url.split("/").pop() ?? ""), url])
+    );
+    showcaseVideos = showcaseOrder.map((n) => byName.get(n)).filter((u): u is string => !!u);
+    for (const url of showcaseAll) {
+      const name = decodeURIComponent(url.split("/").pop() ?? "");
+      if (!showcaseOrder.includes(name)) showcaseVideos.push(url);
+    }
+  } else {
+    showcaseVideos = showcaseAll;
+  }
+  const storageHero = await listMedia("videos")
+    .then((files) => files.find((f) => /^hero/i.test(f.name))?.url ?? files[0]?.url ?? null)
+    .catch(() => null);
+  const heroSrc = storageHero ?? (hasHeroVideo ? "/videos/hero.mp4" : null);
 
   return (
     <>
@@ -57,7 +80,7 @@ export default function Home() {
       <main className="relative">
         {/* Héro — avec vidéo de fond si public/videos/hero.mp4 existe */}
         <section className="relative mx-auto w-full max-w-5xl px-4 pt-20 pb-16 text-center sm:pt-28">
-          {hasHeroVideo && <HeroVideo />}
+          {heroSrc && <HeroVideo src={heroSrc} />}
           <FadeIn>
             <p className="text-sm tracking-[0.3em] text-accent uppercase">
               DJ &amp; animations — Loir-et-Cher

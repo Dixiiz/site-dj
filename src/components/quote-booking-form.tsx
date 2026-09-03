@@ -290,7 +290,7 @@ export function QuoteBookingForm({
       skipFetchRef.current = false;
       return;
     }
-    if (eventLocation.trim().length < 3) {
+    if (eventLocation.trim().length < 2) {
       setSuggestions([]);
       return;
     }

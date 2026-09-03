@@ -298,6 +298,7 @@ export function AdminQuoteEdit({
         <select name="status" defaultValue={quote.status} className={input}>
           <option value="nouveau">Nouveau</option>
           <option value="contacte">Contacté</option>
+          <option value="attente_acompte">En attente de l'acompte</option>
           <option value="confirme">Confirmé</option>
           <option value="refuse">Refusé</option>
           <option value="annule">Annulé</option>

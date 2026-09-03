@@ -157,4 +157,5 @@ html,
 body {
   overflow-x: clip;
   overscroll-behavior-x: none;
+  scroll-behavior: smooth;
 }

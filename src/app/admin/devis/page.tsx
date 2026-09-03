@@ -1,6 +1,7 @@
 import { deleteQuote } from "@/app/actions";
 import { markQuoteSeen, resolveQuoteOptions } from "@/app/client-actions";
 import { QuickStatusForm } from "@/components/quick-status-form";
+import { confirmAcompteReceived } from "@/app/client-actions";
 import { AdminQuoteConversation } from "@/components/admin-quote-conversation";
 import { AdminQuoteDetails } from "@/components/admin-quote-details";
 import { AdminQuoteDocuments } from "@/components/admin-quote-documents";
@@ -25,6 +26,10 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
     className: "border-orange-500/60 text-orange-400",
   },
   confirme: { label: "Confirmé", className: "border-green-500/60 text-green-400" },
+  attente_acompte: {
+    label: "En attente de l'acompte",
+    className: "border-cyan-500/60 text-cyan-400",
+  },
   refuse: { label: "Refusé", className: "border-red-500/60 text-red-400" },
   annule: { label: "Annulé", className: "border-zinc-500/60 text-zinc-400" },
 };
@@ -239,6 +244,29 @@ export default async function DevisPage({
                   ) : null}
                 </summary>
 <QuickStatusForm statusAction={updateQuoteStatus} deleteAction={deleteQuote} quoteId={quote.id} currentStatus={quote.status} />
+                {/* Suivi acompte : déclaration client + confirmation de réception */}
+                {quote.acompte_declared_at && !quote.acompte_paid_at ? (
+                  <div className="flex flex-wrap items-center gap-3 border-t border-border px-4 pt-3 text-sm">
+                    <span className="text-orange-300">
+                      💳 Acompte déclaré envoyé par le client le{" "}
+                      {new Date(quote.acompte_declared_at).toLocaleDateString("fr-FR")}.
+                    </span>
+                    <form
+                      action={async (formData: FormData) => {
+                        "use server";
+                        await confirmAcompteReceived(formData);
+                      }}
+                    >
+                      <input type="hidden" name="quote_id" value={quote.id} />
+                      <button
+                        type="submit"
+                        className="rounded-lg border border-cyan-500/50 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-400 transition-colors hover:bg-cyan-400/25 hover:text-cyan-200"
+                      >
+                        ✓ Acompte reçu
+                      </button>
+                    </form>
+                  </div>
+                ) : null}
                 {/* Demandes client : pastille vu + validation des options */}
                 {quote.has_unread_updates || quote.pending_options ? (
                   <div className="flex flex-wrap items-center gap-3 border-t border-border px-4 pt-3 text-sm">

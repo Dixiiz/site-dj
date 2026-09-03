@@ -44,7 +44,7 @@ export async function estimateTravelFee(formData: FormData) {
 // avec repli sur OpenStreetMap Nominatim si Google indisponible.
 export async function searchAddresses(query: string) {
   const q = query.trim();
-  if (q.length < 3) return { ok: true as const, results: [] as string[] };
+  if (q.length < 2) return { ok: true as const, results: [] as string[] };
 
   // 1) Google Places (New) — Text Search, trouve aussi les domaines/lieux (pas que les adresses).
   const key = process.env.GOOGLE_PLACES_API_KEY;
@@ -383,7 +383,7 @@ export async function getUnavailableDates(): Promise<string[]> {
     const { data: quotes } = await supabase
       .from("quotes")
       .select("event_date")
-      .eq("status", "confirme")
+      .in("status", ["attente_acompte", "confirme"])
       .gte("event_date", today);
     for (const r of quotes ?? []) {
       if (r.event_date) out.add(String(r.event_date));
@@ -428,7 +428,7 @@ export async function updateQuoteStatus(formData: FormData) {
   if (!(await isAdmin())) return;
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
-  const allowed = ["nouveau", "contacte", "attente_signature", "confirme", "refuse", "annule"];
+  const allowed = ["nouveau", "contacte", "attente_signature", "attente_acompte", "confirme", "refuse", "annule"];
   if (!id || !allowed.includes(status)) return;
   const supabase = createAdminClient();
 
