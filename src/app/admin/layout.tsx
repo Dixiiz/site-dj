@@ -29,9 +29,6 @@ export default async function AdminLayout({
             <Link href="/admin/devis" className="text-muted-foreground hover:text-foreground">
               Devis
             </Link>
-            <Link href="/admin/messages" className="text-muted-foreground hover:text-foreground">
-              Messages
-            </Link>
             <Link href="/admin/planning" className="text-muted-foreground hover:text-foreground">
               Planning
             </Link>
