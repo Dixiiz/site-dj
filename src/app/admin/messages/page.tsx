@@ -116,47 +116,71 @@ export default async function AdminMessagesPage() {
                       {(tracksByQuote.get(quoteId) ?? []).length})
                     </summary>
                     <ul className="mt-3 space-y-2">
-                      {(tracksByQuote.get(quoteId) ?? []).map((track) => (
-                        <li
-                          key={track.id}
-                          className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm sm:gap-3"
-                        >
-                          {track.artwork_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={track.artwork_url}
-                              alt=""
-                              width={36}
-                              height={36}
-                              className="h-9 w-9 shrink-0 rounded-md object-cover"
-                            />
-                          ) : null}
-                          <div className="min-w-0 flex-1 basis-40">
-                            <p className="truncate">
-                              <span className="font-medium">{track.title}</span>
-                              {track.artist ? (
-                                <span className="text-muted-foreground"> — {track.artist}</span>
-                              ) : null}
-                            </p>
-                            <p
-                              className={`text-xs ${
-                                track.kind === "blacklist" ? "text-red-400" : "text-muted-foreground"
-                              }`}
-                            >
-                              {track.kind === "blacklist" ? "⚠ À ne PAS passer — " : ""}
-                              {track.moment}
-                            </p>
-                          </div>
-                          {track.preview_url ? (
-                            <audio
-                              controls
-                              preload="none"
-                              src={track.preview_url}
-                              className="h-8 w-full min-w-0 sm:w-44"
-                            />
-                          ) : null}
-                        </li>
-                      ))}
+                      {(() => {
+                        const quoteTracks = tracksByQuote.get(quoteId) ?? [];
+                        const wishes = quoteTracks.filter((t) => t.kind === "souhait");
+                        const blacklist = quoteTracks.filter((t) => t.kind === "blacklist");
+                        const moments = [...new Set(wishes.map((t) => t.moment))];
+                        const row = (track: Track) => (
+                          <li
+                            key={track.id}
+                            className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm sm:gap-3"
+                          >
+                            {track.artwork_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={track.artwork_url}
+                                alt=""
+                                width={36}
+                                height={36}
+                                className="h-9 w-9 shrink-0 rounded-md object-cover"
+                              />
+                            ) : null}
+                            <div className="min-w-0 flex-1 basis-40">
+                              <p className="truncate">
+                                <span className="font-medium">{track.title}</span>
+                                {track.artist ? (
+                                  <span className="text-muted-foreground"> — {track.artist}</span>
+                                ) : null}
+                              </p>
+                            </div>
+                            {track.preview_url ? (
+                              <audio
+                                controls
+                                preload="none"
+                                src={track.preview_url}
+                                className="h-8 w-full min-w-0 sm:w-44"
+                              />
+                            ) : null}
+                          </li>
+                        );
+                        return (
+                          <>
+                            {moments.map((moment) => {
+                              const momentTracks = wishes.filter((t) => t.moment === moment);
+                              return (
+                                <li key={moment}>
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-accent">
+                                    {moment}{" "}
+                                    <span className="text-muted-foreground">
+                                      ({momentTracks.length})
+                                    </span>
+                                  </p>
+                                  <ul className="mt-2 space-y-2">{momentTracks.map(row)}</ul>
+                                </li>
+                              );
+                            })}
+                            {blacklist.length > 0 ? (
+                              <li>
+                                <p className="text-xs font-semibold uppercase tracking-wide text-red-400">
+                                  ⚠ À ne PAS passer ({blacklist.length})
+                                </p>
+                                <ul className="mt-2 space-y-2">{blacklist.map(row)}</ul>
+                              </li>
+                            ) : null}
+                          </>
+                        );
+                      })()}
                     </ul>
                   </details>
                 ) : null}
