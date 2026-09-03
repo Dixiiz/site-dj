@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getMyQuotes } from "@/app/client-actions";
+import { ClientBack } from "@/components/client-back";
 import { formatEuros } from "@/lib/money";
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
@@ -68,8 +69,15 @@ export default async function MonEspacePage() {
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-medium">{quote.formula_name}</span>
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}>
-                      {status.label}
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      {quote.pending_options ? (
+                        <span className="rounded-full bg-yellow-500/10 px-2.5 py-0.5 text-xs font-medium text-yellow-300 border border-yellow-500/40">
+                          ⏳ Modif. en attente
+                        </span>
+                      ) : null}
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}>
+                        {status.label}
+                      </span>
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">

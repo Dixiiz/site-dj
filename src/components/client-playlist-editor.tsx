@@ -392,14 +392,21 @@ function DanceSection({
         </span>
       </div>
 
-      <div className="mt-3 flex gap-1 rounded-lg border border-white/10 p-1 text-xs">
+      <div className="relative mt-3 grid grid-cols-2 gap-1 rounded-lg border border-white/10 p-1 text-xs">
+        {/* Curseur qui glisse de gauche à droite */}
+        <span
+          aria-hidden
+          className={`absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-md transition-all duration-300 ease-out ${
+            danceKind === "blacklist"
+              ? "translate-x-[calc(100%+0.5rem)] bg-red-500/25"
+              : "translate-x-0 bg-accent/20"
+          }`}
+        />
         <button
           type="button"
           onClick={() => setDanceKind("souhait")}
-          className={`flex-1 rounded-md px-3 py-1.5 transition-colors ${
-            danceKind === "souhait"
-              ? "bg-accent/15 font-medium text-accent"
-              : "text-muted-foreground"
+          className={`relative z-10 rounded-md px-3 py-1.5 font-medium transition-colors duration-300 ${
+            danceKind === "souhait" ? "text-accent" : "text-muted-foreground"
           }`}
         >
           ▶ À passer
@@ -407,10 +414,8 @@ function DanceSection({
         <button
           type="button"
           onClick={() => setDanceKind("blacklist")}
-          className={`flex-1 rounded-md px-3 py-1.5 font-medium transition-colors ${
-            danceKind === "blacklist"
-              ? "bg-red-500/20 text-red-400"
-              : "text-red-400/70"
+          className={`relative z-10 rounded-md px-3 py-1.5 font-medium transition-colors duration-300 ${
+            danceKind === "blacklist" ? "text-red-400" : "text-red-400/60"
           }`}
         >
           🚫 À ne PAS passer

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { updateQuoteOptions } from "@/app/client-actions";
 import { Button } from "@/components/ui/button";
 import { formatEuros } from "@/lib/money";
@@ -58,15 +59,39 @@ export function ClientOptionsEditor({
                 type="button"
                 aria-pressed={checked}
                 onClick={() => toggle(option.id)}
-                className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors ${
+                className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-all duration-300 ${
                   checked
-                    ? "border-accent bg-accent/10"
+                    ? "border-accent bg-accent/10 shadow-[0_0_20px_-8px_var(--accent)]"
                     : "border-white/10 hover:border-accent/40"
                 } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
               >
-                <span className="min-w-0">
-                  {checked ? "✓ " : ""}
-                  {option.name}
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="relative inline-flex h-4 w-4 shrink-0 items-center justify-center">
+                    <AnimatePresence>
+                      {checked ? (
+                        <motion.span
+                          key="check"
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0, opacity: 0 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
+                          className="absolute inset-0 flex items-center justify-center rounded-full bg-accent text-[10px] font-bold text-background"
+                        >
+                          ✓
+                        </motion.span>
+                      ) : (
+                        <motion.span
+                          key="circle"
+                          initial={{ scale: 0.6, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.6, opacity: 0 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute inset-0 rounded-full border border-white/25"
+                        />
+                      )}
+                    </AnimatePresence>
+                  </span>
+                  <span className="min-w-0">{option.name}</span>
                 </span>
                 <span className="shrink-0 text-muted-foreground">
                   {formatEuros(option.price_cents)}

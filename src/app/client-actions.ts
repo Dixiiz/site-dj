@@ -101,7 +101,9 @@ export async function getMyQuotes() {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("quotes")
-    .select("id, event_date, event_type, formula_name, total_cents, status, created_at")
+    .select(
+      "id, event_date, event_type, formula_name, total_cents, status, created_at, pending_options"
+    )
     .eq("customer_email", user.email)
     .order("created_at", { ascending: false });
   return data ?? [];
