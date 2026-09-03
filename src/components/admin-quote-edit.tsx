@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { updateQuoteAdmin } from "@/app/actions";
+import { SubmitButton } from "@/components/submit-button";
 import { ADMIN_PACK_LIST, ADMIN_FX_OPTIONS } from "@/components/pricing-section";
 import type { SelectedOption } from "@/lib/types";
 
@@ -307,12 +308,12 @@ export function AdminQuoteEdit({
       <input type="hidden" name="options_raw" value={selectedOptions.map((o) => `${o.name} | ${(o.price / 100).toFixed(2).replace(".", ",")}`).join("\n")} />
       <input type="hidden" name="total" value={(total / 100).toFixed(2).replace(".", ",")} />
       <div className="flex gap-2">
-        <button
-          type="submit"
+        <SubmitButton
+          pendingLabel="Enregistrement…"
           className="rounded-lg bg-accent px-4 py-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-90"
         >
           Enregistrer
-        </button>
+        </SubmitButton>
         <button
           type="button"
           onClick={() => setOpen(false)}

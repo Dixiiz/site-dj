@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { deleteClientQuote, getMyQuotes } from "@/app/client-actions";
+import { SubmitButton } from "@/components/submit-button";
 import { ClientBack } from "@/components/client-back";
 import { RenameInline } from "@/components/rename-inline";
 import { formatEuros } from "@/lib/money";
@@ -109,12 +110,13 @@ export default async function MonEspacePage() {
                     className="mt-1 text-right"
                   >
                     <input type="hidden" name="quote_id" value={quote.id} />
-                    <button
-                      type="submit"
+                    <SubmitButton
+                      pendingLabel="Suppression…"
+                      confirm="Supprimer ce devis ? Cette action est irréversible."
                       className="text-xs text-muted-foreground transition-colors hover:text-red-400"
                     >
                       🗑 Supprimer ce devis
-                    </button>
+                    </SubmitButton>
                   </form>
                 ) : null}
               </li>

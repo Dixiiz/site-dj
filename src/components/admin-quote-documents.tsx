@@ -6,7 +6,7 @@ import {
   generateFactureDocument,
   uploadAdminDocument,
 } from "@/app/client-actions";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { InvoiceAdjustments } from "@/components/admin-invoice-adjustments";
@@ -79,12 +79,13 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
       <form action={deleteAdminDocument}>
         <input type="hidden" name="quote_id" value={quoteId} />
         <input type="hidden" name="file_id" value={file.id} />
-        <button
-          type="submit"
+        <SubmitButton
+          pendingLabel="Suppression…"
+          confirm={`Supprimer « ${file.name} » ?`}
           className="rounded-lg border border-red-500/40 px-2.5 py-1 text-xs text-red-400 transition-colors hover:bg-red-500/10"
         >
           Supprimer
-        </button>
+        </SubmitButton>
       </form>
     </li>
   );
@@ -234,9 +235,9 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
             required
             className="max-w-xs cursor-pointer text-xs file:cursor-pointer file:mr-2 file:rounded-md file:border-0 file:bg-white/10 file:px-2.5 file:py-1 file:text-xs"
           />
-          <Button type="submit" size="sm" variant="outline">
+          <SubmitButton pendingLabel="Envoi…" className={buttonVariants({ size: "sm", variant: "outline" })}>
             Envoyer (document simple)
-          </Button>
+          </SubmitButton>
         </form>
       </div>
     </div>

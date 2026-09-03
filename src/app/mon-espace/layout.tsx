@@ -5,7 +5,8 @@ import { SiteHeader } from "@/components/site-header";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getClientUser, logoutClient } from "@/app/client-actions";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 
 export default async function MonEspaceLayout({ children }: { children: ReactNode }) {
   const user = await getClientUser();
@@ -27,9 +28,12 @@ export default async function MonEspaceLayout({ children }: { children: ReactNod
             </Link>
           </div>
           <form action={logoutClient}>
-            <Button type="submit" variant="outline" size="sm">
+            <SubmitButton
+              pendingLabel="…"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
               Déconnexion
-            </Button>
+            </SubmitButton>
           </form>
         </div>
       </div>

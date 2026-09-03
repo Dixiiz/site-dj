@@ -33,16 +33,34 @@ export function SubmitButton({
   children,
   className = "",
   pendingLabel = "Génération…",
+  confirm,
+  name,
+  value,
 }: {
   children: React.ReactNode;
   className?: string;
   pendingLabel?: string;
+  /** Message de confirmation avant soumission (optionnel). */
+  confirm?: string;
+  name?: string;
+  value?: string;
 }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
+      name={name}
+      value={value}
       disabled={pending}
+      onClick={(e) => {
+        if (confirm && !window.confirm(confirm)) {
+          e.preventDefault();
+          return;
+        }
+        // Safari/WebKit : vide la sélection avant soumission (bug « EmptyRanges »).
+        window.getSelection()?.removeAllRanges();
+        (document.activeElement as HTMLElement | null)?.blur();
+      }}
       className={`${className} ${pending ? "animate-pulse cursor-wait opacity-90" : ""} disabled:opacity-90`}
       aria-busy={pending}
     >

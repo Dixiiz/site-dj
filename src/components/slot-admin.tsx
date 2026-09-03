@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { createSlot, deleteSlot, toggleSlot } from "@/app/actions";
-import { Button } from "@/components/ui/button";
+import { buttonVariants, Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -30,9 +31,9 @@ export function CreateSlotForm() {
         <Input id="end_time" name="end_time" type="time" defaultValue="23:00" required />
       </div>
       <div className="flex items-end">
-        <Button type="submit" className="w-full">
+        <SubmitButton pendingLabel="Ajout…" className="w-full">
           Ajouter le créneau
-        </Button>
+        </SubmitButton>
       </div>
       {error ? <p className="sm:col-span-4 text-sm text-destructive">{error}</p> : null}
     </form>
@@ -60,9 +61,9 @@ export function SlotActions({
         >
           <input type="hidden" name="id" value={id} />
           <input type="hidden" name="is_open" value={String(isOpen)} />
-          <Button type="submit" variant="outline" size="sm">
+          <SubmitButton pendingLabel="…" className={buttonVariants({ variant: "outline", size: "sm" })}>
             {isOpen ? "Fermer" : "Ouvrir"}
-          </Button>
+          </SubmitButton>
         </form>
         <form
           action={async (formData) => {
@@ -72,9 +73,13 @@ export function SlotActions({
           }}
         >
           <input type="hidden" name="id" value={id} />
-          <Button type="submit" variant="destructive" size="sm">
+          <SubmitButton
+            pendingLabel="Suppression…"
+            confirm="Supprimer ce créneau ?"
+            className={buttonVariants({ variant: "destructive", size: "sm" })}
+          >
             Supprimer
-          </Button>
+          </SubmitButton>
         </form>
       </div>
       {error ? <p className="text-xs text-destructive">{error}</p> : null}

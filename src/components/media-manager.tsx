@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { MediaItem } from "@/lib/site-media";
+import { SubmitButton } from "@/components/submit-button";
 
 type Action = (formData: FormData) => void | Promise<void>;
 
@@ -62,12 +63,12 @@ export function MediaManager({
           accept={accept}
           className="text-xs text-muted-foreground file:mr-2 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-xs file:text-foreground"
         />
-        <button
-          type="submit"
+        <SubmitButton
+          pendingLabel="Envoi…"
           className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
         >
           ⬆ Envoyer
-        </button>
+        </SubmitButton>
         {busy ? <span className="text-xs text-muted-foreground">…</span> : null}
       </form>
 
@@ -146,30 +147,24 @@ export function MediaManager({
                 <form action={importLocalAction}>
                   <input type="hidden" name="folder" value={folder} />
                   <input type="hidden" name="name" value={item.name} />
-                  <button
-                    type="submit"
-                    title="Importer dans le stockage en ligne"
+                  <SubmitButton
+                    pendingLabel="…"
                     className="rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-cyan-600"
                   >
                     ⬆
-                  </button>
+                  </SubmitButton>
                 </form>
               ) : null}
-              <form
-                action={item.origin === "local" ? deleteLocalAction : deleteStorageAction}
-                onSubmit={(e) => {
-                  if (!window.confirm(`Supprimer « ${item.name} » ?`)) e.preventDefault();
-                }}
-              >
+              <form action={item.origin === "local" ? deleteLocalAction : deleteStorageAction}>
                 <input type="hidden" name="folder" value={folder} />
                 <input type="hidden" name="name" value={item.name} />
-                <button
-                  type="submit"
-                  title="Supprimer"
+                <SubmitButton
+                  pendingLabel="…"
+                  confirm={`Supprimer « ${item.name} » ?`}
                   className="rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-red-600"
                 >
                   ✕
-                </button>
+                </SubmitButton>
               </form>
             </div>
             <p className="truncate bg-black/50 px-2 py-1 text-[10px] text-white/80">{item.name}</p>

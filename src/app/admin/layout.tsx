@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { logoutAdmin } from "@/app/actions";
 import { AdminLoginForm } from "@/components/admin-login-form";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { isAdmin } from "@/lib/admin-auth";
 
 export default async function AdminLayout({
@@ -39,9 +40,12 @@ export default async function AdminLayout({
               Site
             </Link>
             <form action={logoutAdmin}>
-              <Button type="submit" variant="outline" size="sm">
+              <SubmitButton
+                pendingLabel="…"
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
                 Déconnexion
-              </Button>
+              </SubmitButton>
             </form>
           </nav>
         </div>

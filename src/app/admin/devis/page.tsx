@@ -279,12 +279,12 @@ export default async function DevisPage({
                     {quote.has_unread_updates ? (
                       <form action={markQuoteSeen}>
                         <input type="hidden" name="quote_id" value={quote.id} />
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          pendingLabel="…"
                           className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
                         >
                           ✓ Marquer comme vu
-                        </button>
+                        </SubmitButton>
                       </form>
                     ) : null}
                   </div>

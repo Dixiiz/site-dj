@@ -1,5 +1,7 @@
 "use client";
 
+import { SubmitButton } from "@/components/submit-button";
+
 export function QuickStatusForm({
   statusAction,
   deleteAction,
@@ -28,11 +30,11 @@ export function QuickStatusForm({
         <input type="hidden" name="id" value={quoteId} />
         <span className="text-xs text-muted-foreground">Statut rapide :</span>
         {statuses.map(([value, lbl]) => (
-          <button
+          <SubmitButton
             key={value}
-            type="submit"
             name="status"
             value={value}
+            pendingLabel="…"
             className={`rounded-lg border px-2.5 py-1 text-xs transition-colors ${
               currentStatus === value
                 ? "border-accent bg-accent/15 text-foreground"
@@ -40,30 +42,18 @@ export function QuickStatusForm({
             }`}
           >
             {lbl}
-          </button>
+          </SubmitButton>
         ))}
       </form>
-      <form
-        action={deleteAction}
-        className="ml-auto"
-        onSubmit={(e) => {
-          if (!window.confirm("Supprimer définitivement ce devis ? Cette action est irréversible.")) {
-            e.preventDefault();
-            return;
-          }
-          // Safari/WebKit : une sélection de texte active sur l'élément qui va
-          // être retiré du DOM fait planter la mise à jour (« EmptyRanges »).
-          window.getSelection()?.removeAllRanges();
-          (document.activeElement as HTMLElement | null)?.blur();
-        }}
-      >
+      <form action={deleteAction} className="ml-auto">
         <input type="hidden" name="id" value={quoteId} />
-        <button
-          type="submit"
+        <SubmitButton
+          pendingLabel="Suppression…"
+          confirm="Supprimer définitivement ce devis ? Cette action est irréversible."
           className="rounded-lg border border-red-500/40 px-2.5 py-1 text-xs text-red-400 transition-colors hover:bg-red-500/15"
         >
           Supprimer
-        </button>
+        </SubmitButton>
       </form>
     </div>
   );
