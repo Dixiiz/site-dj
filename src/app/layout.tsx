@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Poppins, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Providers } from "@/components/providers";
 import { SITE_URL, SITE_NAME } from "@/lib/site-url";
 import "./globals.css";
@@ -60,6 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>{children}</Providers>
         {/* Analytics uniquement en production (warning script en dev) */}
         {process.env.NODE_ENV === "production" ? <Analytics /> : null}
+        <SpeedInsights />
       </body>
     </html>
   );
