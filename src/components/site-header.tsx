@@ -23,7 +23,7 @@ export async function SiteHeader() {
           </span>
         </Link>
         <div className="flex items-center gap-2">
-          {/* Bouton compte toujours visible, même sur mobile */}
+          {/* Bouton compte : "Mon espace" (redirige vers /connexion si non connecté) */}
           <Link
             href={user ? "/mon-espace" : "/connexion"}
             className="flex items-center gap-1.5 rounded-full border border-accent/40 px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent/15"
@@ -41,7 +41,7 @@ export async function SiteHeader() {
               <circle cx="12" cy="8" r="4" />
               <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
             </svg>
-            <span>{user ? "Mon espace" : "Connexion"}</span>
+            <span>Mon espace</span>
           </Link>
           <MainNav />
         </div>
