@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 const FADE_MS = 700; // durée du fondu de boucle
+const PARALLAX = 0.55; // la vidéo descend à 55% de la vitesse du scroll
+const MAX_SHIFT_RATIO = 0.2; // course maximale de la vidéo (proportion du héro)
 
 // Vidéo de fond du héro : boucle avec fondu enchaîné, bords estompés par des
 // masques FIXES (la vidéo glisse dessous au scroll → aucun bord jamais visible).
@@ -31,7 +33,7 @@ export function HeroVideo({ src = "/videos/hero.mp4" }: { src?: string }) {
     };
   }, []);
 
-  // Parallaxe : la vidéo glisse sous les masques fixes (version d'origine)
+  // Parallaxe : la vidéo glisse sous les masques fixes
   useEffect(() => {
     let raf = 0;
     const onScroll = () => {
@@ -40,8 +42,8 @@ export function HeroVideo({ src = "/videos/hero.mp4" }: { src?: string }) {
         const video = videoRef.current;
         if (!video) return;
         const hero = video.closest("section");
-        const maxShift = (hero ? hero.offsetHeight : 600) * 0.2;
-        const shift = Math.min(window.scrollY * 0.55, maxShift);
+        const maxShift = (hero ? hero.offsetHeight : 600) * MAX_SHIFT_RATIO;
+        const shift = Math.min(window.scrollY * PARALLAX, maxShift);
         video.style.transform = `translateY(${shift}px) scale(1.15)`;
       });
     };
@@ -88,12 +90,11 @@ export function HeroVideo({ src = "/videos/hero.mp4" }: { src?: string }) {
             preload="auto"
             style={{
               transform: "scale(1.15)",
-              transitionProperty: "opacity",
               transitionDuration: `${FADE_MS}ms`,
               willChange: "transform",
             }}
             className={`absolute inset-0 h-full w-full object-cover transition-opacity ease-in-out ${
-              fading ? "opacity-0" : "opacity-95"
+              fading ? "opacity-0" : "opacity-75"
             }`}
           >
             <source src={src} type="video/mp4" />
@@ -103,7 +104,7 @@ export function HeroVideo({ src = "/videos/hero.mp4" }: { src?: string }) {
       {/* Voile dégradé léger pour garder le texte lisible */}
       <div
         aria-hidden
-        className="absolute inset-0 -z-10 bg-gradient-to-b from-background/30 via-background/15 to-background"
+        className="absolute inset-0 -z-10 bg-gradient-to-b from-background/60 via-background/40 to-background"
       />
     </>
   );
