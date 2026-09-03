@@ -627,8 +627,8 @@ export function PricingSection() {
                   if (!el) return;
                   el.dataset.fxVideo = "1";
                 }}
-                className="absolute inset-0 h-full w-full object-cover opacity-15 transition-all duration-700 ease-out group-hover:scale-105 group-hover:opacity-50"
-                style={fxSelected ? { opacity: 0.4 } : undefined}
+                className="absolute inset-0 h-full w-full object-cover opacity-35 transition-all duration-700 ease-out group-hover:scale-105 md:opacity-15 md:group-hover:opacity-50"
+                style={fxSelected ? { opacity: 0.55 } : undefined}
               />
             ) : (
               <Image
@@ -637,11 +637,13 @@ export function PricingSection() {
                 fill
                 sizes="(max-width: 768px) 100vw, 33vw"
                 className={`object-cover transition-all duration-700 ease-out group-hover:scale-105 ${
-                  fxSelected ? "opacity-40" : "opacity-15 group-hover:opacity-50"
+                  fxSelected
+                    ? "opacity-55"
+                    : "opacity-35 md:opacity-15 md:group-hover:opacity-50"
                 }`}
               />
             )}
-            <span className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background/90 transition-opacity duration-700 group-hover:opacity-40" />
+            <span className="absolute inset-0 bg-gradient-to-b from-background/55 via-background/35 to-background/80 transition-opacity duration-700 md:from-background/80 md:via-background/60 md:to-background/90 group-hover:opacity-40" />
             <CardHeader className="relative">
               <CardTitle className="text-base">{option.name}</CardTitle>
               <CardDescription className="text-sm">{option.detail}</CardDescription>
