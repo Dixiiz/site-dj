@@ -264,19 +264,16 @@ export async function sendAdminMessage(formData: FormData) {
     .eq("id", quoteId)
     .single();
 
-  // Le user_id de référence : le propriétaire du devis (client).
-  const { data: firstMessage } = await supabase
-    .from("quote_messages")
-    .select("user_id")
-    .eq("quote_id", quoteId)
-    .limit(1)
-    .single();
-
-  if (!quote?.customer_email || !firstMessage?.user_id) return;
+  // user_id du client s'il a un compte (sinon null : la conversation reste
+  // rattachée au devis et le client la verra dès la création de son compte).
+  const { data: users } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const ownerUser = users?.users?.find(
+    (u) => u.email?.toLowerCase() === quote.customer_email.toLowerCase()
+  );
 
   await supabase.from("quote_messages").insert({
     quote_id: quoteId,
-    user_id: firstMessage.user_id,
+    user_id: ownerUser?.id ?? null,
     sender: "admin",
     body,
   });

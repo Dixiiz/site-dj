@@ -68,6 +68,10 @@ alter table quote_files add column if not exists signed_at timestamptz;
 alter table quote_files add column if not exists signed_ip text;
 alter table quote_files add column if not exists signed_consent boolean not null default false;
 
+-- L'admin peut ouvrir la conversation même si le client n'a pas encore de compte
+alter table quote_messages alter column user_id drop not null;
+alter table quote_files alter column user_id drop not null;
+
 create index if not exists quote_files_quote_idx on quote_files (quote_id, created_at);
 
 alter table quote_files enable row level security;
