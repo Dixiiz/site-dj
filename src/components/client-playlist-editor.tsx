@@ -20,16 +20,8 @@ type PlaylistFile = {
   moment: string | null;
 };
 
-// Les temps forts "fixes" : une section dédiée, 1 à 4 musiques max.
-const FIXED_MOMENTS = [
-  "Cérémonie laïque",
-  "Entrée des mariés",
-  "Cocktail / Vin d'honneur",
-  "Repas",
-  "Ouverture de bal",
-  "Anniversaires & temps forts",
-];
-
+// Le type d'événement (mariage / anniversaire) détermine les temps forts
+// : la liste est passée en prop depuis la page du devis.
 const DANCE_MOMENT = "Soirée / Piste de danse";
 
 type Track = {
@@ -46,20 +38,20 @@ export function ClientPlaylistEditor({
   quoteId,
   tracks,
   files,
+  moments,
 }: {
   quoteId: string;
   tracks: Track[];
   files: PlaylistFile[];
+  moments: string[];
 }) {
-  const [activeMoment, setActiveMoment] = useState(FIXED_MOMENTS[0]);
+  const [activeMoment, setActiveMoment] = useState(moments[0]);
   // Temps forts personnalisés créés par le client (ouverture du dessert…)
   const allCustom = [
     ...new Set(
       tracks
         .map((t) => t.moment)
-        .filter(
-          (m) => m !== DANCE_MOMENT && !(FIXED_MOMENTS as string[]).includes(m)
-        )
+        .filter((m) => m !== DANCE_MOMENT && !moments.includes(m))
     ),
   ];
   const [customMoments, setCustomMoments] = useState<string[]>(allCustom);
@@ -98,7 +90,7 @@ export function ClientPlaylistEditor({
         <div className="rounded-xl border border-white/10 p-4">
           <h3 className="font-medium text-accent">Temps forts</h3>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {FIXED_MOMENTS.map((m) => (
+            {[...moments, ...customMoments].map((m) => (
               <button
                 key={m}
                 type="button"
@@ -124,35 +116,22 @@ export function ClientPlaylistEditor({
             onRemove={removeTrack}
           />
 
-          {/* Temps forts personnalisés */}
-          {customMoments.map((moment) => (
-            <MomentSection
-              key={moment}
-              quoteId={quoteId}
-              moment={moment}
-              tracks={tracks.filter(
-                (t) => t.kind === "souhait" && t.moment === moment
-              )}
-              files={files.filter((f) => f.moment === moment)}
-              onRemove={removeTrack}
-            />
-          ))}
-
           {/* Créer un temps fort supplémentaire */}
           <form
             className="mt-3 flex items-center gap-2"
             onSubmit={(e) => {
               e.preventDefault();
               const name = newMoment.trim();
-              if (!name || (FIXED_MOMENTS as string[]).includes(name)) return;
+              if (!name || moments.includes(name) || customMoments.includes(name)) return;
               setCustomMoments((current) => [...current, name]);
+              setActiveMoment(name);
               setNewMoment("");
             }}
           >
             <Input
               value={newMoment}
               onChange={(e) => setNewMoment(e.target.value)}
-              placeholder="Autre temps fort ? (ex : Ouverture du dessert)"
+              placeholder="Autre temps fort ? (ex : Fontaine de champagne)"
               className="text-xs"
               maxLength={40}
             />

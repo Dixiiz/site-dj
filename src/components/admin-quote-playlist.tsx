@@ -21,13 +21,13 @@ type FileRow = {
 };
 
 const DANCE = "Soirée / Piste de danse";
-const FIXED_MOMENTS = [
+// Temps forts par défaut (mariage) ; la liste réelle est passée en prop.
+const DEFAULT_MOMENTS = [
   "Cérémonie laïque",
   "Entrée des mariés",
   "Cocktail / Vin d'honneur",
   "Repas",
   "Ouverture de bal",
-  "Anniversaires & temps forts",
 ];
 
 function sizeLabel(bytes: number | null) {
@@ -95,8 +95,27 @@ function fileRow(quoteId: string, file: FileRow) {
   );
 }
 
+// Temps forts selon le type d'événement (mariage / anniversaire / pro).
+export function eventMoments(formulaName: string | null | undefined): string[] {
+  return /mariage|essential|deluxe|ultime/i.test(formulaName ?? "")
+    ? [
+        "Cérémonie laïque",
+        "Cocktail / Vin d'honneur",
+        "Entrée des mariés",
+        "Animation",
+        "Ouverture de bal",
+      ]
+    : ["Entrée en salle", "Animation", "Dessert"];
+}
+
 // Playlist du devis : même présentation en 2 colonnes que le client.
-export async function AdminQuotePlaylist({ quoteId }: { quoteId: string }) {
+export async function AdminQuotePlaylist({
+  quoteId,
+  moments,
+}: {
+  quoteId: string;
+  moments: string[];
+}) {
   const supabase = createAdminClient();
   const [{ data: tracks }, { data: files }] = await Promise.all([
     supabase
@@ -160,7 +179,7 @@ export async function AdminQuotePlaylist({ quoteId }: { quoteId: string }) {
 
       {/* Droite : chaque temps fort avec ses musiques et ses fichiers */}
       <div className="space-y-4">
-        {FIXED_MOMENTS.map((moment) => {
+        {moments.map((moment) => {
           const momentTracks = all.filter(
             (t) => t.kind === "souhait" && t.moment === moment
           );
@@ -191,7 +210,7 @@ export async function AdminQuotePlaylist({ quoteId }: { quoteId: string }) {
           ...new Set(
             wishes
               .map((t) => t.moment)
-              .filter((m) => m !== DANCE && !(FIXED_MOMENTS as string[]).includes(m))
+              .filter((m) => m !== DANCE && !moments.includes(m))
           ),
         ].map((moment) => {
           const momentTracks = wishes.filter((t) => t.moment === moment);

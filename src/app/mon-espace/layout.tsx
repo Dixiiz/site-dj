@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AutoRefresh } from "@/components/auto-refresh";
 import { ClientBack } from "@/components/client-back";
 import Link from "next/link";
 import { redirect } from "next/navigation";

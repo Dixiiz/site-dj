@@ -1,7 +1,13 @@
-import { getAdminPlaylist, getAdminThreads, sendAdminMessage } from "@/app/client-actions";
+import { getAdminThreads, sendAdminMessage } from "@/app/client-actions";
+import { AutoRefresh } from "@/components/auto-refresh";
+import {
+  AdminQuotePlaylist,
+  eventMoments,
+} from "@/components/admin-quote-playlist";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
+// Compte uniquement (la liste complète est rendue par AdminQuotePlaylist).
 type Track = {
   id: string;
   quote_id: string;
@@ -25,14 +31,7 @@ function timeLabel(iso: string) {
 export const dynamic = "force-dynamic";
 
 export default async function AdminMessagesPage() {
-  const [messages, playlist] = await Promise.all([getAdminThreads(), getAdminPlaylist()]);
-
-  const tracksByQuote = new Map<string, Track[]>();
-  for (const track of playlist) {
-    const list = tracksByQuote.get(track.quote_id) ?? [];
-    list.push(track);
-    tracksByQuote.set(track.quote_id, list);
-  }
+  const messages = await getAdminThreads();
 
   // Groupe les messages par devis, devis le plus récent en premier.
   const threads = new Map<string, typeof messages>();
@@ -49,6 +48,7 @@ export default async function AdminMessagesPage() {
 
   return (
     <main>
+      <AutoRefresh />
       <h1 className="text-2xl font-medium">Messagerie clients</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Les messages envoyés depuis l&apos;espace client, et vos réponses.
@@ -108,82 +108,16 @@ export default async function AdminMessagesPage() {
                   })}
                 </ul>
 
-                {/* Musiques du dossier — partagées avec le client */}
-                {(tracksByQuote.get(quoteId) ?? []).length > 0 ? (
-                  <details className="mt-4 rounded-lg border border-white/10 p-3">
-                    <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
-                      🎵 Musiques du dossier (
-                      {(tracksByQuote.get(quoteId) ?? []).length})
-                    </summary>
-                    <ul className="mt-3 space-y-2">
-                      {(() => {
-                        const quoteTracks = tracksByQuote.get(quoteId) ?? [];
-                        const wishes = quoteTracks.filter((t) => t.kind === "souhait");
-                        const blacklist = quoteTracks.filter((t) => t.kind === "blacklist");
-                        const moments = [...new Set(wishes.map((t) => t.moment))];
-                        const row = (track: Track) => (
-                          <li
-                            key={track.id}
-                            className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm sm:gap-3"
-                          >
-                            {track.artwork_url ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={track.artwork_url}
-                                alt=""
-                                width={36}
-                                height={36}
-                                className="h-9 w-9 shrink-0 rounded-md object-cover"
-                              />
-                            ) : null}
-                            <div className="min-w-0 flex-1 basis-40">
-                              <p className="truncate">
-                                <span className="font-medium">{track.title}</span>
-                                {track.artist ? (
-                                  <span className="text-muted-foreground"> — {track.artist}</span>
-                                ) : null}
-                              </p>
-                            </div>
-                            {track.preview_url ? (
-                              <audio
-                                controls
-                                preload="none"
-                                src={track.preview_url}
-                                className="h-8 w-full min-w-0 sm:w-44"
-                              />
-                            ) : null}
-                          </li>
-                        );
-                        return (
-                          <>
-                            {moments.map((moment) => {
-                              const momentTracks = wishes.filter((t) => t.moment === moment);
-                              return (
-                                <li key={moment}>
-                                  <p className="text-xs font-semibold uppercase tracking-wide text-accent">
-                                    {moment}{" "}
-                                    <span className="text-muted-foreground">
-                                      ({momentTracks.length})
-                                    </span>
-                                  </p>
-                                  <ul className="mt-2 space-y-2">{momentTracks.map(row)}</ul>
-                                </li>
-                              );
-                            })}
-                            {blacklist.length > 0 ? (
-                              <li>
-                                <p className="text-xs font-semibold uppercase tracking-wide text-red-400">
-                                  ⚠ À ne PAS passer ({blacklist.length})
-                                </p>
-                                <ul className="mt-2 space-y-2">{blacklist.map(row)}</ul>
-                              </li>
-                            ) : null}
-                          </>
-                        );
-                      })()}
-                    </ul>
-                  </details>
-                ) : null}
+                {/* Musiques + fichiers du dossier — partagés avec le client */}
+                <details className="mt-4 rounded-lg border border-white/10 p-3">
+                  <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
+                    🎵 Musiques &amp; fichiers du dossier
+                  </summary>
+                  <AdminQuotePlaylist
+                    quoteId={quoteId}
+                    moments={eventMoments(quoteInfo?.formula_name)}
+                  />
+                </details>
 
                 <form action={sendAdminMessage} className="mt-4 flex items-end gap-3">
                   <input type="hidden" name="quote_id" value={quoteId} />

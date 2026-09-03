@@ -4,7 +4,8 @@ import { QuickStatusForm } from "@/components/quick-status-form";
 import { AdminQuoteConversation } from "@/components/admin-quote-conversation";
 import { AdminQuoteDetails } from "@/components/admin-quote-details";
 import { AdminQuoteFiles } from "@/components/admin-quote-files";
-import { AdminQuotePlaylist } from "@/components/admin-quote-playlist";
+import { AutoRefresh } from "@/components/auto-refresh";
+import { AdminQuotePlaylist, eventMoments } from "@/components/admin-quote-playlist";
 import { updateQuoteStatus } from "@/app/actions";
 
 import { QuoteStatusSelect } from "@/components/quote-status-select";
@@ -85,6 +86,7 @@ export default async function DevisPage({
 
   return (
     <div className="space-y-6">
+      <AutoRefresh />
       <div>
         <h1 className="text-2xl font-medium">Devis reçus</h1>
         <p className="text-sm text-muted-foreground">
@@ -270,7 +272,10 @@ export default async function DevisPage({
                       }[]
                     }
                   />
-                  <AdminQuotePlaylist quoteId={quote.id} />
+                  <AdminQuotePlaylist
+                    quoteId={quote.id}
+                    moments={eventMoments(quote.formula_name)}
+                  />
                   <AdminQuoteFiles quoteId={quote.id} />
                 </div>
               </details>

@@ -5,6 +5,8 @@ import {
   getQuoteFiles,
   getQuoteMessages,
 } from "@/app/client-actions";
+import { AutoRefresh } from "@/components/auto-refresh";
+import { eventMoments } from "@/components/admin-quote-playlist";
 import { DiversFiles, MomentFiles } from "@/components/client-files";
 import { ClientOptionsEditor } from "@/components/client-options-editor";
 import { ClientPlaylistEditor } from "@/components/client-playlist-editor";
@@ -53,6 +55,7 @@ export default async function ClientQuotePage({
 
   return (
     <main className="space-y-10">
+      <AutoRefresh />
       <div className="flex flex-wrap items-center gap-4">
         {packImage ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -150,7 +153,12 @@ export default async function ClientQuotePage({
 
       {/* Playlist */}
       {/* Musiques + fichiers par catégorie */}
-      <ClientPlaylistEditor quoteId={id} tracks={tracks} files={files} />
+      <ClientPlaylistEditor
+        quoteId={id}
+        tracks={tracks}
+        files={files}
+        moments={eventMoments(quote.formula_name)}
+      />
 
       {/* Fichiers sans catégorie (anciens envois) */}
       <DiversFiles quoteId={id} files={files} />
