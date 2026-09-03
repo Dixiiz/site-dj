@@ -65,6 +65,8 @@ alter table quotes add column if not exists client_label text;
 -- Signature en ligne des documents par le client
 alter table quote_files add column if not exists signed_name text;
 alter table quote_files add column if not exists signed_at timestamptz;
+alter table quote_files add column if not exists signed_ip text;
+alter table quote_files add column if not exists signed_consent boolean not null default false;
 
 create index if not exists quote_files_quote_idx on quote_files (quote_id, created_at);
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createAuthClient } from "@/lib/supabase/server";
@@ -582,22 +583,32 @@ export async function deleteQuoteMoment(formData: FormData) {
   revalidatePath("/admin/devis");
 }
 
-// Le client signe un document en ligne (acceptation nominative et datée).
+// Le client signe un document en ligne (acceptation nominative et datée,
+// avec consentement explicite et IP — valeur probante renforcée).
 export async function signClientDocument(formData: FormData) {
   const quoteId = String(formData.get("quote_id") ?? "");
   const fileId = String(formData.get("file_id") ?? "");
   const name = String(formData.get("name") ?? "").trim().slice(0, 80);
-  if (!quoteId || !fileId || !name) {
-    return { ok: false as const, error: "Nom requis pour signer." };
+  const consent = String(formData.get("consent") ?? "") === "on";
+  if (!quoteId || !fileId || !name || !consent) {
+    return { ok: false as const, error: "Nom et consentement requis pour signer." };
   }
 
   const { user } = await getOwnedQuote(quoteId);
   if (!user) return { ok: false as const, error: "Devis introuvable." };
 
+  const ip =
+    (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
   const supabase = createAdminClient();
   const { error } = await supabase
     .from("quote_files")
-    .update({ signed_name: name, signed_at: new Date().toISOString() })
+    .update({
+      signed_name: name,
+      signed_at: new Date().toISOString(),
+      signed_ip: ip,
+      signed_consent: true,
+    })
     .eq("id", fileId)
     .eq("quote_id", quoteId);
   if (error) return { ok: false as const, error: "Impossible de signer." };

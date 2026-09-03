@@ -218,13 +218,13 @@ export default async function ClientQuotePage({
                         Télécharger
                       </button>
                     </form>
-                    {!file.signed_name ? (
+                    {!file.signed_name && confirmed ? (
                       <form
                         action={async (formData: FormData) => {
                           "use server";
                           await signClientDocument(formData);
                         }}
-                        className="flex items-center gap-1.5"
+                        className="flex flex-wrap items-center gap-1.5"
                       >
                         <input type="hidden" name="quote_id" value={id} />
                         <input type="hidden" name="file_id" value={file.id} />
@@ -235,6 +235,13 @@ export default async function ClientQuotePage({
                           placeholder="Votre nom pour signer"
                           className="w-40 rounded-md border border-white/10 bg-background px-2 py-1.5 text-xs outline-none focus:border-accent"
                         />
+                        <label className="flex max-w-xs items-start gap-1.5 text-left text-[11px] text-muted-foreground">
+                          <input type="checkbox" name="consent" required className="mt-0.5" />
+                          <span>
+                            Je reconnais avoir lu et accepte le contenu de ce
+                            document ; ma saisie vaut signature électronique.
+                          </span>
+                        </label>
                         <button
                           type="submit"
                           className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-500"
@@ -242,6 +249,10 @@ export default async function ClientQuotePage({
                           ✍️ Signer
                         </button>
                       </form>
+                    ) : !file.signed_name ? (
+                      <span className="text-xs text-muted-foreground">
+                        Signature disponible après confirmation du devis
+                      </span>
                     ) : null}
                   </div>
                 </li>
@@ -250,13 +261,29 @@ export default async function ClientQuotePage({
         </section>
       ) : null}
 
-      {/* Musiques + fichiers par catégorie */}
-      <ClientPlaylistEditor
-        quoteId={id}
-        tracks={tracks}
-        files={files}
-        moments={eventMoments(quote.formula_name)}
-      />
+      {/* Musiques + fichiers par catégorie : réservés aux devis confirmés */}
+      {confirmed ? (
+        <ClientPlaylistEditor
+          quoteId={id}
+          tracks={tracks}
+          files={files}
+          moments={eventMoments(quote.formula_name)}
+        />
+      ) : (
+        <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5 text-center">
+          <h2 className="font-medium">🎵 Musiques &amp; fichiers</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+            Cette section s&apos;ouvrira dès que votre devis sera{" "}
+            <span className="font-medium text-green-400">confirmé</span> :
+            vous pourrez alors choisir vos musiques par temps fort, votre
+            blacklist et joindre vos fichiers.
+          </p>
+          <p className="mt-3 text-xs text-muted-foreground">
+            En attendant, vous pouvez déjà ajuster vos options et nous écrire
+            via la messagerie.
+          </p>
+        </section>
+      )}
 
       {/* Fichiers sans catégorie (anciens envois) */}
       <DiversFiles quoteId={id} files={files} />
