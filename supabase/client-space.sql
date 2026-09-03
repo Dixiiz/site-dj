@@ -72,6 +72,9 @@ alter table quote_files add column if not exists signed_consent boolean not null
 alter table quote_messages alter column user_id drop not null;
 alter table quote_files alter column user_id drop not null;
 
+-- Type de document côté admin : simple ou à signer par le client
+alter table quote_files add column if not exists doc_kind text not null default 'info';
+
 create index if not exists quote_files_quote_idx on quote_files (quote_id, created_at);
 
 alter table quote_files enable row level security;

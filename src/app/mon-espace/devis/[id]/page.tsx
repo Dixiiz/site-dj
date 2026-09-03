@@ -192,8 +192,8 @@ export default async function ClientQuotePage({
       </section>
 
       {/* Playlist */}
-      {/* Documents officiels envoyés par Propul'Sound DJ */}
-      {files.filter((f) => f.from_admin).length > 0 ? (
+      {/* Documents officiels simples envoyés par Propul'Sound DJ */}
+      {files.filter((f) => f.from_admin && f.doc_kind !== "a_signer").length > 0 ? (
         <section className="rounded-xl border border-accent/30 bg-accent/5 p-5">
           <h2 className="font-medium">📄 Documents officiels</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -225,43 +225,80 @@ export default async function ClientQuotePage({
                     >
                       Télécharger
                     </a>
-                    {!file.signed_name && confirmed ? (
-                      <form
-                        action={async (formData: FormData) => {
-                          "use server";
-                          await signClientDocument(formData);
-                        }}
-                        className="flex flex-wrap items-center gap-1.5"
-                      >
-                        <input type="hidden" name="quote_id" value={id} />
-                        <input type="hidden" name="file_id" value={file.id} />
-                        <input
-                          type="text"
-                          name="name"
-                          required
-                          placeholder="Votre nom pour signer"
-                          className="w-40 rounded-md border border-white/10 bg-background px-2 py-1.5 text-xs outline-none focus:border-accent"
-                        />
-                        <label className="flex max-w-xs items-start gap-1.5 text-left text-[11px] text-muted-foreground">
-                          <input type="checkbox" name="consent" required className="mt-0.5" />
-                          <span>
-                            Je reconnais avoir lu et accepte le contenu de ce
-                            document ; ma saisie vaut signature électronique.
-                          </span>
-                        </label>
-                        <button
-                          type="submit"
-                          className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-500"
-                        >
-                          ✍️ Signer
-                        </button>
-                      </form>
-                    ) : !file.signed_name ? (
-                      <span className="text-xs text-muted-foreground">
-                        Signature disponible après confirmation du devis
-                      </span>
-                    ) : null}
                   </div>
+                </li>
+              ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {/* Documents à signer */}
+      {files.filter((f) => f.from_admin && f.doc_kind === "a_signer").length > 0 ? (
+        <section className="rounded-xl border border-orange-500/40 bg-orange-500/[0.06] p-5">
+          <h2 className="font-medium text-orange-300">✍️ Documents à signer</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Signez pour valider — votre devis sera confirmé automatiquement.
+          </p>
+          <ul className="mt-3 space-y-3">
+            {files
+              .filter((f) => f.from_admin && f.doc_kind === "a_signer")
+              .map((file) => (
+                <li
+                  key={file.id}
+                  className="rounded-lg border border-white/10 px-3 py-2.5 text-sm"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="min-w-0 truncate font-medium">📄 {file.name}</span>
+                    <a
+                      href={`/api/files/${file.id}`}
+                      className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
+                    >
+                      Télécharger
+                    </a>
+                  </div>
+                  {file.signed_name ? (
+                    <p className="mt-2 text-xs font-medium text-green-400">
+                      ✓ Signé par {file.signed_name} le{" "}
+                      {file.signed_at
+                        ? new Date(file.signed_at).toLocaleDateString("fr-FR")
+                        : ""}
+                    </p>
+                  ) : confirmed ? (
+                    <form
+                      action={async (formData: FormData) => {
+                        "use server";
+                        await signClientDocument(formData);
+                      }}
+                      className="mt-2 flex flex-wrap items-center gap-1.5"
+                    >
+                      <input type="hidden" name="quote_id" value={id} />
+                      <input type="hidden" name="file_id" value={file.id} />
+                      <input
+                        type="text"
+                        name="name"
+                        required
+                        placeholder="Votre nom pour signer"
+                        className="w-44 rounded-md border border-white/10 bg-background px-2 py-1.5 text-xs outline-none focus:border-accent"
+                      />
+                      <label className="flex max-w-xs items-start gap-1.5 text-left text-[11px] text-muted-foreground">
+                        <input type="checkbox" name="consent" required className="mt-0.5" />
+                        <span>
+                          Je reconnais avoir lu et j'accepte le contenu ; ma saisie
+                          vaut signature électronique.
+                        </span>
+                      </label>
+                      <button
+                        type="submit"
+                        className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-500"
+                      >
+                        ✍️ Signer
+                      </button>
+                    </form>
+                  ) : (
+                    <p className="mt-2 text-xs text-orange-300">
+                      ⏳ En attente de signature — disponible après confirmation du devis
+                    </p>
+                  )}
                 </li>
               ))}
           </ul>

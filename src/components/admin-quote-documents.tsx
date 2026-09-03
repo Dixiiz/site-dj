@@ -1,4 +1,9 @@
-import { deleteAdminDocument, uploadAdminDocument } from "@/app/client-actions";
+import {
+  deleteAdminDocument,
+  downloadQuoteFile,
+  generateDevisDocument,
+  uploadAdminDocument,
+} from "@/app/client-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -8,79 +13,131 @@ type FileRow = {
   name: string;
   mime_type: string | null;
   size_bytes: number | null;
+  doc_kind: string;
+  signed_name: string | null;
 };
 
-// Documents officiels envoyés au client (contrat, devis signé…).
+function sizeLabel(bytes: number | null) {
+  if (!bytes) return "";
+  if (bytes > 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+  return `${Math.round(bytes / 1024)} Ko`;
+}
+
+// Documents admin : « à signer » (devis, contrat…) et documents simples.
 export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
   const supabase = createAdminClient();
   const { data: files } = await supabase
     .from("quote_files")
-    .select("id, name, mime_type, size_bytes, signed_name")
+    .select("id, name, mime_type, size_bytes, doc_kind, signed_name")
     .eq("quote_id", quoteId)
     .eq("from_admin", true)
     .order("created_at", { ascending: true });
 
-  return (
-    <div className="space-y-1.5">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Documents envoyés au client (contrat, devis signé…)
-      </h3>
-      {files && files.length > 0 ? (
-        <ul className="space-y-2">
-          {files.map((file) => (
-            <li
-              key={file.id}
-              className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm sm:gap-3"
-            >
-              <span className="shrink-0">📄</span>
-              <div className="min-w-0 flex-1 basis-40">
-                <p className="truncate font-medium">
-                  {file.name}
-                  {file.signed_name ? (
-                    <span className="ml-2 rounded-full bg-green-500/15 px-2 py-0.5 text-xs font-medium text-green-400">
-                      ✓ Signé par {file.signed_name}
-                    </span>
-                  ) : null}
-                </p>
-              </div>
-              <a
-                href={`/api/files/${file.id}`}
-                className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
-              >
-                Télécharger
-              </a>
-              <form action={deleteAdminDocument}>
-                <input type="hidden" name="quote_id" value={quoteId} />
-                <input type="hidden" name="file_id" value={file.id} />
-                <button
-                  type="submit"
-                  className="rounded-lg border border-red-500/40 px-2.5 py-1 text-xs text-red-400 transition-colors hover:bg-red-500/10"
-                >
-                  Supprimer
-                </button>
-              </form>
-            </li>
-          ))}
-        </ul>
+  const toSign = (files ?? []).filter((f) => f.doc_kind === "a_signer");
+  const info = (files ?? []).filter((f) => f.doc_kind !== "a_signer");
+
+  const row = (file: FileRow, showSign: boolean) => (
+    <li
+      key={file.id}
+      className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm sm:gap-3"
+    >
+      <span className="shrink-0">📄</span>
+      <div className="min-w-0 flex-1 basis-40">
+        <p className="truncate font-medium">{file.name}</p>
+        <p className="text-[11px] text-muted-foreground">{sizeLabel(file.size_bytes)}</p>
+      </div>
+      {showSign ? (
+        file.signed_name ? (
+          <span className="rounded-full bg-green-500/15 px-2 py-0.5 text-xs font-medium text-green-400">
+            ✓ Signé par {file.signed_name}
+          </span>
+        ) : (
+          <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-xs font-medium text-orange-400">
+            ⏳ En attente de signature
+          </span>
+        )
       ) : null}
-      <form
-        action={async (formData) => {
-          "use server";
-          await uploadAdminDocument(formData);
-        }}
-        className="flex flex-wrap items-center gap-2"
+      <a
+        href={`/api/files/${file.id}`}
+        className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
       >
+        ⬇
+      </a>
+      <form action={deleteAdminDocument}>
         <input type="hidden" name="quote_id" value={quoteId} />
-        <Input
-          type="file"
-          name="file"
-          required
-          className="max-w-xs cursor-pointer text-xs file:cursor-pointer file:mr-2 file:rounded-md file:border-0 file:bg-accent/15 file:px-2.5 file:py-1 file:text-xs file:text-accent"
-        />
-        <Button type="submit" size="sm" variant="outline">
-          Envoyer au client
-        </Button>
+        <input type="hidden" name="file_id" value={file.id} />
+        <button
+          type="submit"
+          className="rounded-lg border border-red-500/40 px-2.5 py-1 text-xs text-red-400 transition-colors hover:bg-red-500/10"
+        >
+          Supprimer
+        </button>
       </form>
+    </li>
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Documents à signer */}
+      <div className="rounded-xl border border-orange-500/30 bg-orange-500/[0.04] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-medium text-orange-400">✍️ Documents à signer</h3>
+          <form
+            action={async (formData: FormData) => {
+              "use server";
+              await generateDevisDocument(formData);
+            }}
+          >
+            <input type="hidden" name="quote_id" value={quoteId} />
+            <button
+              type="submit"
+              className="rounded-lg border border-accent/50 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/15"
+            >
+              ⚡ Générer le devis PDF
+            </button>
+          </form>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Généré automatiquement depuis la prestation choisie — le client le
+          signe dans son espace, ce qui confirme le devis.
+        </p>
+        {toSign.length > 0 ? (
+          <ul className="mt-3 space-y-2">{toSign.map((f) => row(f, true))}</ul>
+        ) : (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Aucun document à signer pour le moment.
+          </p>
+        )}
+      </div>
+
+      {/* Documents simples */}
+      <div className="rounded-xl border border-white/10 p-4">
+        <h3 className="font-medium text-muted-foreground">📎 Documents simples</h3>
+        {info.length > 0 ? (
+          <ul className="mt-3 space-y-2">{info.map((f) => row(f, false))}</ul>
+        ) : (
+          <p className="mt-3 text-xs text-muted-foreground">Aucun document simple.</p>
+        )}
+        <form
+          action={async (formData: FormData) => {
+            "use server";
+            await uploadAdminDocument(formData);
+          }}
+          className="mt-3 flex flex-wrap items-center gap-2"
+        >
+          <input type="hidden" name="quote_id" value={quoteId} />
+          <input type="hidden" name="doc_kind" value="info" />
+          <Input
+            type="file"
+            name="file"
+            required
+            className="max-w-xs cursor-pointer text-xs file:cursor-pointer file:mr-2 file:rounded-md file:border-0 file:bg-white/10 file:px-2.5 file:py-1 file:text-xs"
+          />
+          <Button type="submit" size="sm" variant="outline">
+            Envoyer (document simple)
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

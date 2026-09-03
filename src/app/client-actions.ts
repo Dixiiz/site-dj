@@ -676,11 +676,126 @@ export async function signClientDocument(formData: FormData) {
 
 // ---------- Documents envoyés par l'admin ----------
 
+// Génère automatiquement le devis PDF à partir de la prestation choisie
+// et le place dans la section « à signer » du client.
+export async function generateDevisDocument(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("*")
+    .eq("id", quoteId)
+    .single();
+  if (!quote) return { ok: false as const, error: "Devis introuvable." };
+
+  const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
+  const doc = await PDFDocument.create();
+  doc.setTitle(`Devis Propul'Sound DJ — ${quote.formula_name}`);
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+
+  const page = doc.addPage([595, 842]); // A4
+  const M = 50;
+  let y = 792;
+  const line = (text: string, size = 11, b = false, color = rgb(0.1, 0.1, 0.12)) => {
+    page.drawText(text, { x: M, y, size, font: b ? bold : font, color });
+    y -= size + 8;
+  };
+
+  line("DEVIS — Propul'Sound DJ", 20, true, rgb(0.05, 0.35, 0.7));
+  line("DJ & Show Lumière — Huisseau-sur-Cosson (41350)", 10, false, rgb(0.45, 0.45, 0.45));
+  y -= 10;
+
+  line(`Client : ${quote.customer_name ?? "-"}`, 11, true);
+  line(`E-mail : ${quote.customer_email ?? "-"}`);
+  if (quote.customer_phone) line(`Téléphone : ${quote.customer_phone}`);
+  line(`Événement : ${quote.event_type ?? "-"}`);
+  line(
+    `Date : ${quote.event_date ?? "-"}${quote.start_time ? ` — ${quote.start_time} à ${quote.end_time ?? ""}` : ""}`
+  );
+  line(`Lieu : ${quote.event_location ?? "-"}`);
+  y -= 12;
+
+  line("Prestation", 14, true);
+  line(`${quote.formula_name} : ${((quote.formula_price_cents ?? 0) / 100).toFixed(2)} EUR`, 11);
+  const options = (quote.selected_options ?? []) as SelectedOption[];
+  for (const option of options) {
+    line(
+      `  Option : ${option.name}${option.qty && option.qty > 1 ? ` x${option.qty}` : ""} : ${(option.price_cents / 100).toFixed(2)} EUR`,
+      11
+    );
+  }
+  if ((quote.travel_fee_cents ?? 0) > 0) {
+    line(
+      `  Déplacement (${quote.travel_distance_km ?? "?"} km A/R) : ${((quote.travel_fee_cents ?? 0) / 100).toFixed(2)} EUR`,
+      11
+    );
+  }
+  if ((quote.extra_fee_cents ?? 0) > 0) {
+    line(`  Heures supplémentaires : ${(quote.extra_fee_cents / 100).toFixed(2)} EUR`, 11);
+  }
+  y -= 6;
+  line(`TOTAL : ${((quote.total_cents ?? 0) / 100).toFixed(2)} EUR`, 16, true, rgb(0.05, 0.35, 0.7));
+  y -= 20;
+
+  line("Devis valable 30 jours. Bon pour accord (signature) :", 11, true);
+  y -= 30;
+  page.drawLine({
+    start: { x: M, y },
+    end: { x: M + 220, y },
+    thickness: 0.7,
+    color: rgb(0.6, 0.6, 0.6),
+  });
+  y -= 14;
+  line("Signature du client — approuver le document dans l'espace client", 9, false, rgb(0.5, 0.5, 0.5));
+
+  const bytes = await doc.save();
+
+  // Propriétaire du devis (clé user_id).
+  const { data: owner } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const ownerUser = owner?.users?.find(
+    (u) => u.email?.toLowerCase() === quote.customer_email?.toLowerCase()
+  );
+
+  const storagePath = `admin/${quoteId}/devis-${Date.now()}.pdf`;
+  const { error: uploadError } = await supabase.storage
+    .from("client-files")
+    .upload(storagePath, bytes, { contentType: "application/pdf" });
+  if (uploadError) {
+    return { ok: false as const, error: "Échec de la génération du devis." };
+  }
+
+  await supabase.from("quote_files").insert({
+    quote_id: quoteId,
+    user_id: ownerUser?.id ?? null,
+    name: `Devis - ${quote.formula_name}.pdf`,
+    storage_path: storagePath,
+    mime_type: "application/pdf",
+    size_bytes: bytes.length,
+    from_admin: true,
+    doc_kind: "a_signer",
+  });
+
+  // Passage en « attente de signature » + pastille.
+  await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
+  await advanceQuoteStatus(supabase, quoteId, "attente_signature");
+
+  revalidatePath("/admin/devis");
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  return { ok: true as const, message: "Devis PDF généré et envoyé à la signature ✓" };
+}
+
 export async function uploadAdminDocument(formData: FormData) {
   const { isAdmin } = await import("@/lib/admin-auth");
   if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
 
   const quoteId = String(formData.get("quote_id") ?? "");
+  const docKind = String(formData.get("doc_kind") ?? "info") === "a_signer" ? "a_signer" : "info";
   const file = formData.get("file");
   if (!quoteId || !(file instanceof File) || file.size === 0) {
     return { ok: false as const, error: "Aucun fichier sélectionné." };
@@ -720,6 +835,7 @@ export async function uploadAdminDocument(formData: FormData) {
     mime_type: file.type || null,
     size_bytes: file.size,
     from_admin: true,
+    doc_kind: docKind,
   });
 
   // Notification e-mail au client (best effort).
@@ -837,7 +953,7 @@ export async function getQuoteFiles(quoteId: string) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("quote_files")
-    .select("id, name, storage_path, mime_type, size_bytes, created_at, moment, from_admin, signed_name, signed_at")
+    .select("id, name, storage_path, mime_type, size_bytes, created_at, moment, from_admin, signed_name, signed_at, doc_kind")
     .eq("quote_id", quoteId)
     .order("created_at", { ascending: true });
   return data ?? [];
