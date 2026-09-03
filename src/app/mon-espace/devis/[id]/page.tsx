@@ -54,6 +54,7 @@ export default async function ClientQuotePage({
   const selectedOptions = (quote.selected_options ?? []) as SelectedOption[];
   const pendingOptions = (quote.pending_options ?? null) as SelectedOption[] | null;
   const editable = optionsEditable(quote.status) && !pendingOptions;
+  const confirmed = quote.status === "confirme";
   const packImage = PACK_IMAGES[quote.formula_name] ?? null;
 
   return (
