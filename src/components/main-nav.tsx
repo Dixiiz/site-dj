@@ -45,7 +45,7 @@ export function MainNav() {
         aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 text-foreground transition-colors hover:border-accent/50 hover:text-accent md:hidden"
+        className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-foreground transition-colors hover:border-accent/50 hover:text-accent md:hidden"
       >
         {open ? (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
@@ -60,7 +60,7 @@ export function MainNav() {
 
       {/* Mobile : panneau déroulant */}
       {open ? (
-        <nav className="absolute inset-x-0 top-full z-40 border-b border-white/10 bg-background/95 backdrop-blur-md md:hidden">
+        <nav className="absolute inset-x-0 top-full z-40 border-b border-border bg-background/95 backdrop-blur-md md:hidden">
           <ul className="mx-auto max-w-5xl px-4 py-3">
             {links.map((link) => {
               const active = pathname === link.href;

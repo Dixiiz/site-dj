@@ -62,7 +62,7 @@ export default function MentionsLegalesPage() {
           ))}
         </div>
         <FadeIn>
-          <p className="mt-12 border-t border-white/10 pt-6 text-sm text-muted-foreground">
+          <p className="mt-12 border-t border-border pt-6 text-sm text-muted-foreground">
             Une question ?{" "}
             <Link
               href="/contact"

@@ -17,7 +17,7 @@ export function CreateSlotForm() {
   }
 
   return (
-    <form action={onSubmit} className="grid gap-3 rounded-xl border border-white/10 p-4 sm:grid-cols-4">
+    <form action={onSubmit} className="grid gap-3 rounded-xl border border-border p-4 sm:grid-cols-4">
       <div className="space-y-1.5">
         <Label htmlFor="slot_date">Date</Label>
         <Input id="slot_date" name="slot_date" type="date" required />

@@ -48,7 +48,7 @@ export function RenameInline({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-md border border-white/10 px-2 py-1 text-xs text-muted-foreground"
+          className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground"
         >
           ✕
         </button>

@@ -52,7 +52,7 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
   const row = (file: FileRow, showSign: boolean) => (
     <li
       key={file.id}
-      className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm sm:gap-3"
+      className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm sm:gap-3"
     >
       <span className="shrink-0">📄</span>
       <div className="min-w-0 flex-1 basis-40">
@@ -109,7 +109,7 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
               <summary className="cursor-pointer text-xs text-muted-foreground hover:text-accent">
                 ⚙️ Personnaliser le devis
               </summary>
-              <div className="mt-2 space-y-2 rounded-lg border border-white/10 p-3">
+              <div className="mt-2 space-y-2 rounded-lg border border-border p-3">
                 <div className="grid gap-2 sm:grid-cols-2">
                   <label className="text-xs text-muted-foreground">
                     Titre
@@ -155,7 +155,7 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
                   <textarea
                     name="devis_notes"
                     rows={3}
-                    className="mt-1 w-full rounded-md border border-white/10 bg-background px-2 py-1.5 text-xs outline-none focus:border-accent"
+                    className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-accent"
                   />
                 </label>
               </div>
@@ -197,7 +197,7 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
       </div>
 
       {/* Documents simples */}
-      <div className="rounded-xl border border-white/10 p-4">
+      <div className="rounded-xl border border-border p-4">
         <h3 className="font-medium text-muted-foreground">📎 Documents simples</h3>
         <form
           action={async (formData: FormData) => {

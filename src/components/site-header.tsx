@@ -2,16 +2,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { getClientUser } from "@/app/client-actions";
 import { MainNav } from "@/components/main-nav";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export async function SiteHeader() {
   const user = await getClientUser();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
       <div className="relative mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
         <Link href="/" className="flex shrink-0 items-center gap-2.5">
           <Image
-            src="/logo-bleu-v2.png"
+            src="/logo-bleu-transparent.png"
             alt="Propul'Sound DJ"
             width={140}
             height={40}
@@ -23,6 +24,7 @@ export async function SiteHeader() {
           </span>
         </Link>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <MainNav />
           {/* Bouton compte en position la plus à droite */}
           <Link

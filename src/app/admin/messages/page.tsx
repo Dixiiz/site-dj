@@ -64,7 +64,7 @@ export default async function AdminMessagesPage() {
             return (
               <section
                 key={quoteId}
-                className="rounded-xl border border-white/10 bg-white/[0.03] p-5"
+                className="rounded-xl border border-border bg-muted/50 p-5"
               >
                 <header className="flex flex-wrap items-baseline justify-between gap-2">
                   <div>
@@ -93,7 +93,7 @@ export default async function AdminMessagesPage() {
                         <div
                           className={`max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm ${
                             fromClient
-                              ? "border border-white/10 bg-background"
+                              ? "border border-border bg-background"
                               : "bg-accent/15"
                           }`}
                         >
@@ -109,7 +109,7 @@ export default async function AdminMessagesPage() {
                 </ul>
 
                 {/* Musiques + fichiers du dossier — partagés avec le client */}
-                <details className="mt-4 rounded-lg border border-white/10 p-3">
+                <details className="mt-4 rounded-lg border border-border p-3">
                   <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
                     🎵 Musiques &amp; fichiers du dossier
                   </summary>

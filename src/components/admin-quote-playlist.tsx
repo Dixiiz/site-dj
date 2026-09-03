@@ -46,7 +46,7 @@ function trackRow(track: Track) {
   return (
     <li
       key={track.id}
-      className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm sm:gap-3"
+      className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm sm:gap-3"
     >
       {track.artwork_url ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -77,7 +77,7 @@ function fileRow(quoteId: string, file: FileRow) {
   return (
     <li
       key={file.id}
-      className="flex flex-wrap items-center gap-2 rounded-lg bg-white/[0.03] px-2.5 py-1.5 text-xs sm:gap-3"
+      className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 px-2.5 py-1.5 text-xs sm:gap-3"
     >
       <span className="shrink-0">{fileIcon(file.mime_type)}</span>
       <div className="min-w-0 flex-1 basis-32">
@@ -142,7 +142,7 @@ export async function AdminQuotePlaylist({
   return (
     <div className="grid items-start gap-4 lg:grid-cols-2">
       {/* Gauche : soirée / danse + blacklist */}
-      <div className="rounded-xl border border-white/10 p-4">
+      <div className="rounded-xl border border-border p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-medium text-accent">🎵 Soirée / Piste de danse</h3>
           <span className="text-xs text-muted-foreground">{dance.length}/30 titres</span>
@@ -185,7 +185,7 @@ export async function AdminQuotePlaylist({
           const momentFiles = allFiles.filter((f) => f.moment === moment);
           if (momentTracks.length === 0 && momentFiles.length === 0) return null;
           return (
-            <div key={moment} className="rounded-xl border border-white/10 p-4">
+            <div key={moment} className="rounded-xl border border-border p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="font-medium text-accent">{moment}</h3>
                 <span className="text-xs text-muted-foreground">
@@ -215,7 +215,7 @@ export async function AdminQuotePlaylist({
           const momentTracks = wishes.filter((t) => t.moment === moment);
           const momentFiles = allFiles.filter((f) => f.moment === moment);
           return (
-            <div key={moment} className="rounded-xl border border-white/10 p-4">
+            <div key={moment} className="rounded-xl border border-border p-4">
               <h3 className="font-medium text-accent">{moment} ✨</h3>
               <ul className="mt-3 space-y-2">{momentTracks.map(trackRow)}</ul>
               {momentFiles.length > 0 ? (
@@ -228,14 +228,14 @@ export async function AdminQuotePlaylist({
         })}
 
         {miscFiles.length > 0 ? (
-          <div className="rounded-xl border border-white/10 p-4">
+          <div className="rounded-xl border border-border p-4">
             <h3 className="font-medium text-muted-foreground">📎 Autres fichiers</h3>
             <ul className="mt-3 space-y-1.5">{miscFiles.map((f) => fileRow(quoteId, f))}</ul>
           </div>
         ) : null}
 
         {all.length === 0 && allFiles.length === 0 ? (
-          <div className="rounded-xl border border-white/10 p-4 text-sm text-muted-foreground">
+          <div className="rounded-xl border border-border p-4 text-sm text-muted-foreground">
             Aucune musique ni fichier pour le moment.
           </div>
         ) : null}

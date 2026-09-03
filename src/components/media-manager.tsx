@@ -103,7 +103,7 @@ export function MediaManager({
               setDragOver(null);
             }}
             className={`group relative cursor-grab overflow-hidden rounded-lg border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
-              dragOver === i ? "border-accent scale-[1.02]" : "border-white/10"
+              dragOver === i ? "border-accent scale-[1.02]" : "border-border"
             }`}
           >
             {/* Flèches de réordre : indispensables sur mobile (pas de glisser au doigt) */}

@@ -318,8 +318,8 @@ export default async function Home() {
 
         <GoogleReviews />
 
-        {/* Badge Linkaband « Réservation confirmée » */}
-        <div className="flex justify-center pb-8 -mt-2">
+        {/* Badges confiance : Linkaband + Mariages.net */}
+        <div className="flex flex-wrap items-center justify-center gap-4 pb-8 -mt-2">
           <a
             href="https://linkaband.com/propulsound-dj?utm_source=badge&utm_campaign=161495"
             target="_blank"
@@ -337,9 +337,23 @@ export default async function Home() {
               className="rounded-lg"
             />
           </a>
+          <a
+            href="https://www.mariages.net/musique-mariage/propulsound-dj--e366139"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Profil Propul'Sound DJ sur Mariages.net — 4,8/5"
+            className="flex h-[130px] w-[130px] flex-col items-center justify-center gap-1 rounded-lg border border-border bg-[#12233a] text-center transition-transform hover:scale-105"
+          >
+            <span className="text-[13px] font-semibold leading-tight text-white">
+              Mariages<span className="text-[#f06292]">.net</span>
+            </span>
+            <span className="text-lg font-bold leading-none text-[#f06292]">4,8<span className="text-xs text-white/70">/5</span></span>
+            <span className="text-[10px] leading-tight text-[#fbb1c9]">★★★★★</span>
+            <span className="px-2 text-[9px] leading-tight text-white/60">Profil vérifié depuis 2024</span>
+          </a>
         </div>
       </main>
-      <footer className="border-t border-white/10 py-8 text-center text-sm text-muted-foreground">
+      <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
         Propul&apos;Sound DJ — Huisseau-sur-Cosson (41350) · Déplacement offert dans un rayon de
         30 km
         <div className="mt-2">

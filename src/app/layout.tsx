@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Providers } from "@/components/providers";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 import { SITE_URL, SITE_NAME } from "@/lib/site-url";
 import "./globals.css";
 
@@ -56,8 +57,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
       className={`${poppins.variable} ${inter.variable} dark h-full antialiased`}
     >
+      <head>
+        {/* Thème : sombre par défaut, respecte le choix mémorisé de l'utilisateur */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem("theme")==="light"){document.documentElement.classList.remove("dark")}}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col overflow-x-hidden bg-background text-foreground">
         <Providers>{children}</Providers>
+        <WhatsAppButton />
         {/* Analytics uniquement en production (warning script en dev) */}
         {process.env.NODE_ENV === "production" ? <Analytics /> : null}
       </body>

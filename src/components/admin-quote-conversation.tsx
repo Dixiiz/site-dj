@@ -78,7 +78,7 @@ export function AdminQuoteConversation({
             <li key={message.id} className={`flex ${fromClient ? "justify-start" : "justify-end"}`}>
               <div
                 className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${
-                  fromClient ? "border border-white/10 bg-background" : "bg-accent/15"
+                  fromClient ? "border border-border bg-background" : "bg-accent/15"
                 }`}
               >
                 <p className="whitespace-pre-wrap">{message.body}</p>

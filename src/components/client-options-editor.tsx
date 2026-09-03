@@ -85,7 +85,7 @@ export function ClientOptionsEditor({
                   label: "text-yellow-300",
                 }
               : {
-                  box: "border-white/10 hover:border-accent/40",
+                  box: "border-border hover:border-accent/40",
                   badge: "",
                   badgeIcon: "",
                   label: "",
@@ -156,7 +156,7 @@ export function ClientOptionsEditor({
                     onChange={(e) =>
                       setCo2Qty(Number(e.target.value) === 2 ? 2 : 1)
                     }
-                    className="rounded-md border border-white/10 bg-background px-2 py-1 text-xs"
+                    className="rounded-md border border-border bg-background px-2 py-1 text-xs"
                   >
                     <option value={1}>1 pistolet</option>
                     <option value={2}>2 pistolets</option>

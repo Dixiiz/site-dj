@@ -398,7 +398,7 @@ export function QuoteBookingForm({
                   </Button>
                 </div>
                 {showSuggestions && suggestions.length > 0 ? (
-                  <ul className="absolute z-20 w-full overflow-hidden rounded-lg border border-white/10 bg-card shadow-xl">
+                  <ul className="absolute z-20 w-full overflow-hidden rounded-lg border border-border bg-card shadow-xl">
                     {suggestions.map((suggestion) => (
                       <li key={suggestion.label}>
                         <button
@@ -445,7 +445,7 @@ export function QuoteBookingForm({
                     id="start_time_select"
                     value={startTime}
                     onChange={(event) => setStartTime(event.target.value)}
-                    className="w-full rounded-lg border border-white/10 bg-background px-3 py-3 text-lg font-medium"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-3 text-lg font-medium"
                   >
                     {startTimes.map((time) => (
                       <option key={time} value={time}>
@@ -462,7 +462,7 @@ export function QuoteBookingForm({
                     id="end_time_select"
                     value={endTime}
                     onChange={(event) => setEndTime(event.target.value)}
-                    className="w-full rounded-lg border border-white/10 bg-background px-3 py-3 text-lg font-medium"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-3 text-lg font-medium"
                   >
                     <option value="">Choisir…</option>
                     {END_TIMES.filter(
@@ -495,7 +495,7 @@ export function QuoteBookingForm({
               ) : null}
 
               {isMariage && startMinutes < toMinutes("18:00") ? (
-                <div className="space-y-2 rounded-lg border border-white/10 p-3">
+                <div className="space-y-2 rounded-lg border border-border p-3">
                   <p className="text-sm font-medium">
                     Vous commencez avant 18 h — souhaitez-vous de la sonorisation en plus ?
                   </p>
@@ -506,7 +506,7 @@ export function QuoteBookingForm({
                     className={`w-full rounded-md border px-3 py-2.5 text-left text-sm transition-colors ${
                       wantCeremony
                         ? "border-accent bg-accent/15 text-foreground"
-                        : "border-white/10 hover:border-accent/60 hover:bg-accent/10"
+                        : "border-border hover:border-accent/60 hover:bg-accent/10"
                     }`}
                   >
                     {wantCeremony ? "✓ " : ""}Sonorisation de la cérémonie laïque
@@ -518,14 +518,14 @@ export function QuoteBookingForm({
                     className={`w-full rounded-md border px-3 py-2.5 text-left text-sm transition-colors ${
                       wantCocktail
                         ? "border-accent bg-accent/15 text-foreground"
-                        : "border-white/10 hover:border-accent/60 hover:bg-accent/10"
+                        : "border-border hover:border-accent/60 hover:bg-accent/10"
                     }`}
                   >
                     {wantCocktail ? "✓ " : ""}Sonorisation du cocktail / vin d&apos;honneur
                   </button>
                 </div>
               ) : isMariage && startMinutes === toMinutes("18:00") ? (
-                <div className="space-y-2 rounded-lg border border-white/10 p-3">
+                <div className="space-y-2 rounded-lg border border-border p-3">
                   <p className="text-sm font-medium">Début à 18 h</p>
                   <button
                     type="button"
@@ -534,14 +534,14 @@ export function QuoteBookingForm({
                     className={`w-full rounded-md border px-3 py-2.5 text-left text-sm transition-colors ${
                       wantCocktail
                         ? "border-accent bg-accent/15 text-foreground"
-                        : "border-white/10 hover:border-accent/60 hover:bg-accent/10"
+                        : "border-border hover:border-accent/60 hover:bg-accent/10"
                     }`}
                   >
                     {wantCocktail ? "✓ " : ""}Sonorisation du cocktail / vin d&apos;honneur
                   </button>
                 </div>
               ) : !isMariage && !isBarClub && startMinutes === toMinutes("18:00") ? (
-                <div className="space-y-2 rounded-lg border border-white/10 p-3">
+                <div className="space-y-2 rounded-lg border border-border p-3">
                   <p className="text-sm font-medium">Début à 18 h</p>
                   <button
                     type="button"
@@ -550,7 +550,7 @@ export function QuoteBookingForm({
                     className={`w-full rounded-md border px-3 py-2.5 text-left text-sm transition-colors ${
                       wantCocktail
                         ? "border-accent bg-accent/15 text-foreground"
-                        : "border-white/10 hover:border-accent/60 hover:bg-accent/10"
+                        : "border-border hover:border-accent/60 hover:bg-accent/10"
                     }`}
                   >
                     {wantCocktail ? "✓ " : ""}Sonorisation de l&apos;apéritif / cocktail
@@ -656,7 +656,7 @@ export function QuoteBookingForm({
                 <span>{formatEuros(travel.feeCents)}</span>
               </div>
             ) : null}
-            <div className="flex justify-between border-t border-white/10 pt-3 text-lg font-medium">
+            <div className="flex justify-between border-t border-border pt-3 text-lg font-medium">
               <span>Total estimé</span>
               <span>{formatEuros(total)}</span>
             </div>

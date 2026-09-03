@@ -23,7 +23,7 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-full">
-      <header className="border-b border-white/10">
+      <header className="border-b border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <p className="font-medium">Tableau de bord</p>
           <nav className="flex items-center gap-3 text-sm">

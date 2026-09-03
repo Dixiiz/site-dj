@@ -56,7 +56,7 @@ export function AdminPlanningCalendar({
             className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${
               y === year
                 ? "border-accent bg-accent/15 font-medium text-accent"
-                : "border-white/10 text-muted-foreground hover:border-accent/40"
+                : "border-border text-muted-foreground hover:border-accent/40"
             }`}
           >
             {y}
@@ -69,7 +69,7 @@ export function AdminPlanningCalendar({
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {MONTHS.map((name, m) => (
-          <div key={name} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+          <div key={name} className="rounded-xl border border-border bg-muted/50 p-4">
             <p className="mb-2 text-sm font-medium">{name}</p>
             <div className="grid grid-cols-7 gap-1 text-center text-[11px] text-muted-foreground">
               {DAYS.map((d, i) => (

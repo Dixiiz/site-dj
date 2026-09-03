@@ -51,7 +51,7 @@ export default async function MonEspacePage() {
       </p>
 
       {quotes.length === 0 ? (
-        <div className="mt-10 rounded-xl border border-white/10 p-8 text-center">
+        <div className="mt-10 rounded-xl border border-border p-8 text-center">
           <p className="text-muted-foreground">
             Aucun devis pour le moment.
             <br />
@@ -75,7 +75,7 @@ export default async function MonEspacePage() {
               <li key={quote.id}>
                 <Link
                   href={`/mon-espace/devis/${quote.id}`}
-                  className="block rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-colors hover:border-accent/40"
+                  className="block rounded-xl border border-border bg-muted/50 p-4 transition-colors hover:border-accent/40"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="flex items-center gap-1.5">

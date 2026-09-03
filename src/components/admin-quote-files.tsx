@@ -38,7 +38,7 @@ export async function AdminQuoteFiles({ quoteId }: { quoteId: string }) {
           {files.map((file) => (
             <li
               key={file.id}
-              className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm sm:gap-3"
+              className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm sm:gap-3"
             >
               <span className="shrink-0">
                 {file.mime_type?.startsWith("video")

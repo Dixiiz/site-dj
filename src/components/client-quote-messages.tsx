@@ -66,7 +66,7 @@ export function ClientQuoteMessages({
   }
 
   return (
-    <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+    <section className="rounded-xl border border-border bg-muted/50 p-5">
       <h2 className="font-medium">
         Messagerie
         <span
@@ -91,7 +91,7 @@ export function ClientQuoteMessages({
                 className={`max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm ${
                   mine
                     ? "bg-accent/15 text-foreground"
-                    : "border border-white/10 bg-background text-foreground"
+                    : "border border-border bg-background text-foreground"
                 }`}
               >
                 <p className="whitespace-pre-wrap">{message.body}</p>

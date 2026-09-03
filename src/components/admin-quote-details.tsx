@@ -110,7 +110,7 @@ export function AdminQuoteDetails({
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Message du client
           </h3>
-          <p className="whitespace-pre-wrap rounded-lg border border-white/10 bg-white/[0.03] p-3 text-foreground/90">
+          <p className="whitespace-pre-wrap rounded-lg border border-border bg-muted/50 p-3 text-foreground/90">
             {parsed.message}
           </p>
         </div>

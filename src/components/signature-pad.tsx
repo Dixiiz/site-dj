@@ -60,7 +60,7 @@ export function SignaturePad() {
 
   return (
     <div className="mt-2">
-      <div className="relative w-full max-w-sm rounded-lg border border-white/15 bg-white">
+      <div className="relative w-full max-w-sm rounded-lg border border-border bg-white">
         <canvas
           ref={canvasRef}
           width={480}

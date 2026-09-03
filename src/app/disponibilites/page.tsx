@@ -113,7 +113,7 @@ export default async function DisponibilitesPage({
                 className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${
                   y === selectedYear
                     ? "border-accent bg-accent/15 font-medium text-accent"
-                    : "border-white/10 text-muted-foreground hover:border-accent/40"
+                    : "border-border text-muted-foreground hover:border-accent/40"
                 }`}
               >
                 {y}
@@ -133,7 +133,7 @@ export default async function DisponibilitesPage({
                       ? "mois-courant"
                       : undefined
                   }
-                  className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
+                  className="rounded-xl border border-border bg-muted/50 p-4"
                 >
                   <p className="mb-3 text-center font-medium">
                     {MONTH_NAMES[month]} {year}

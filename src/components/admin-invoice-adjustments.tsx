@@ -45,7 +45,7 @@ export function InvoiceAdjustments({
   const total = rows.reduce((s, r) => s + r.amount_cents, 0);
 
   return (
-    <div className="mt-3 rounded-lg border border-white/10 p-3">
+    <div className="mt-3 rounded-lg border border-border p-3">
       <p className="text-xs font-medium text-muted-foreground">
         ✏️ Lignes personnalisées de la facture
       </p>
@@ -74,7 +74,7 @@ export function InvoiceAdjustments({
               </button>
             </li>
           ))}
-          <li className="border-t border-white/10 pt-1 text-xs text-muted-foreground">
+          <li className="border-t border-border pt-1 text-xs text-muted-foreground">
             Impact sur le total :{" "}
             <span className={total < 0 ? "text-red-400" : "text-green-400"}>
               {total >= 0 ? "+" : "−"}
@@ -88,18 +88,18 @@ export function InvoiceAdjustments({
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="Libellé (ex. Remise, Mise à disposition…)"
-          className="min-w-40 flex-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs outline-none focus:border-cyan-400/50"
+          className="min-w-40 flex-1 rounded-md border border-border bg-white/5 px-2 py-1 text-xs outline-none focus:border-cyan-400/50"
         />
         <input
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder="Montant €"
-          className="w-24 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-xs outline-none focus:border-cyan-400/50"
+          className="w-24 rounded-md border border-border bg-white/5 px-2 py-1 text-xs outline-none focus:border-cyan-400/50"
         />
         <button
           type="button"
           onClick={add}
-          className="rounded-md border border-white/15 px-2 py-1 text-xs transition-colors hover:bg-white/10"
+          className="rounded-md border border-border px-2 py-1 text-xs transition-colors hover:bg-white/10"
         >
           + Ajouter
         </button>

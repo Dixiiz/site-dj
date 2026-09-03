@@ -79,7 +79,7 @@ export function ClientPlaylistEditor({
   const blacklist = tracks.filter((t) => t.kind === "blacklist");
 
   return (
-    <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+    <section className="rounded-xl border border-border bg-muted/50 p-5">
       <h2 className="font-medium">Musiques</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Chaque temps fort a sa section : tapez un titre et touchez la suggestion
@@ -98,7 +98,7 @@ export function ClientPlaylistEditor({
           onRemove={removeTrack}
         />
 
-        <div className="rounded-xl border border-white/10 p-4">
+        <div className="rounded-xl border border-border p-4">
           <h3 className="font-medium text-accent">Temps forts</h3>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {[...moments, ...customMoments].map((m) => (
@@ -109,7 +109,7 @@ export function ClientPlaylistEditor({
                 className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
                   activeMoment === m
                     ? "border-accent bg-accent/15 font-medium text-accent"
-                    : "border-white/10 text-muted-foreground hover:border-accent/40"
+                    : "border-border text-muted-foreground hover:border-accent/40"
                 }`}
               >
                 {m}
@@ -340,7 +340,7 @@ function SectionSearch({
       </div>
       {/* Suggestions : un clic sur le nom ajoute directement */}
       {showSuggestions && (searching || suggestions.length > 0) && !disabled ? (
-        <ul className="absolute inset-x-0 top-full z-20 mt-1 max-h-80 overflow-y-auto rounded-lg border border-white/10 bg-background shadow-xl">
+        <ul className="absolute inset-x-0 top-full z-20 mt-1 max-h-80 overflow-y-auto rounded-lg border border-border bg-background shadow-xl">
           {searching ? (
             <li className="px-3 py-2.5 text-sm text-muted-foreground">Recherche…</li>
           ) : null}
@@ -472,7 +472,7 @@ function DanceSection({
   const full = danceTracks.length >= 30;
 
   return (
-    <div className="rounded-xl border border-white/10 p-4">
+    <div className="rounded-xl border border-border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-medium text-accent">🎵 Soirée / Piste de danse</h3>
         <span className="text-xs text-muted-foreground">
@@ -480,7 +480,7 @@ function DanceSection({
         </span>
       </div>
 
-      <div className="relative mt-3 grid grid-cols-2 gap-1 rounded-lg border border-white/10 p-1 text-xs">
+      <div className="relative mt-3 grid grid-cols-2 gap-1 rounded-lg border border-border p-1 text-xs">
         {/* Curseur qui glisse de gauche à droite */}
         <span
           aria-hidden
@@ -565,7 +565,7 @@ function DanceSection({
 
 function TrackRow({ track, onRemove }: { track: Track; onRemove: () => void }) {
   return (
-    <li className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm sm:gap-3">
+    <li className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm sm:gap-3">
       {track.artwork_url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img

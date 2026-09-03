@@ -80,7 +80,7 @@ export default function FaqPage() {
         <div className="mt-10 space-y-3">
           {faqs.map((item, i) => (
             <FadeIn key={i} delay={0.05 * i}>
-              <details className="group rounded-xl border border-white/10 bg-white/[0.03] p-5 transition-colors hover:border-accent/40 open:border-accent/40">
+              <details className="group rounded-xl border border-border bg-muted/50 p-5 transition-colors hover:border-accent/40 open:border-accent/40">
                 <summary className="cursor-pointer list-none font-medium marker:hidden [&::-webkit-details-marker]:hidden">
                   <span className="mr-2 text-accent transition-transform group-open:rotate-90 inline-block">
                     ▸

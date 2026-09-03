@@ -50,7 +50,7 @@ export default function ContactPage() {
         </FadeIn>
 
         <FadeIn delay={0.1}>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 rounded-xl border border-white/10 bg-white/[0.03] px-6 py-5">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 rounded-xl border border-border bg-muted/50 px-6 py-5">
             {BRANDS.map((b) => (
               <a
                 key={b.name}

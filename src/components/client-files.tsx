@@ -96,7 +96,7 @@ export function MomentFiles({
           {files.map((file) => (
             <li
               key={file.id}
-              className="flex flex-wrap items-center gap-2 rounded-lg bg-white/[0.03] px-2.5 py-1.5 text-xs sm:gap-3"
+              className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 px-2.5 py-1.5 text-xs sm:gap-3"
             >
               <span className="shrink-0">{fileIcon(file.mime_type)}</span>
               <div className="min-w-0 flex-1 basis-32">
@@ -140,13 +140,13 @@ export function DiversFiles({ quoteId, files }: { quoteId: string; files: Client
   const misc = files.filter((f) => !f.moment && !f.from_admin);
   if (misc.length === 0) return null;
   return (
-    <div className="rounded-xl border border-white/10 p-4">
+    <div className="rounded-xl border border-border p-4">
       <h3 className="font-medium text-muted-foreground">📎 Autres fichiers</h3>
       <ul className="mt-3 space-y-2">
         {misc.map((file) => (
           <li
             key={file.id}
-            className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm"
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm"
           >
             <span className="shrink-0">{fileIcon(file.mime_type)}</span>
             <div className="min-w-0 flex-1 basis-40">

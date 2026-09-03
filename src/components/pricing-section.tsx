@@ -310,7 +310,7 @@ function PackCard({
           ? "border-accent shadow-[0_0_60px_-5px] shadow-accent/70 ring-2 ring-accent sm:scale-[1.03]"
           : pack.highlight
             ? "border-accent/60 shadow-[0_0_35px_-10px] shadow-accent/40"
-            : "border-white/10 hover:border-accent/40"
+            : "border-border hover:border-accent/40"
       }`}
     >
       {/* Badge sur la photo : sélection ou mis en avant */}
@@ -458,7 +458,7 @@ export function PricingSection() {
               key={category.id}
               type="button"
               onClick={() => setCategoryId(category.id)}
-              className="group glow-hover relative h-56 overflow-hidden rounded-2xl border border-white/10 text-left transition-colors hover:border-accent/60 focus-visible:outline-2 focus-visible:outline-accent"
+              className="group glow-hover relative h-56 overflow-hidden rounded-2xl border border-border text-left transition-colors hover:border-accent/60 focus-visible:outline-2 focus-visible:outline-accent"
             >
               <Image
                 src={category.image}
@@ -492,7 +492,7 @@ export function PricingSection() {
             <button
               type="button"
               onClick={() => setCategoryId(null)}
-              className="shrink-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-accent/40 hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent"
+              className="shrink-0 rounded-xl border border-border bg-muted/50 px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-accent/40 hover:text-foreground focus-visible:outline-2 focus-visible:outline-accent"
             >
               ← Catégories
             </button>
@@ -507,7 +507,7 @@ export function PricingSection() {
                   className={`shrink-0 whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-accent ${
                     selected
                       ? "border-accent/60 bg-accent/15 text-foreground"
-                      : "border-white/10 bg-white/[0.03] text-muted-foreground hover:border-accent/30 hover:text-foreground"
+                      : "border-border bg-muted/50 text-muted-foreground hover:border-accent/30 hover:text-foreground"
                   }`}
                 >
                   {category.label}
@@ -524,7 +524,7 @@ export function PricingSection() {
               <span className="text-foreground">jeux de lumières</span> : plus vous montez en
               gamme, plus la scénographie est riche (nombre de lyres, PAR LED, effets).
             </p>
-            <div className="mt-4 flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-4 flex flex-col gap-3 rounded-xl border border-border bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <Badge className="w-fit bg-accent/15 text-accent hover:bg-accent/15">
                 ⚡ Éclairage 100 % synchronisé en temps réel
               </Badge>
@@ -611,7 +611,7 @@ export function PricingSection() {
               className={`group relative cursor-pointer overflow-hidden transition-all duration-300 ease-out focus-visible:outline-2 focus-visible:outline-accent ${
                 fxSelected
                   ? "border-accent shadow-[0_0_60px_-5px] shadow-accent/70 ring-2 ring-accent sm:scale-[1.03]"
-                  : "border-white/10 hover:border-accent/40"
+                  : "border-border hover:border-accent/40"
               }`}
             >
             {/* Aperçu en fond, fané derrière le texte — vidéo au survol, sinon image */}
@@ -679,7 +679,7 @@ export function PricingSection() {
                           })
                         );
                       }}
-                      className="rounded-md border border-white/10 bg-background px-2 py-1 text-xs"
+                      className="rounded-md border border-border bg-background px-2 py-1 text-xs"
                     >
                       <option value={1}>1 pistolet</option>
                       <option value={2}>2 pistolets</option>

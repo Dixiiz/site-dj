@@ -17,7 +17,7 @@ export function AdminLoginForm() {
   }
 
   return (
-    <form action={onSubmit} className="mx-auto mt-16 max-w-sm space-y-4 rounded-xl border border-white/10 p-6">
+    <form action={onSubmit} className="mx-auto mt-16 max-w-sm space-y-4 rounded-xl border border-border p-6">
       <h1 className="text-xl font-medium">Espace admin</h1>
       <p className="text-sm text-muted-foreground">
         Mot de passe défini dans la variable d&apos;environnement ADMIN_PASSWORD.

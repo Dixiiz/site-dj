@@ -71,7 +71,7 @@ export default async function ClientQuotePage({
             alt={`Scénographie du ${quote.formula_name}`}
             width={120}
             height={68}
-            className="h-16 w-28 shrink-0 rounded-xl border border-white/10 object-cover sm:h-20 sm:w-36"
+            className="h-16 w-28 shrink-0 rounded-xl border border-border object-cover sm:h-20 sm:w-36"
           />
         ) : null}
         <div className="min-w-0 flex-1">
@@ -97,7 +97,7 @@ export default async function ClientQuotePage({
               defaultValue={quote.client_label ?? ""}
               maxLength={60}
               placeholder="Renommer (ex : Mariage de Julien)"
-              className="w-full rounded-md border border-white/10 bg-background px-2.5 py-1.5 text-xs outline-none focus:border-accent"
+              className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs outline-none focus:border-accent"
             />
             <button
               type="submit"
@@ -110,7 +110,7 @@ export default async function ClientQuotePage({
       </div>
 
       {/* Récapitulatif */}
-      <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+      <section className="rounded-xl border border-border bg-muted/50 p-5">
         <h2 className="font-medium">Récapitulatif</h2>
         <div className="mt-3 space-y-2 text-sm">
           <div className="flex justify-between gap-4">
@@ -134,7 +134,7 @@ export default async function ClientQuotePage({
               <span>{formatEuros(quote.travel_fee_cents)}</span>
             </div>
           ) : null}
-          <div className="flex justify-between border-t border-white/10 pt-3 text-base font-medium">
+          <div className="flex justify-between border-t border-border pt-3 text-base font-medium">
             <span>Total</span>
             <span>{formatEuros(quote.total_cents)}</span>
           </div>
@@ -158,7 +158,7 @@ export default async function ClientQuotePage({
       </section>
 
       {/* Options modifiables */}
-      <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+      <section className="rounded-xl border border-border bg-muted/50 p-5">
         <h2 className="font-medium">Options</h2>
         {pendingOptions ? (
           <div className="mt-3 rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm">
@@ -208,7 +208,7 @@ export default async function ClientQuotePage({
               .map((file) => (
                 <li
                   key={file.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium">📄 {file.name}</p>
@@ -248,7 +248,7 @@ export default async function ClientQuotePage({
               .map((file) => (
                 <li
                   key={file.id}
-                  className="rounded-lg border border-white/10 px-3 py-2.5 text-sm"
+                  className="rounded-lg border border-border px-3 py-2.5 text-sm"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="min-w-0 truncate font-medium">📄 {file.name}</span>
@@ -283,7 +283,7 @@ export default async function ClientQuotePage({
                         name="name"
                         required
                         placeholder="Votre prénom et nom"
-                        className="w-56 rounded-md border border-white/10 bg-background px-2 py-1.5 text-xs outline-none focus:border-accent"
+                        className="w-56 rounded-md border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-accent"
                       />
                       <SignaturePad />
                       <label className="mt-2 flex max-w-md items-start gap-1.5 text-left text-[11px] text-muted-foreground">
@@ -320,7 +320,7 @@ export default async function ClientQuotePage({
           const acompte = total - solde;
           const libelle = `${quote.customer_name} — ${quote.event_date ?? ""}`;
           return (
-            <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+            <section className="rounded-xl border border-border bg-muted/50 p-5">
               <h2 className="font-medium">💳 Acompte de réservation</h2>
               {quote.acompte_paid_at ? (
                 <p className="mt-2 text-sm font-medium text-green-400">
@@ -343,7 +343,7 @@ export default async function ClientQuotePage({
                     par virement avec le libellé&nbsp;:{" "}
                     <span className="font-mono text-xs text-foreground">{libelle}</span>
                   </p>
-                  <div className="mt-3 space-y-0.5 rounded-lg border border-white/10 bg-white/5 p-3 text-sm">
+                  <div className="mt-3 space-y-0.5 rounded-lg border border-border bg-white/5 p-3 text-sm">
                     <p>
                       <span className="text-muted-foreground">Titulaire :</span>{" "}
                       SOULAINE Maxime
@@ -390,7 +390,7 @@ export default async function ClientQuotePage({
           moments={eventMoments(quote.formula_name)}
         />
       ) : (
-        <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5 text-center">
+        <section className="rounded-xl border border-border bg-muted/50 p-5 text-center">
           <h2 className="font-medium">🎵 Musiques &amp; fichiers</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
             Cette section s&apos;ouvrira dès que vos documents (devis et contrat)

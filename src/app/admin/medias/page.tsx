@@ -139,7 +139,7 @@ export default async function AdminMediasPage() {
       </p>
 
       {sections.map((section) => (
-        <section key={section.key} className="rounded-xl border border-white/10 p-5">
+        <section key={section.key} className="rounded-xl border border-border p-5">
           <h2 className="font-medium">{section.titre}</h2>
           <p className="mt-1 text-xs text-muted-foreground">{section.hint}</p>
           <div className="mt-3">

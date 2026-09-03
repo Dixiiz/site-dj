@@ -27,8 +27,8 @@ export function ConnexionForm() {
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-white/10 p-6">
-      <div className="grid grid-cols-2 gap-2 rounded-lg border border-white/10 p-1 text-sm">
+    <div className="space-y-4 rounded-xl border border-border p-6">
+      <div className="grid grid-cols-2 gap-2 rounded-lg border border-border p-1 text-sm">
         <button
           type="button"
           onClick={() => {
