@@ -117,6 +117,7 @@ export default async function Home() {
               sameAs: [
                 "https://www.instagram.com/propulsounddj/",
                 "https://linkaband.com/propulsound-dj",
+                "https://www.mariages.net/musique-mariage/propulsound-dj--e366139",
                 "https://g.page/r/CYgCQMSAgDcWEAE",
               ],
               makesOffer: [
