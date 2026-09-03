@@ -19,7 +19,10 @@ export async function SiteHeader() {
             className="h-8 w-auto object-contain sm:h-10"
             priority
           />
-          <span className="hidden text-lg font-semibold tracking-wide sm:inline">
+          <span
+            className="hidden text-lg font-normal tracking-wide sm:inline"
+            style={{ fontFamily: "var(--font-fjalla), sans-serif" }}
+          >
             Propul&apos;Sound DJ
           </span>
         </Link>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Poppins, Inter } from "next/font/google";
+import { Poppins, Inter, Fjalla_One } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Providers } from "@/components/providers";
 import { WhatsAppButton } from "@/components/whatsapp-button";
@@ -15,6 +15,12 @@ const poppins = Poppins({
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+});
+
+const fjallaOne = Fjalla_One({
+  variable: "--font-fjalla",
+  subsets: ["latin"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -55,7 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="fr"
       suppressHydrationWarning
-      className={`${poppins.variable} ${inter.variable} dark h-full antialiased`}
+      className={`${poppins.variable} ${inter.variable} ${fjallaOne.variable} dark h-full antialiased`}
     >
       <body className="min-h-full flex flex-col overflow-x-hidden bg-background text-foreground">
         <Providers>{children}</Providers>
