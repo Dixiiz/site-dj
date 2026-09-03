@@ -2,6 +2,7 @@ import { deleteQuote } from "@/app/actions";
 import { markQuoteSeen, resolveQuoteOptions } from "@/app/client-actions";
 import { QuickStatusForm } from "@/components/quick-status-form";
 import { confirmAcompteReceived } from "@/app/client-actions";
+import { SubmitButton } from "@/components/submit-button";
 import { AdminQuoteConversation } from "@/components/admin-quote-conversation";
 import { AdminQuoteDetails } from "@/components/admin-quote-details";
 import { AdminQuoteDocuments } from "@/components/admin-quote-documents";
@@ -258,12 +259,12 @@ export default async function DevisPage({
                       }}
                     >
                       <input type="hidden" name="quote_id" value={quote.id} />
-                      <button
-                        type="submit"
+                      <SubmitButton
+                        pendingLabel="Validation…"
                         className="rounded-lg border border-cyan-500/50 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-400 transition-colors hover:bg-cyan-400/25 hover:text-cyan-200"
                       >
                         ✓ Acompte reçu
-                      </button>
+                      </SubmitButton>
                     </form>
                   </div>
                 ) : null}

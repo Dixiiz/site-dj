@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { InvoiceAdjustments } from "@/components/admin-invoice-adjustments";
+import { SubmitButton } from "@/components/submit-button";
 
 type FileRow = {
   id: string;
@@ -158,12 +159,12 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
                 </label>
               </div>
             </details>
-            <button
-              type="submit"
+            <SubmitButton
+              pendingLabel="Génération du devis…"
               className="rounded-lg border border-accent/50 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/15"
             >
               ⚡ Générer le devis PDF
-            </button>
+            </SubmitButton>
           </form>
           <form
             action={async (formData: FormData) => {
@@ -172,12 +173,12 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
             }}
           >
             <input type="hidden" name="quote_id" value={quoteId} />
-            <button
-              type="submit"
+            <SubmitButton
+              pendingLabel="Génération du contrat…"
               className="rounded-lg border border-cyan-500/50 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:border-cyan-400 hover:bg-cyan-400/25 hover:text-cyan-100"
             >
               📝 Générer le contrat PDF
-            </button>
+            </SubmitButton>
           </form>
           </div>
         </div>
@@ -205,12 +206,12 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
           className="mt-2"
         >
           <input type="hidden" name="quote_id" value={quoteId} />
-          <button
-            type="submit"
+          <SubmitButton
+            pendingLabel="Génération de la facture…"
             className="rounded-lg border border-green-500/50 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-400 transition-colors hover:border-green-400 hover:bg-green-400/25 hover:text-green-200"
           >
             🧾 Générer la facture PDF
-          </button>
+          </SubmitButton>
         </form>
         <InvoiceAdjustments quoteId={quoteId} initial={adjustments} />
         {info.length > 0 ? (

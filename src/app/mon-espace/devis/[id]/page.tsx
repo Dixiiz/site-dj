@@ -17,6 +17,7 @@ import { ClientPlaylistEditor } from "@/components/client-playlist-editor";
 import { ClientQuoteMessages } from "@/components/client-quote-messages";
 import { PACK_IMAGES } from "@/components/pricing-section";
 import { SignaturePad } from "@/components/signature-pad";
+import { SubmitButton } from "@/components/submit-button";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEuros } from "@/lib/money";
 import type { SelectedOption } from "@/lib/types";
@@ -293,12 +294,12 @@ export default async function ClientQuotePage({
                           signature électronique.
                         </span>
                       </label>
-                      <button
-                        type="submit"
+                      <SubmitButton
+                        pendingLabel="Signature en cours…"
                         className="mt-2 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-500"
                       >
                         ✍️ Signer le document
-                      </button>
+                      </SubmitButton>
                     </form>
                   ) : (
                     <p className="mt-2 text-xs text-orange-300">
@@ -366,12 +367,12 @@ export default async function ClientQuotePage({
                     className="mt-3"
                   >
                     <input type="hidden" name="quote_id" value={id} />
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white transition-colors hover:opacity-90"
+                    <SubmitButton
+                      pendingLabel="Envoi de la confirmation…"
+                      className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
                     >
                       ✅ J&apos;ai envoyé l&apos;acompte
-                    </button>
+                    </SubmitButton>
                   </form>
                 </>
               )}
