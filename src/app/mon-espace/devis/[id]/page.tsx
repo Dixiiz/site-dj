@@ -78,7 +78,13 @@ export default async function ClientQuotePage({
             {quote.event_location ?? "Lieu à définir"} · Pack : {quote.formula_name}
           </p>
           {/* Renommage du devis */}
-          <form action={renameClientQuote} className="mt-2 flex max-w-md items-center gap-2">
+          <form
+            action={async (formData: FormData) => {
+              "use server";
+              await renameClientQuote(formData);
+            }}
+            className="mt-2 flex max-w-md items-center gap-2"
+          >
             <input type="hidden" name="quote_id" value={id} />
             <input
               type="text"

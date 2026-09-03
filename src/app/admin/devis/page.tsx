@@ -49,7 +49,7 @@ export default async function DevisPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  const { q, tri } = await searchParams;
+  const { q, tri } = await searchParams as { q?: string; tri?: string };
   const query = (q ?? "").trim().toLowerCase();
   const supabase = createAdminClient();
   const { data: quotes } = await supabase
