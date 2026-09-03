@@ -175,7 +175,10 @@ export default async function Home() {
             <p className="text-sm tracking-[0.3em] text-accent uppercase">
               DJ &amp; animations — Loir-et-Cher
             </p>
-            <h1 className="mx-auto mt-4 max-w-3xl text-3xl font-medium tracking-tight text-glow sm:text-5xl">
+            <h1
+              className="mx-auto mt-4 max-w-3xl text-4xl font-normal tracking-tight text-glow sm:text-6xl"
+              style={{ fontFamily: "var(--font-fjalla), sans-serif" }}
+            >
               Mettez de l&apos;énergie dans vos événements avec{" "}
               <span className="text-accent">Propul&apos;Sound DJ</span>
             </h1>
