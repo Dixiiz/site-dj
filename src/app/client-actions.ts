@@ -116,6 +116,31 @@ export async function getMyQuote(quoteId: string) {
   return quote;
 }
 
+// Progression automatique des statuts (jamais de régression) :
+// nouveau → contacté → attente de signature → confirmé
+const STATUS_RANK: Record<string, number> = {
+  nouveau: 0,
+  contacte: 1,
+  attente_signature: 2,
+  confirme: 3,
+};
+
+export async function advanceQuoteStatus(
+  supabase: ReturnType<typeof createAdminClient>,
+  quoteId: string,
+  target: string
+) {
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("status")
+    .eq("id", quoteId)
+    .single();
+  const current = quote?.status ?? "nouveau";
+  if ((STATUS_RANK[current] ?? 9) < (STATUS_RANK[target] ?? 9)) {
+    await supabase.from("quotes").update({ status: target }).eq("id", quoteId);
+  }
+}
+
 // Le client renomme son devis (ex : « Mariage de Julien »).
 export async function renameClientQuote(formData: FormData) {
   const quoteId = String(formData.get("quote_id") ?? "");
@@ -255,6 +280,9 @@ export async function sendAdminMessage(formData: FormData) {
     sender: "admin",
     body,
   });
+
+  // Contacter le client fait passer le devis en « contacté ».
+  await advanceQuoteStatus(supabase, quoteId, "contacte");
 
   revalidatePath("/admin/messages");
   revalidatePath(`/mon-espace/devis/${quoteId}`);
@@ -613,6 +641,34 @@ export async function signClientDocument(formData: FormData) {
     .eq("quote_id", quoteId);
   if (error) return { ok: false as const, error: "Impossible de signer." };
 
+  // La signature confirme automatiquement le devis.
+  await advanceQuoteStatus(supabase, quoteId, "confirme");
+
+  // E-mail de confirmation au client (best effort).
+  try {
+    const { data: quote } = await supabase
+      .from("quotes")
+      .select("customer_email")
+      .eq("id", quoteId)
+      .single();
+    if (quote?.customer_email) {
+      const { Resend } = await import("resend");
+      const apiKey = process.env.RESEND_API_KEY;
+      const from = process.env.NOTIF_EMAIL;
+      if (apiKey && from) {
+        const resend = new Resend(apiKey);
+        await resend.emails.send({
+          from: `Propul'Sound DJ <${from}>`,
+          to: quote.customer_email,
+          subject: "✅ Document signé — devis confirmé !",
+          text: `Bonjour,\n\nNous avons bien reçu votre signature. Votre devis est désormais confirmé !\n\nMerci de votre confiance.\n\n— Propul'Sound DJ`,
+        });
+      }
+    }
+  } catch {
+    // best effort
+  }
+
   revalidatePath(`/mon-espace/devis/${quoteId}`);
   revalidatePath("/admin/devis");
   return { ok: true as const, message: "Document signé ✓" };
@@ -685,6 +741,10 @@ export async function uploadAdminDocument(formData: FormData) {
   } catch {
     // best effort
   }
+
+  // Pastille nouveautés + passage en « attente de signature ».
+  await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
+  await advanceQuoteStatus(supabase, quoteId, "attente_signature");
 
   revalidatePath("/admin/devis");
   revalidatePath(`/mon-espace/devis/${quoteId}`);

@@ -428,7 +428,7 @@ export async function updateQuoteStatus(formData: FormData) {
   if (!(await isAdmin())) return;
   const id = String(formData.get("id") ?? "");
   const status = String(formData.get("status") ?? "");
-  const allowed = ["nouveau", "contacte", "confirme", "refuse", "annule"];
+  const allowed = ["nouveau", "contacte", "attente_signature", "confirme", "refuse", "annule"];
   if (!id || !allowed.includes(status)) return;
   const supabase = createAdminClient();
 

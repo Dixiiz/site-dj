@@ -136,7 +136,17 @@ export default async function ClientQuotePage({
             <span>{formatEuros(quote.total_cents)}</span>
           </div>
           <p className="pt-1 text-xs text-muted-foreground">
-            Statut : {quote.status}
+            Statut :{" "}
+            {
+              {
+                nouveau: "Nouveau",
+                contacte: "Contacté",
+                attente_signature: "En attente de signature",
+                confirme: "Confirmé ✓",
+                refuse: "Refusé",
+                annule: "Annulé",
+              }[quote.status as string] ?? quote.status
+            }
             {quote.start_time && quote.end_time
               ? ` · ${quote.start_time} → ${quote.end_time}`
               : ""}

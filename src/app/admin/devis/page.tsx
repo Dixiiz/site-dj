@@ -20,6 +20,10 @@ export const dynamic = "force-dynamic";
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   nouveau: { label: "Nouveau", className: "border-accent/60 text-accent" },
   contacte: { label: "Contacté", className: "border-yellow-500/60 text-yellow-400" },
+  attente_signature: {
+    label: "En attente de signature",
+    className: "border-orange-500/60 text-orange-400",
+  },
   confirme: { label: "Confirmé", className: "border-green-500/60 text-green-400" },
   refuse: { label: "Refusé", className: "border-red-500/60 text-red-400" },
   annule: { label: "Annulé", className: "border-zinc-500/60 text-zinc-400" },

@@ -33,6 +33,7 @@ export function QuoteStatusSelect({
       <SelectContent>
         <SelectItem value="nouveau">Nouveau</SelectItem>
         <SelectItem value="contacte">Contacté</SelectItem>
+        <SelectItem value="attente_signature">En attente de signature</SelectItem>
         <SelectItem value="confirme">Confirmé</SelectItem>
         <SelectItem value="refuse">Refusé</SelectItem>
       </SelectContent>
