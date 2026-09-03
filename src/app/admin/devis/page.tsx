@@ -210,6 +210,7 @@ export default async function DevisPage({
                     <div className="mt-3 flex flex-wrap gap-2">
                       <form
                         action={async (formData) => {
+                          "use server";
                           await resolveQuoteOptions(formData);
                         }}
                       >
@@ -224,6 +225,7 @@ export default async function DevisPage({
                       </form>
                       <form
                         action={async (formData) => {
+                          "use server";
                           await resolveQuoteOptions(formData);
                         }}
                       >
