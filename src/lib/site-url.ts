@@ -9,10 +9,15 @@ export const SITE_NAME = "Propul'Sound DJ";
 export const INTERVENTION_ZONES = [
   "Blois",
   "Vendôme",
+  "Romorantin-Lanthenay",
+  "Amboise",
   "La Ferté-Bernard",
   "Morée",
   "Huisseau-sur-Cosson",
+  "Chambord",
+  "Montrichard",
   "Loir-et-Cher",
   "Loir-et-Eure",
   "Sarthe",
+  "Indre-et-Loire",
 ] as const;

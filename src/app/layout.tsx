@@ -23,11 +23,14 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`,
   },
   description:
-    "DJ généraliste et techno pour mariages, anniversaires et soirées privées à Blois, Vendôme, Morée et dans un rayon de 50 km. Devis en ligne gratuit, sonorisation et lumière incluses, options FX (fumée, étincelles, CO2).",
+    "DJ généraliste et techno pour mariages, anniversaires et soirées privées à Blois, Vendôme, Romorantin, Amboise, Morée et dans un rayon de 50 km. Devis en ligne gratuit, sonorisation et lumière incluses, options FX (fumée, étincelles, CO2).",
   keywords: [
     "DJ Blois",
     "DJ mariage Blois",
     "DJ Vendôme",
+    "DJ Romorantin",
+    "DJ Amboise",
+    "DJ Chambord",
     "DJ Loir-et-Cher",
     "DJ anniversaire",
     "DJ soirée privée",
@@ -40,7 +43,7 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     siteName: SITE_NAME,
     url: SITE_URL,
-    title: `${SITE_NAME} — DJ mariage & soirées (Blois, Vendôme, 50 km)`,
+    title: `${SITE_NAME} — DJ mariage & soirées (Blois, Vendôme, Amboise, 50 km)`,
     description:
       "Animation DJ pour mariages, anniversaires et soirées privées. Devis gratuit en ligne, matériel pro, options FX (fumée, étincelles, CO2).",
   },

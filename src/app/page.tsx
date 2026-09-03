@@ -104,7 +104,12 @@ export default async function Home() {
               areaServed: [
                 { "@type": "City", name: "Blois" },
                 { "@type": "City", name: "Vendôme" },
+                { "@type": "City", name: "Romorantin-Lanthenay" },
+                { "@type": "City", name: "Amboise" },
+                { "@type": "City", name: "La Ferté-Bernard" },
                 { "@type": "City", name: "Morée" },
+                { "@type": "City", name: "Chambord" },
+                { "@type": "City", name: "Montrichard" },
                 { "@type": "AdministrativeArea", name: "Loir-et-Cher" },
               ],
               geo: { "@type": "GeoCoordinates", latitude: 47.5667, longitude: 1.4667 },
