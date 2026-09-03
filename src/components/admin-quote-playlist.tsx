@@ -102,7 +102,7 @@ export function eventMoments(formulaName: string | null | undefined): string[] {
         "Cérémonie laïque",
         "Cocktail / Vin d'honneur",
         "Entrée des mariés",
-        "Animation",
+        "Dessert",
         "Ouverture de bal",
       ]
     : ["Entrée en salle", "Animation", "Dessert"];

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import {
   addPlaylistTrack,
+  deleteQuoteMoment,
   removePlaylistTrack,
   searchTrackSuggestions,
   type TrackSuggestion,
@@ -65,6 +66,15 @@ export function ClientPlaylistEditor({
     startRemove(async () => void (await removePlaylistTrack(formData)));
   }
 
+  function removeCustomMoment(moment: string) {
+    const formData = new FormData();
+    formData.set("quote_id", quoteId);
+    formData.set("moment", moment);
+    startRemove(async () => void (await deleteQuoteMoment(formData)));
+    setCustomMoments((current) => current.filter((m) => m !== moment));
+    if (activeMoment === moment) setActiveMoment(moments[0]);
+  }
+
   const blacklist = tracks.filter((t) => t.kind === "blacklist");
 
   return (
@@ -115,6 +125,21 @@ export function ClientPlaylistEditor({
             files={files.filter((f) => f.moment === activeMoment)}
             onRemove={removeTrack}
           />
+
+          {/* Temps forts personnalisés (supprimables) */}
+          {customMoments.map((moment) => (
+            <MomentSection
+              key={moment}
+              quoteId={quoteId}
+              moment={moment}
+              tracks={tracks.filter(
+                (t) => t.kind === "souhait" && t.moment === moment
+              )}
+              files={files.filter((f) => f.moment === moment)}
+              onRemove={removeTrack}
+              onDelete={() => removeCustomMoment(moment)}
+            />
+          ))}
 
           {/* Créer un temps fort supplémentaire */}
           <form
@@ -355,20 +380,35 @@ function MomentSection({
   tracks,
   files,
   onRemove,
+  onDelete,
 }: {
   quoteId: string;
   moment: string;
   tracks: Track[];
   files: PlaylistFile[];
   onRemove: (trackId: string) => void;
+  onDelete?: () => void;
 }) {
   const full = tracks.length >= 4;
   return (
     <div className="mt-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="text-sm font-medium text-foreground">{moment}</h4>
-        <span className="text-xs text-muted-foreground">
-          {tracks.length}/4 musique{tracks.length > 1 ? "s" : ""}
+        <span className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {tracks.length}/4 musique{tracks.length > 1 ? "s" : ""}
+          </span>
+          {onDelete ? (
+            <button
+              type="button"
+              onClick={onDelete}
+              title="Supprimer ce temps fort"
+              aria-label={`Supprimer le temps fort ${moment}`}
+              className="flex h-6 w-6 items-center justify-center rounded-full border border-red-500/40 text-xs text-red-400 transition-colors hover:bg-red-500/15"
+            >
+              ✕
+            </button>
+          ) : null}
         </span>
       </div>
       {tracks.length > 0 ? (

@@ -136,21 +136,29 @@ export function ClientOptionsEditor({
                   {formatEuros(option.price_cents * qty)}
                 </span>
               </button>
-              {/* Choix de la quantité pour les pistolets CO2 */}
+              {/* Quantité pour les pistolets CO2 — verrouillée une fois confirmée */}
               {isCo2 && checked ? (
                 <div className="mt-1.5 flex items-center gap-2 pl-3 text-xs text-muted-foreground">
                   <span>Quantité :</span>
-                  <select
-                    value={co2Qty}
-                    onChange={(e) =>
-                      setCo2Qty(Number(e.target.value) === 2 ? 2 : 1)
-                    }
-                    className="rounded-md border border-white/10 bg-background px-2 py-1 text-xs"
-                  >
-                    <option value={1}>1 pistolet</option>
-                    <option value={2}>2 pistolets</option>
-                  </select>
-                  <span>{formatEuros(option.price_cents * co2Qty)}</span>
+                  {confirmed ? (
+                    <span className="font-medium text-blue-200">
+                      {co2Qty} pistolet{co2Qty > 1 ? "s" : ""} — confirmé
+                    </span>
+                  ) : (
+                    <>
+                      <select
+                        value={co2Qty}
+                        onChange={(e) =>
+                          setCo2Qty(Number(e.target.value) === 2 ? 2 : 1)
+                        }
+                        className="rounded-md border border-white/10 bg-background px-2 py-1 text-xs"
+                      >
+                        <option value={1}>1 pistolet</option>
+                        <option value={2}>2 pistolets</option>
+                      </select>
+                      <span>{formatEuros(option.price_cents * co2Qty)}</span>
+                    </>
+                  )}
                 </div>
               ) : null}
               <input

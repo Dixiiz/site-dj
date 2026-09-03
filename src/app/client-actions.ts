@@ -503,6 +503,38 @@ export async function markQuoteSeen(formData: FormData) {
   revalidatePath("/admin/devis");
 }
 
+// Supprime un temps fort personnalisé (musiques + fichiers associés).
+export async function deleteQuoteMoment(formData: FormData) {
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const moment = String(formData.get("moment") ?? "").trim();
+  if (!quoteId || !moment) return;
+
+  const { user } = await getOwnedQuote(quoteId);
+  if (!user) return;
+
+  const supabase = createAdminClient();
+  // Fichiers associés : on retire aussi les objets du storage.
+  const { data: files } = await supabase
+    .from("quote_files")
+    .select("storage_path")
+    .eq("quote_id", quoteId)
+    .eq("moment", moment);
+  if (files && files.length > 0) {
+    await supabase.storage
+      .from("client-files")
+      .remove(files.map((f) => f.storage_path));
+  }
+
+  await supabase.from("playlist_tracks").delete().eq("quote_id", quoteId).eq("moment", moment);
+  await supabase.from("quote_files").delete().eq("quote_id", quoteId).eq("moment", moment);
+
+  // Pastille nouveautés côté admin.
+  await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
+
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  revalidatePath("/admin/devis");
+}
+
 // ---------- Fichiers clients (MP3, MP4, documents…) ----------
 
 const FILES_BUCKET = "client-files";
