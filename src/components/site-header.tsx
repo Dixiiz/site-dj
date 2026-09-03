@@ -24,7 +24,6 @@ export async function SiteHeader() {
           </span>
         </Link>
         <div className="flex items-center gap-2">
-          <ThemeToggle />
           <MainNav />
           {/* Bouton compte en position la plus à droite */}
           <Link
@@ -46,6 +45,7 @@ export async function SiteHeader() {
             </svg>
             <span>Mon espace</span>
           </Link>
+          <ThemeToggle />
         </div>
       </div>
     </header>
