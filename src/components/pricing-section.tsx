@@ -380,6 +380,11 @@ export const ADMIN_PACK_LIST = CATEGORIES.flatMap((category) =>
   category.packs.map((pack) => ({ id: pack.name, name: pack.name, price: pack.price })),
 );
 
+// Image de scénographie par nom de pack (pour les récapitulatifs de l'espace client).
+export const PACK_IMAGES: Record<string, string> = Object.fromEntries(
+  CATEGORIES.flatMap((category) => category.packs.map((pack) => [pack.name, pack.image]))
+);
+
 export const ADMIN_FX_OPTIONS = FX_OPTIONS.map((option) => ({
   name: option.name,
   price: option.price,

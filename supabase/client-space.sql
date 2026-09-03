@@ -37,3 +37,7 @@ alter table playlist_tracks enable row level security;
 alter table playlist_tracks add column if not exists preview_url text;
 alter table playlist_tracks add column if not exists artwork_url text;
 
+-- Espace client : options en attente de validation admin + pastille nouveautés
+alter table quotes add column if not exists pending_options jsonb;
+alter table quotes add column if not exists has_unread_updates boolean not null default false;
+

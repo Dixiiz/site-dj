@@ -12,15 +12,18 @@ export function ClientOptionsEditor({
   options,
   selectedIds,
   disabled,
+  notice,
 }: {
   quoteId: string;
   options: SimpleOption[];
   selectedIds: string[];
   disabled: boolean;
+  notice?: "pending" | "review";
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set(selectedIds));
   const [pending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [isError, setIsError] = useState(false);
 
   function toggle(id: string) {
     if (disabled) return;
@@ -36,7 +39,10 @@ export function ClientOptionsEditor({
     setFeedback(null);
     startTransition(async () => {
       const result = await updateQuoteOptions(formData);
-      setFeedback(result.ok ? "Options mises à jour ✓" : (result.error ?? null));
+      setFeedback(
+        result.ok ? (result.message ?? "Demande envoyée ✓") : (result.error ?? null)
+      );
+      setIsError(!result.ok);
     });
   }
 
@@ -66,18 +72,30 @@ export function ClientOptionsEditor({
                   {formatEuros(option.price_cents)}
                 </span>
               </button>
-              <input type="checkbox" name="option_ids" value={option.id} checked={checked} onChange={() => toggle(option.id)} className="hidden" />
+              <input
+                type="checkbox"
+                name="option_ids"
+                value={option.id}
+                checked={checked}
+                onChange={() => toggle(option.id)}
+                className="hidden"
+              />
             </li>
           );
         })}
       </ul>
       {!disabled ? (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" size="sm" disabled={pending}>
-            {pending ? "Enregistrement…" : "Enregistrer mes options"}
+            {pending ? "Envoi…" : "Demander ces options"}
           </Button>
+          {notice === "review" && !feedback ? (
+            <span className="text-xs text-muted-foreground">
+              Soumis à validation avant application au devis.
+            </span>
+          ) : null}
           {feedback ? (
-            <p className={`text-sm ${feedback.endsWith("✓") ? "text-accent" : "text-destructive"}`}>
+            <p className={`text-sm ${isError ? "text-destructive" : "text-accent"}`}>
               {feedback}
             </p>
           ) : null}

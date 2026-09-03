@@ -143,6 +143,9 @@ export async function sendQuoteMessage(formData: FormData) {
     body,
   });
 
+  // Pastille nouveautés côté admin.
+  await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
+
   // Notification e-mail à l'admin (best effort).
   try {
     const { Resend } = await import("resend");
@@ -335,6 +338,9 @@ export async function addPlaylistTrack(formData: FormData) {
     artwork_url: artworkUrl,
   });
 
+  // Pastille nouveautés côté admin.
+  await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
+
   revalidatePath(`/mon-espace/devis/${quoteId}`);
   revalidatePath("/admin/messages");
 }
@@ -364,6 +370,7 @@ function optionsEditable(status: string | null) {
   return status !== "confirme" && status !== "refuse" && status !== "annule";
 }
 
+// Le client propose une modification : elle part en attente de validation admin.
 export async function updateQuoteOptions(formData: FormData) {
   const quoteId = String(formData.get("quote_id") ?? "");
   const optionIds = formData.getAll("option_ids").map(String);
@@ -374,7 +381,13 @@ export async function updateQuoteOptions(formData: FormData) {
   if (!optionsEditable(quote.status)) {
     return {
       ok: false as const,
-      error: "Ce devis est confirmé : contactez-nous pour toute modification.",
+      error: "Ce devis est confirmé : contactez-nous via la messagerie.",
+    };
+  }
+  if (quote.pending_options) {
+    return {
+      ok: false as const,
+      error: "Une modification est déjà en attente de validation.",
     };
   }
 
@@ -385,7 +398,6 @@ export async function updateQuoteOptions(formData: FormData) {
     .eq("is_active", true);
 
   const oldOptions = (quote.selected_options ?? []) as SelectedOption[];
-  const oldSum = oldOptions.reduce((sum, o) => sum + (o.price_cents ?? 0), 0);
 
   const selected: SelectedOption[] = (allOptions ?? [])
     .filter((option) => optionIds.includes(option.id))
@@ -400,18 +412,77 @@ export async function updateQuoteOptions(formData: FormData) {
         qty,
       };
     });
-  const newSum = selected.reduce((sum, o) => sum + o.price_cents, 0);
 
+  // Mise en attente : rien n'est appliqué avant la validation de l'admin.
   const { error } = await supabase
     .from("quotes")
-    .update({ selected_options: selected, total_cents: quote.total_cents - oldSum + newSum })
+    .update({ pending_options: selected, has_unread_updates: true })
     .eq("id", quoteId);
 
   if (error) {
-    return { ok: false as const, error: "Impossible de mettre à jour les options." };
+    return { ok: false as const, error: "Impossible d'enregistrer la demande." };
   }
 
   revalidatePath(`/mon-espace/devis/${quoteId}`);
+  return {
+    ok: true as const,
+    message: "Demande envoyée ! Nous vous confirmons dès que possible.",
+  };
+}
+
+// ---------- Validation admin des options demandées ----------
+
+export async function resolveQuoteOptions(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const approve = String(formData.get("approve") ?? "") === "true";
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("selected_options, total_cents, pending_options")
+    .eq("id", quoteId)
+    .single();
+  if (!quote?.pending_options) return { ok: false as const, error: "Rien à valider." };
+
+  if (approve) {
+    const pending = quote.pending_options as SelectedOption[];
+    const oldOptions = (quote.selected_options ?? []) as SelectedOption[];
+    const oldSum = oldOptions.reduce((sum, o) => sum + (o.price_cents ?? 0), 0);
+    const newSum = pending.reduce((sum, o) => sum + (o.price_cents ?? 0), 0);
+    const { error } = await supabase
+      .from("quotes")
+      .update({
+        selected_options: pending,
+        total_cents: (quote.total_cents ?? 0) - oldSum + newSum,
+        pending_options: null,
+        has_unread_updates: false,
+      })
+      .eq("id", quoteId);
+    if (error) return { ok: false as const, error: "Erreur lors de l'application." };
+  } else {
+    await supabase
+      .from("quotes")
+      .update({ pending_options: null, has_unread_updates: false })
+      .eq("id", quoteId);
+  }
+
+  revalidatePath("/admin/devis");
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
   return { ok: true as const };
+}
+
+// L'admin a pris connaissance des nouveautés du devis.
+export async function markQuoteSeen(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return;
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) return;
+  const supabase = createAdminClient();
+  await supabase.from("quotes").update({ has_unread_updates: false }).eq("id", quoteId);
+  revalidatePath("/admin/devis");
 }
 

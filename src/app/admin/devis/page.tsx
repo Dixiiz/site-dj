@@ -1,4 +1,5 @@
 import { deleteQuote } from "@/app/actions";
+import { markQuoteSeen, resolveQuoteOptions } from "@/app/client-actions";
 import { QuickStatusForm } from "@/components/quick-status-form";
 import { AdminQuoteDetails } from "@/components/admin-quote-details";
 import { updateQuoteStatus } from "@/app/actions";
@@ -156,8 +157,88 @@ export default async function DevisPage({
                       </Badge>
                     </div>
                   </div>
+                  {/* Pastille nouveautés client (message, musique, modification) */}
+                  {quote.has_unread_updates ? (
+                    <span
+                      title="Nouveautés client : message, musique ou modification"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-sm text-background shadow-[0_0_16px_-2px_var(--accent)]"
+                    >
+                      🔔
+                    </span>
+                  ) : null}
                 </summary>
 <QuickStatusForm statusAction={updateQuoteStatus} deleteAction={deleteQuote} quoteId={quote.id} currentStatus={quote.status} />
+                {/* Demandes client : pastille vu + validation des options */}
+                {quote.has_unread_updates || quote.pending_options ? (
+                  <div className="flex flex-wrap items-center gap-3 border-t border-border px-4 pt-3 text-sm">
+                    <span className="text-yellow-400">
+                      {quote.pending_options
+                        ? "⏳ Le client a demandé une modification d'options."
+                        : "🔔 Nouveautés client (musique ou message)."}
+                    </span>
+                    {quote.has_unread_updates ? (
+                      <form action={markQuoteSeen}>
+                        <input type="hidden" name="quote_id" value={quote.id} />
+                        <button
+                          type="submit"
+                          className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          ✓ Marquer comme vu
+                        </button>
+                      </form>
+                    ) : null}
+                  </div>
+                ) : null}
+                {quote.pending_options ? (
+                  <div className="mx-4 mb-4 mt-3 rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm">
+                    <p className="font-medium text-yellow-300">
+                      Options demandées par le client :
+                    </p>
+                    <ul className="mt-2 space-y-1">
+                      {((quote.pending_options ?? []) as SelectedOption[]).map((option) => (
+                        <li key={option.id} className="flex justify-between gap-4">
+                          <span>
+                            {option.name}
+                            {option.qty && option.qty > 1 ? ` × ${option.qty}` : ""}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {formatEuros(option.price_cents)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <form
+                        action={async (formData) => {
+                          await resolveQuoteOptions(formData);
+                        }}
+                      >
+                        <input type="hidden" name="quote_id" value={quote.id} />
+                        <input type="hidden" name="approve" value="true" />
+                        <button
+                          type="submit"
+                          className="rounded-lg bg-green-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-500"
+                        >
+                          ✓ Accepter et appliquer
+                        </button>
+                      </form>
+                      <form
+                        action={async (formData) => {
+                          await resolveQuoteOptions(formData);
+                        }}
+                      >
+                        <input type="hidden" name="quote_id" value={quote.id} />
+                        <input type="hidden" name="approve" value="false" />
+                        <button
+                          type="submit"
+                          className="rounded-lg border border-red-500/50 px-4 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/10"
+                        >
+                          ✕ Refuser
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                ) : null}
                 <AdminQuoteDetails quote={quote} options={options} />
               </details>
             );

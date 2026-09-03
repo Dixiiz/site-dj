@@ -7,6 +7,7 @@ import {
 import { ClientOptionsEditor } from "@/components/client-options-editor";
 import { ClientPlaylistEditor } from "@/components/client-playlist-editor";
 import { ClientQuoteMessages } from "@/components/client-quote-messages";
+import { PACK_IMAGES } from "@/components/pricing-section";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEuros } from "@/lib/money";
 import type { SelectedOption } from "@/lib/types";
@@ -43,17 +44,30 @@ export default async function ClientQuotePage({
   );
 
   const selectedOptions = (quote.selected_options ?? []) as SelectedOption[];
-  const editable = optionsEditable(quote.status);
+  const pendingOptions = (quote.pending_options ?? null) as SelectedOption[] | null;
+  const editable = optionsEditable(quote.status) && !pendingOptions;
+  const packImage = PACK_IMAGES[quote.formula_name] ?? null;
 
   return (
     <main className="space-y-10">
-      <div>
-        <h1 className="text-2xl font-medium tracking-tight">
-          {quote.formula_name}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {quote.event_date ?? "Date à définir"} · {quote.event_location ?? "Lieu à définir"}
-        </p>
+      <div className="flex flex-wrap items-center gap-4">
+        {packImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={packImage}
+            alt={`Scénographie du ${quote.formula_name}`}
+            width={120}
+            height={68}
+            className="h-16 w-28 shrink-0 rounded-xl border border-white/10 object-cover sm:h-20 sm:w-36"
+          />
+        ) : null}
+        <div className="min-w-0">
+          <h1 className="text-2xl font-medium tracking-tight">{quote.formula_name}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {quote.event_date ?? "Date à définir"} ·{" "}
+            {quote.event_location ?? "Lieu à définir"}
+          </p>
+        </div>
       </div>
 
       {/* Récapitulatif */}
@@ -97,11 +111,24 @@ export default async function ClientQuotePage({
       {/* Options modifiables */}
       <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
         <h2 className="font-medium">Options</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {editable
-            ? "Ajoutez ou retirez des options : le total est recalculé automatiquement."
-            : "Ce devis est confirmé : contactez-nous via la messagerie pour toute modification."}
-        </p>
+        {pendingOptions ? (
+          <div className="mt-3 rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm">
+            <p className="font-medium text-yellow-300">⏳ Modification en attente de validation</p>
+            <p className="mt-1 text-muted-foreground">
+              Vous avez demandé :{" "}
+              {pendingOptions.length > 0
+                ? pendingOptions.map((o) => o.name).join(", ")
+                : "aucune option"}
+              . Nous vous répondons dès que possible.
+            </p>
+          </div>
+        ) : (
+          <p className="mt-1 text-sm text-muted-foreground">
+            {editable
+              ? "Ajoutez ou retirez des options : votre demande nous est envoyée pour validation."
+              : "Ce devis est confirmé : contactez-nous via la messagerie pour toute modification."}
+          </p>
+        )}
         <ClientOptionsEditor
           quoteId={id}
           options={(options ?? []).map((o) => ({
@@ -111,6 +138,7 @@ export default async function ClientQuotePage({
           }))}
           selectedIds={selectedOptions.map((o) => o.id)}
           disabled={!editable}
+          notice={pendingOptions ? "pending" : editable ? "review" : undefined}
         />
       </section>
 
