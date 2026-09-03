@@ -5,7 +5,7 @@ import {
   getQuoteFiles,
   getQuoteMessages,
 } from "@/app/client-actions";
-import { ClientQuoteFiles as ClientFiles } from "@/components/client-files";
+import { DiversFiles, MomentFiles } from "@/components/client-files";
 import { ClientOptionsEditor } from "@/components/client-options-editor";
 import { ClientPlaylistEditor } from "@/components/client-playlist-editor";
 import { ClientQuoteMessages } from "@/components/client-quote-messages";
@@ -146,10 +146,11 @@ export default async function ClientQuotePage({
       </section>
 
       {/* Playlist */}
-      <ClientPlaylistEditor quoteId={id} tracks={tracks} />
+      {/* Musiques + fichiers par catégorie */}
+      <ClientPlaylistEditor quoteId={id} tracks={tracks} files={files} />
 
-      {/* Fichiers */}
-      <ClientFiles quoteId={id} files={files} />
+      {/* Fichiers sans catégorie (anciens envois) */}
+      <DiversFiles quoteId={id} files={files} />
 
       {/* Messagerie */}
       <ClientQuoteMessages quoteId={id} messages={messages} />

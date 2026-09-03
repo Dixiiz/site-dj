@@ -500,6 +500,7 @@ async function ensureBucket(supabase: ReturnType<typeof createAdminClient>) {
 
 export async function uploadClientFile(formData: FormData) {
   const quoteId = String(formData.get("quote_id") ?? "");
+  const moment = String(formData.get("moment") ?? "").trim() || null;
   const file = formData.get("file");
   if (!quoteId || !(file instanceof File) || file.size === 0) {
     return { ok: false as const, error: "Aucun fichier sélectionné." };
@@ -532,6 +533,7 @@ export async function uploadClientFile(formData: FormData) {
     storage_path: storagePath,
     mime_type: file.type || null,
     size_bytes: file.size,
+    moment,
   });
 
   // Pastille nouveautés côté admin.
@@ -548,7 +550,7 @@ export async function getQuoteFiles(quoteId: string) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("quote_files")
-    .select("id, name, storage_path, mime_type, size_bytes, created_at")
+    .select("id, name, storage_path, mime_type, size_bytes, created_at, moment")
     .eq("quote_id", quoteId)
     .order("created_at", { ascending: true });
   return data ?? [];
@@ -561,7 +563,7 @@ export async function getQuoteFilesAdmin(quoteId: string) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("quote_files")
-    .select("id, name, storage_path, mime_type, size_bytes, created_at")
+    .select("id, name, storage_path, mime_type, size_bytes, created_at, moment")
     .eq("quote_id", quoteId)
     .order("created_at", { ascending: true });
   return data ?? [];

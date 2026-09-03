@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -12,17 +12,11 @@ const links = [
   { href: "/sur-mesure", label: "Sur-mesure" },
   { href: "/contact", label: "Contact" },
   { href: "/faq", label: "FAQ" },
-  { href: "/mon-espace", label: "Mon espace" },
 ];
 
 export function MainNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-
-  // Ferme le menu à chaque changement de page.
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
 
   return (
     <>
@@ -74,6 +68,7 @@ export function MainNav() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
+                    onClick={() => setOpen(false)}
                     className={cn(
                       "block rounded-lg px-3 py-2.5 text-base transition-colors hover:bg-accent/10 hover:text-accent",
                       active && "bg-accent/10 font-medium text-accent"

@@ -9,6 +9,16 @@ import {
 } from "@/app/client-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MomentFiles } from "@/components/client-files";
+
+type PlaylistFile = {
+  id: string;
+  name: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  created_at: string;
+  moment: string | null;
+};
 
 // Les temps forts "fixes" : une section dédiée, 1 à 4 musiques max.
 const FIXED_MOMENTS = [
@@ -35,9 +45,11 @@ type Track = {
 export function ClientPlaylistEditor({
   quoteId,
   tracks,
+  files,
 }: {
   quoteId: string;
   tracks: Track[];
+  files: PlaylistFile[];
 }) {
   const [activeMoment, setActiveMoment] = useState(FIXED_MOMENTS[0]);
   const [pendingRemove, startRemove] = useTransition();
@@ -67,6 +79,7 @@ export function ClientPlaylistEditor({
             (t) => t.moment === DANCE_MOMENT && t.kind === "souhait"
           )}
           blacklist={blacklist}
+          files={files.filter((f) => f.moment === DANCE_MOMENT)}
           onRemove={removeTrack}
         />
 
@@ -95,6 +108,7 @@ export function ClientPlaylistEditor({
             tracks={tracks.filter(
               (t) => t.kind === "souhait" && t.moment === activeMoment
             )}
+            files={files.filter((f) => f.moment === activeMoment)}
             onRemove={removeTrack}
           />
         </div>
@@ -311,11 +325,13 @@ function MomentSection({
   quoteId,
   moment,
   tracks,
+  files,
   onRemove,
 }: {
   quoteId: string;
   moment: string;
   tracks: Track[];
+  files: PlaylistFile[];
   onRemove: (trackId: string) => void;
 }) {
   const full = tracks.length >= 4;
@@ -345,6 +361,7 @@ function MomentSection({
       ) : (
         <SectionSearch quoteId={quoteId} moment={moment} kind="souhait" />
       )}
+      <MomentFiles quoteId={quoteId} moment={moment} files={files} />
     </div>
   );
 }
@@ -354,11 +371,13 @@ function DanceSection({
   quoteId,
   danceTracks,
   blacklist,
+  files,
   onRemove,
 }: {
   quoteId: string;
   danceTracks: Track[];
   blacklist: Track[];
+  files: PlaylistFile[];
   onRemove: (trackId: string) => void;
 }) {
   const [danceKind, setDanceKind] = useState<"souhait" | "blacklist">("souhait");
@@ -440,6 +459,13 @@ function DanceSection({
           )}
         </>
       )}
+
+      {/* Fichiers rattachés à la soirée / danse */}
+      <MomentFiles
+        quoteId={quoteId}
+        moment={DANCE_MOMENT}
+        files={files.filter((f) => f.moment === DANCE_MOMENT)}
+      />
     </div>
   );
 }

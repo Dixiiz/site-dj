@@ -15,6 +15,7 @@ type ClientFile = {
   mime_type: string | null;
   size_bytes: number | null;
   created_at: string;
+  moment: string | null;
 };
 
 function sizeLabel(bytes: number | null) {
@@ -23,11 +24,20 @@ function sizeLabel(bytes: number | null) {
   return `${Math.round(bytes / 1024)} Ko`;
 }
 
-export function ClientQuoteFiles({
+function fileIcon(mime: string | null) {
+  if (mime?.startsWith("video")) return "🎬";
+  if (mime?.startsWith("audio")) return "🎵";
+  return "📄";
+}
+
+// Upload + liste compacte, intégrés dans une catégorie (temps fort).
+export function MomentFiles({
   quoteId,
+  moment,
   files,
 }: {
   quoteId: string;
+  moment: string;
   files: ClientFile[];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -47,53 +57,50 @@ export function ClientQuoteFiles({
   }
 
   return (
-    <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-      <h2 className="font-medium">Fichiers</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Envoyez vos musiques en MP3, vos vidéos, ou tout document utile
-        (texte de cérémonie, timing…) — 50 Mo max par fichier.
-      </p>
-
-      <form ref={formRef} action={onSubmit} className="mt-4 flex flex-wrap items-center gap-3">
+    <div className="mt-3 border-t border-white/5 pt-3">
+      <form
+        ref={formRef}
+        action={onSubmit}
+        className="flex flex-wrap items-center gap-2"
+      >
         <input type="hidden" name="quote_id" value={quoteId} />
+        <input type="hidden" name="moment" value={moment} />
         <Input
           type="file"
           name="file"
           required
           accept="audio/*,video/*,.pdf,.doc,.docx,.txt,.xlsx,.csv"
-          className="max-w-sm cursor-pointer file:cursor-pointer file:mr-3 file:rounded-md file:border-0 file:bg-accent/15 file:px-3 file:py-1 file:text-xs file:text-accent"
+          className="max-w-xs cursor-pointer text-xs file:cursor-pointer file:mr-2 file:rounded-md file:border-0 file:bg-accent/15 file:px-2.5 file:py-1 file:text-xs file:text-accent"
         />
-        <Button type="submit" size="sm" disabled={pending}>
-          {pending ? "Envoi…" : "Envoyer le fichier"}
+        <Button type="submit" size="sm" variant="outline" disabled={pending}>
+          {pending ? "Envoi…" : "📎 Joindre à cette catégorie"}
         </Button>
         {feedback ? (
-          <p className={`text-sm ${isError ? "text-destructive" : "text-accent"}`}>{feedback}</p>
+          <span className={`text-xs ${isError ? "text-destructive" : "text-accent"}`}>
+            {feedback}
+          </span>
         ) : null}
       </form>
 
       {files.length > 0 ? (
-        <ul className="mt-4 space-y-2">
+        <ul className="mt-2 space-y-1.5">
           {files.map((file) => (
             <li
               key={file.id}
-              className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm sm:gap-3"
+              className="flex flex-wrap items-center gap-2 rounded-lg bg-white/[0.03] px-2.5 py-1.5 text-xs sm:gap-3"
             >
-              <span className="shrink-0">
-                {file.mime_type?.startsWith("video")
-                  ? "🎬"
-                  : file.mime_type?.startsWith("audio")
-                    ? "🎵"
-                    : "📄"}
-              </span>
-              <div className="min-w-0 flex-1 basis-40">
+              <span className="shrink-0">{fileIcon(file.mime_type)}</span>
+              <div className="min-w-0 flex-1 basis-32">
                 <p className="truncate font-medium">{file.name}</p>
-                <p className="text-xs text-muted-foreground">{sizeLabel(file.size_bytes)}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {sizeLabel(file.size_bytes)}
+                </p>
               </div>
               <form action={downloadQuoteFile}>
                 <input type="hidden" name="quote_id" value={quoteId} />
                 <input type="hidden" name="file_id" value={file.id} />
                 <Button type="submit" variant="outline" size="sm">
-                  Télécharger
+                  ⬇
                 </Button>
               </form>
               <form
@@ -109,15 +116,45 @@ export function ClientQuoteFiles({
                   size="sm"
                   className="text-red-400 hover:bg-red-500/10"
                 >
-                  Supprimer
+                  ✕
                 </Button>
               </form>
             </li>
           ))}
         </ul>
-      ) : (
-        <p className="mt-4 text-sm text-muted-foreground">Aucun fichier pour le moment.</p>
-      )}
-    </section>
+      ) : null}
+    </div>
+  );
+}
+
+// Fichiers sans catégorie (anciens envois) — liste lecture seule.
+export function DiversFiles({ quoteId, files }: { quoteId: string; files: ClientFile[] }) {
+  const misc = files.filter((f) => !f.moment);
+  if (misc.length === 0) return null;
+  return (
+    <div className="rounded-xl border border-white/10 p-4">
+      <h3 className="font-medium text-muted-foreground">📎 Autres fichiers</h3>
+      <ul className="mt-3 space-y-2">
+        {misc.map((file) => (
+          <li
+            key={file.id}
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm"
+          >
+            <span className="shrink-0">{fileIcon(file.mime_type)}</span>
+            <div className="min-w-0 flex-1 basis-40">
+              <p className="truncate font-medium">{file.name}</p>
+              <p className="text-xs text-muted-foreground">{sizeLabel(file.size_bytes)}</p>
+            </div>
+            <form action={downloadQuoteFile}>
+              <input type="hidden" name="quote_id" value={quoteId} />
+              <input type="hidden" name="file_id" value={file.id} />
+              <Button type="submit" variant="outline" size="sm">
+                Télécharger
+              </Button>
+            </form>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

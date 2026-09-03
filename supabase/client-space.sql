@@ -53,6 +53,9 @@ create table if not exists quote_files (
   created_at timestamptz not null default now()
 );
 
+-- Rattachement d'un fichier à un temps fort (null = divers)
+alter table quote_files add column if not exists moment text;
+
 create index if not exists quote_files_quote_idx on quote_files (quote_id, created_at);
 
 alter table quote_files enable row level security;

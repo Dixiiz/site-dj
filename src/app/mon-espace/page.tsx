@@ -3,11 +3,30 @@ import { getMyQuotes } from "@/app/client-actions";
 import { formatEuros } from "@/lib/money";
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  nouveau: { label: "En attente de réponse", className: "text-yellow-300" },
-  devis_envoye: { label: "Devis envoyé", className: "text-yellow-300" },
-  confirme: { label: "Confirmé ✓", className: "text-green-400" },
-  refuse: { label: "Refusé", className: "text-red-400" },
-  annule: { label: "Annulé", className: "text-muted-foreground" },
+  nouveau: {
+    label: "Nouveau — non lu",
+    className: "bg-sky-500/10 text-sky-300 border border-sky-500/40",
+  },
+  contacte: {
+    label: "En cours",
+    className: "bg-yellow-500/10 text-yellow-300 border border-yellow-500/40",
+  },
+  devis_envoye: {
+    label: "En cours",
+    className: "bg-yellow-500/10 text-yellow-300 border border-yellow-500/40",
+  },
+  confirme: {
+    label: "Confirmé ✓",
+    className: "bg-green-500/10 text-green-400 border border-green-500/40",
+  },
+  refuse: {
+    label: "Refusé",
+    className: "bg-red-500/10 text-red-400 border border-red-500/40",
+  },
+  annule: {
+    label: "Annulé",
+    className: "bg-white/5 text-muted-foreground border border-white/20",
+  },
 };
 
 export default async function MonEspacePage() {
@@ -49,7 +68,9 @@ export default async function MonEspacePage() {
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-medium">{quote.formula_name}</span>
-                    <span className={`text-sm font-medium ${status.className}`}>{status.label}</span>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}>
+                      {status.label}
+                    </span>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {quote.event_date ?? "Date à définir"}

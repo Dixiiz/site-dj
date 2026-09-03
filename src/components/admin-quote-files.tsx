@@ -7,6 +7,7 @@ type FileRow = {
   name: string;
   mime_type: string | null;
   size_bytes: number | null;
+  moment: string | null;
 };
 
 function sizeLabel(bytes: number | null) {
@@ -20,7 +21,7 @@ export async function AdminQuoteFiles({ quoteId }: { quoteId: string }) {
   const supabase = createAdminClient();
   const { data: files } = await supabase
     .from("quote_files")
-    .select("id, name, mime_type, size_bytes")
+    .select("id, name, mime_type, size_bytes, moment")
     .eq("quote_id", quoteId)
     .order("created_at", { ascending: true });
 
@@ -47,7 +48,10 @@ export async function AdminQuoteFiles({ quoteId }: { quoteId: string }) {
               </span>
               <div className="min-w-0 flex-1 basis-40">
                 <p className="truncate font-medium">{file.name}</p>
-                <p className="text-xs text-muted-foreground">{sizeLabel(file.size_bytes)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {file.moment ? `${file.moment} · ` : "Divers · "}
+                  {sizeLabel(file.size_bytes)}
+                </p>
               </div>
               <form action={downloadQuoteFile}>
                 <input type="hidden" name="quote_id" value={quoteId} />
