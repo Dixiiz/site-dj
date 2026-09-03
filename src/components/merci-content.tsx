@@ -43,7 +43,7 @@ export function MerciContent({ nom }: { nom?: string }) {
         Votre demande de devis est bien arrivée. Je vous recontacte dès que
         possible — surveillez vos e-mails (et vos spams, on ne sait jamais !).
       </p>
-      <Button className="mt-8" render={<Link href="/" />}>
+      <Button className="mt-8" nativeButton={false} render={<Link href="/" />}>
         Retour à l&apos;accueil
       </Button>
     </main>
