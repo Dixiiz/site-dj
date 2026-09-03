@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const MEDIA_BUCKET = "site-media";
 
-export type MediaFolder = "galerie" | "videos/showcase" | "videos";
+export type MediaFolder = "galerie" | "packs" | "videos/showcase" | "videos";
 
 export async function ensureMediaBucket() {
   const supabase = createAdminClient();
@@ -94,6 +94,7 @@ export async function saveOrder(folder: MediaFolder, names: string[]): Promise<{
 
 const LOCAL_DIRS: Record<MediaFolder, string> = {
   galerie: "public/galerie",
+  packs: "public/images/packs",
   "videos/showcase": "public/videos/showcase",
   videos: "public/videos",
 };

@@ -22,6 +22,13 @@ const FOLDERS: { key: MediaFolder; titre: string; hint: string; accept: string; 
     kind: "image",
   },
   {
+    key: "packs",
+    titre: "🎒 Photos des packs",
+    hint: "Visuels des packs et formules sur la page d'accueil (aperçus scénographie).",
+    accept: "image/jpeg,image/png,image/webp,image/avif",
+    kind: "image",
+  },
+  {
     key: "videos/showcase",
     titre: "🎬 Vidéos showcase",
     hint: "Vidéos verticales de la section « En action » (ordre = ordre d'affichage).",

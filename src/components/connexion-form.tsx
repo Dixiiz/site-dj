@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { loginClient, signUpClient } from "@/app/client-actions";
+import { loginClient, requestPasswordReset, signUpClient } from "@/app/client-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function ConnexionForm() {
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -71,9 +71,43 @@ export function ConnexionForm() {
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? "Connexion…" : "Se connecter"}
           </Button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("forgot");
+              setError(null);
+              setInfo(null);
+            }}
+            className="block w-full text-center text-xs text-accent underline-offset-2 hover:underline"
+          >
+            Mot de passe oublié ?
+          </button>
           <p className="text-center text-xs text-muted-foreground">
             Utilisez le même e-mail que celui de votre devis pour retrouver vos dossiers.
           </p>
+        </form>
+      ) : mode === "forgot" ? (
+        <form action={onSubmit(requestPasswordReset)} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="email-forgot">E-mail du compte</Label>
+            <Input id="email-forgot" name="email" type="email" required autoComplete="email" />
+          </div>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {info ? <p className="text-sm text-accent">{info}</p> : null}
+          <Button type="submit" className="w-full" disabled={pending}>
+            {pending ? "Envoi…" : "Recevoir le lien de réinitialisation"}
+          </Button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("login");
+              setError(null);
+              setInfo(null);
+            }}
+            className="block w-full text-center text-xs text-muted-foreground underline-offset-2 hover:underline"
+          >
+            Retour à la connexion
+          </button>
         </form>
       ) : (
         <form action={onSubmit(signUpClient)} className="space-y-4">

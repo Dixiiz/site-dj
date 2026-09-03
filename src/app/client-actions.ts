@@ -57,6 +57,45 @@ export async function signUpClient(formData: FormData) {
   redirect("/mon-espace");
 }
 
+export async function requestPasswordReset(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!email) return { ok: false as const, error: "E-mail requis." };
+
+  const supabase = await createAuthClient();
+  const h = await headers();
+  const host = h.get("host") ?? "localhost:3000";
+  const proto = host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${proto}://${host}/connexion/reinitialiser`,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  return {
+    ok: true as const,
+    message:
+      "E-mail envoyé ! Vérifiez votre boîte mail (et vos spams) pour définir un nouveau mot de passe.",
+  };
+}
+
+export async function updatePassword(formData: FormData) {
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  if (password.length < 6) {
+    return { ok: false as const, error: "Mot de passe : 6 caractères minimum." };
+  }
+  if (password !== confirm) {
+    return { ok: false as const, error: "Les deux mots de passe ne correspondent pas." };
+  }
+  const supabase = await createAuthClient();
+  const { data, error } = await supabase.auth.updateUser({ password });
+  if (error || !data.user) {
+    return {
+      ok: false as const,
+      error: "Lien invalide ou expiré. Refaites une demande de réinitialisation.",
+    };
+  }
+  redirect("/mon-espace");
+}
+
 export async function loginClient(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
