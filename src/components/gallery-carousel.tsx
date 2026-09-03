@@ -43,6 +43,35 @@ export function GalleryCarousel({ photos }: { photos: string[] }) {
 
   if (photos.length === 0) return null;
 
+  // Trop peu de photos pour un défilement en boucle : grille simple, sans clonage
+  if (photos.length <= visible) {
+    return (
+      <section className="mx-auto w-full max-w-5xl px-4 py-10">
+        <FadeIn>
+          <p className="text-center text-sm tracking-[0.2em] text-accent uppercase">Galerie</p>
+          <h2 className="mt-2 text-center text-2xl font-medium tracking-tight sm:text-3xl">
+            Nos dernières prestations
+          </h2>
+        </FadeIn>
+        <FadeIn delay={0.1} className="mt-8 sm:mt-10">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {photos.map((src) => (
+              <div key={src} className="relative aspect-square overflow-hidden rounded-2xl">
+                <Image
+                  src={src}
+                  alt="Prestation Propul'Sound DJ"
+                  fill
+                  sizes="(max-width: 640px) 100vw, 33vw"
+                  className="object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        </FadeIn>
+      </section>
+    );
+  }
+
   // Suite étendue pour une boucle visuelle fluide
   const extended = [...photos, ...photos.slice(0, visible)];
 

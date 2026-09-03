@@ -57,7 +57,7 @@ export async function Gallery() {
   } else {
     photos = shuffleByDay(all);
   }
-  return <GalleryCarousel photos={photos} />;
+  return <GalleryCarousel photos={[...new Set(photos)]} />;
 }
 
 
