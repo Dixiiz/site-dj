@@ -33,6 +33,17 @@ function Row({ label, value }: { label: string; value: string | null | undefined
   );
 }
 
+// Le champ "notes" agrège plusieurs infos : on les extrait proprement.
+function parseNotes(notes: string | null) {
+  const n = notes ?? "";
+  return {
+    message: n.match(/Message : ([\s\S]*)$/)?.[1]?.trim() || null,
+    extraHours: n.match(/Heures supplémentaires : ([^(|]+?)(?: \([\d.]+ €\))? \|/)?.[1]?.trim() || null,
+    extraFee: n.match(/Heures supplémentaires : .*?\(([\d.]+) €\)/)?.[1] || null,
+    co2Units: n.match(/Pistolets CO2 : (\d+) unités?/)?.[1] || null,
+  };
+}
+
 export function AdminQuoteDetails({
   quote,
   options,
@@ -41,6 +52,7 @@ export function AdminQuoteDetails({
   options: SelectedOption[];
 }) {
   const extras = (quote.extra_fee_cents ?? 0) + (quote.travel_fee_cents ?? 0);
+  const parsed = parseNotes(quote.notes);
 
   return (
     <div className="space-y-4 border-t border-border px-4 pb-4 pt-4 text-sm">
@@ -72,7 +84,17 @@ export function AdminQuoteDetails({
               : null
           }
         />
-        <Row label="Horaires" value={quote.notes} />
+        <Row label="Heure de début" value={quote.start_time} />
+        <Row label="Heure de fin" value={quote.end_time} />
+        <Row
+          label="Heures supplémentaires"
+          value={
+            parsed.extraHours
+              ? `${parsed.extraHours}${parsed.extraFee ? ` (${parsed.extraFee} €)` : ""}`
+              : null
+          }
+        />
+        <Row label="Pistolets CO2" value={parsed.co2Units ? `${parsed.co2Units} unité(s)` : null} />
         <Row
           label="Déplacement"
           value={
@@ -82,6 +104,17 @@ export function AdminQuoteDetails({
           }
         />
       </div>
+
+      {parsed.message ? (
+        <div className="space-y-1.5">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Message du client
+          </h3>
+          <p className="whitespace-pre-wrap rounded-lg border border-white/10 bg-white/[0.03] p-3 text-foreground/90">
+            {parsed.message}
+          </p>
+        </div>
+      ) : null}
 
       <div className="space-y-1.5">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
