@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 
 const FADE_MS = 700; // durée du fondu de boucle
-const PARALLAX = 0.5; // la vidéo descend à 50% de la vitesse du scroll
-const MAX_SHIFT_RATIO = 0.3; // course maximale de la vidéo (proportion du héro)
+const PARALLAX = 0.9; // la vidéo descend presque à la vitesse du scroll
+const MAX_SHIFT_RATIO = 0.5; // course maximale de la vidéo (proportion du héro)
+const SCALE_FROM = 1.45; // zoom initial (marge de sécurité pour la descente)
+const SCALE_TO = 1.2; // zoom en fin de course : léger dé-zoom cinématique
 
 // Vidéo de fond du héro : boucle avec fondu enchaîné, bords estompés par des
 // masques FIXES (la vidéo glisse dessous au scroll → aucun bord jamais visible).
@@ -33,7 +35,7 @@ export function HeroVideo({ src = "/videos/hero.mp4" }: { src?: string }) {
     };
   }, []);
 
-  // Parallaxe : la vidéo glisse sous les masques fixes
+  // Parallaxe : la vidéo descend + dé-zoom cinématique pendant le scroll
   useEffect(() => {
     let raf = 0;
     const update = () => {
@@ -44,8 +46,11 @@ export function HeroVideo({ src = "/videos/hero.mp4" }: { src?: string }) {
       if (!box) return;
       const hero = box.closest("section") ?? box;
       const maxShift = Math.max(hero.clientHeight, 600) * MAX_SHIFT_RATIO;
+      const progress = Math.min(window.scrollY / Math.max(hero.clientHeight, 1), 1);
       const shift = Math.min(window.scrollY * PARALLAX, maxShift);
+      const scale = SCALE_FROM - (SCALE_FROM - SCALE_TO) * progress;
       box.style.transform = `translate3d(0, ${shift}px, 0)`;
+      video.style.transform = `scale(${scale})`;
     };
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(update);
@@ -94,12 +99,13 @@ export function HeroVideo({ src = "/videos/hero.mp4" }: { src?: string }) {
             playsInline
             preload="auto"
             style={{
-              transform: "scale(1.15)",
+              transform: `scale(${SCALE_FROM})`,
+              transitionProperty: "opacity",
               transitionDuration: `${FADE_MS}ms`,
               willChange: "transform",
             }}
             className={`absolute inset-0 h-full w-full object-cover transition-opacity ease-in-out ${
-              fading ? "opacity-0" : "opacity-75"
+              fading ? "opacity-0" : "opacity-95"
             }`}
           >
             <source src={src} type="video/mp4" />
@@ -109,7 +115,7 @@ export function HeroVideo({ src = "/videos/hero.mp4" }: { src?: string }) {
       {/* Voile dégradé léger pour garder le texte lisible */}
       <div
         aria-hidden
-        className="absolute inset-0 -z-10 bg-gradient-to-b from-background/60 via-background/40 to-background"
+        className="absolute inset-0 -z-10 bg-gradient-to-b from-background/30 via-background/15 to-background"
       />
     </>
   );
