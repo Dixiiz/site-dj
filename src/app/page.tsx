@@ -114,7 +114,11 @@ export default async function Home() {
               ],
               geo: { "@type": "GeoCoordinates", latitude: 47.5667, longitude: 1.4667 },
               priceRange: "€€",
-              sameAs: ["https://www.instagram.com/propulsounddj/"],
+              sameAs: [
+                "https://www.instagram.com/propulsounddj/",
+                "https://linkaband.com/propulsound-dj",
+                "https://g.page/r/CYgCQMSAgDcWEAE",
+              ],
               makesOffer: [
                 { "@type": "Offer", name: "Pack Mariage", description: "Prestation DJ mariage clé en main" },
                 { "@type": "Offer", name: "Pack Anniversaire", description: "Animation DJ anniversaire" },
