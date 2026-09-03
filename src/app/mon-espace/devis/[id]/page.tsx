@@ -140,6 +140,9 @@ export default async function ClientQuotePage({
             price_cents: o.price_cents,
           }))}
           selectedIds={selectedOptions.map((o) => o.id)}
+          co2InitialQty={
+            selectedOptions.find((o) => /co2/i.test(o.name))?.qty ?? 1
+          }
           disabled={!editable}
           notice={pendingOptions ? "pending" : editable ? "review" : undefined}
         />

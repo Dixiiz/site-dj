@@ -114,6 +114,7 @@ export async function AdminQuotePlaylist({ quoteId }: { quoteId: string }) {
   const all = tracks ?? [];
   const allFiles = files ?? [];
   const dance = all.filter((t) => t.moment === DANCE && t.kind === "souhait");
+  const wishes = all.filter((t) => t.kind === "souhait");
   const danceBlacklist = all.filter(
     (t) => t.moment === DANCE && t.kind === "blacklist"
   );
@@ -176,6 +177,29 @@ export async function AdminQuotePlaylist({ quoteId }: { quoteId: string }) {
               {momentTracks.length > 0 ? (
                 <ul className="mt-3 space-y-2">{momentTracks.map(trackRow)}</ul>
               ) : null}
+              {momentFiles.length > 0 ? (
+                <ul className="mt-3 space-y-1.5">
+                  {momentFiles.map((f) => fileRow(quoteId, f))}
+                </ul>
+              ) : null}
+            </div>
+          );
+        })}
+
+        {/* Temps forts personnalisés créés par le client */}
+        {[
+          ...new Set(
+            wishes
+              .map((t) => t.moment)
+              .filter((m) => m !== DANCE && !(FIXED_MOMENTS as string[]).includes(m))
+          ),
+        ].map((moment) => {
+          const momentTracks = wishes.filter((t) => t.moment === moment);
+          const momentFiles = allFiles.filter((f) => f.moment === moment);
+          return (
+            <div key={moment} className="rounded-xl border border-white/10 p-4">
+              <h3 className="font-medium text-accent">{moment} ✨</h3>
+              <ul className="mt-3 space-y-2">{momentTracks.map(trackRow)}</ul>
               {momentFiles.length > 0 ? (
                 <ul className="mt-3 space-y-1.5">
                   {momentFiles.map((f) => fileRow(quoteId, f))}

@@ -52,6 +52,18 @@ export function ClientPlaylistEditor({
   files: PlaylistFile[];
 }) {
   const [activeMoment, setActiveMoment] = useState(FIXED_MOMENTS[0]);
+  // Temps forts personnalisés créés par le client (ouverture du dessert…)
+  const allCustom = [
+    ...new Set(
+      tracks
+        .map((t) => t.moment)
+        .filter(
+          (m) => m !== DANCE_MOMENT && !(FIXED_MOMENTS as string[]).includes(m)
+        )
+    ),
+  ];
+  const [customMoments, setCustomMoments] = useState<string[]>(allCustom);
+  const [newMoment, setNewMoment] = useState("");
   const [pendingRemove, startRemove] = useTransition();
 
   function removeTrack(trackId: string) {
@@ -111,6 +123,43 @@ export function ClientPlaylistEditor({
             files={files.filter((f) => f.moment === activeMoment)}
             onRemove={removeTrack}
           />
+
+          {/* Temps forts personnalisés */}
+          {customMoments.map((moment) => (
+            <MomentSection
+              key={moment}
+              quoteId={quoteId}
+              moment={moment}
+              tracks={tracks.filter(
+                (t) => t.kind === "souhait" && t.moment === moment
+              )}
+              files={files.filter((f) => f.moment === moment)}
+              onRemove={removeTrack}
+            />
+          ))}
+
+          {/* Créer un temps fort supplémentaire */}
+          <form
+            className="mt-3 flex items-center gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const name = newMoment.trim();
+              if (!name || (FIXED_MOMENTS as string[]).includes(name)) return;
+              setCustomMoments((current) => [...current, name]);
+              setNewMoment("");
+            }}
+          >
+            <Input
+              value={newMoment}
+              onChange={(e) => setNewMoment(e.target.value)}
+              placeholder="Autre temps fort ? (ex : Ouverture du dessert)"
+              className="text-xs"
+              maxLength={40}
+            />
+            <Button type="submit" size="sm" variant="outline" disabled={!newMoment.trim()}>
+              + Créer
+            </Button>
+          </form>
         </div>
       </div>
     </section>

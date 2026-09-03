@@ -414,12 +414,14 @@ export async function updateQuoteOptions(formData: FormData) {
 
   const oldOptions = (quote.selected_options ?? []) as SelectedOption[];
 
+  // Quantité de pistolets CO2 choisie par le client (1 ou 2).
+  const co2Qty = Math.min(2, Math.max(1, Number(formData.get("co2_qty") ?? 1) || 1));
+
   const selected: SelectedOption[] = (allOptions ?? [])
     .filter((option) => optionIds.includes(option.id))
     .map((option) => {
-      // Quantité CO2 conservée si l'option était déjà dans le devis.
-      const previous = oldOptions.find((o) => o.id === option.id);
-      const qty = previous?.qty ?? 1;
+      const isCo2 = /co2/i.test(option.name);
+      const qty = isCo2 ? co2Qty : 1;
       return {
         id: option.id,
         name: option.name,
