@@ -62,6 +62,10 @@ alter table quote_files add column if not exists from_admin boolean not null def
 -- Nom personnalisé donné au devis par le client
 alter table quotes add column if not exists client_label text;
 
+-- Signature en ligne des documents par le client
+alter table quote_files add column if not exists signed_name text;
+alter table quote_files add column if not exists signed_at timestamptz;
+
 create index if not exists quote_files_quote_idx on quote_files (quote_id, created_at);
 
 alter table quote_files enable row level security;

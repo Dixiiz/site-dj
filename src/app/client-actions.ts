@@ -482,7 +482,7 @@ export async function resolveQuoteOptions(formData: FormData) {
   const supabase = createAdminClient();
   const { data: quote } = await supabase
     .from("quotes")
-    .select("selected_options, total_cents, pending_options")
+    .select("selected_options, total_cents, pending_options, customer_email")
     .eq("id", quoteId)
     .single();
   if (!quote?.pending_options) return { ok: false as const, error: "Rien à valider." };
@@ -507,6 +507,31 @@ export async function resolveQuoteOptions(formData: FormData) {
       .from("quotes")
       .update({ pending_options: null, has_unread_updates: false })
       .eq("id", quoteId);
+  }
+
+  // Notification e-mail au client (best effort).
+  try {
+    if (quote.customer_email) {
+      const { Resend } = await import("resend");
+      const apiKey = process.env.RESEND_API_KEY;
+      const from = process.env.NOTIF_EMAIL;
+      if (apiKey && from) {
+        const resend = new Resend(apiKey);
+        await resend.emails.send({
+          from: `Propul'Sound DJ <${from}>`,
+          to: quote.customer_email,
+          subject:
+            approve
+              ? "✅ Vos options ont été validées"
+              : "❌ Demande d'options non retenue",
+          text: approve
+            ? "Bonjour,\n\nBonne nouvelle : vos modifications d'options ont été validées et appliquées à votre devis.\n\nRetrouvez le détail dans votre espace client.\n\n— Propul'Sound DJ"
+            : "Bonjour,\n\nAprès étude, nous ne pouvons pas retenir votre demande de modification d'options. N'hésitez pas à nous contacter pour en discuter.\n\n— Propul'Sound DJ",
+        });
+      }
+    }
+  } catch {
+    // best effort
   }
 
   revalidatePath("/admin/devis");
@@ -557,6 +582,31 @@ export async function deleteQuoteMoment(formData: FormData) {
   revalidatePath("/admin/devis");
 }
 
+// Le client signe un document en ligne (acceptation nominative et datée).
+export async function signClientDocument(formData: FormData) {
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const fileId = String(formData.get("file_id") ?? "");
+  const name = String(formData.get("name") ?? "").trim().slice(0, 80);
+  if (!quoteId || !fileId || !name) {
+    return { ok: false as const, error: "Nom requis pour signer." };
+  }
+
+  const { user } = await getOwnedQuote(quoteId);
+  if (!user) return { ok: false as const, error: "Devis introuvable." };
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("quote_files")
+    .update({ signed_name: name, signed_at: new Date().toISOString() })
+    .eq("id", fileId)
+    .eq("quote_id", quoteId);
+  if (error) return { ok: false as const, error: "Impossible de signer." };
+
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  revalidatePath("/admin/devis");
+  return { ok: true as const, message: "Document signé ✓" };
+}
+
 // ---------- Documents envoyés par l'admin ----------
 
 export async function uploadAdminDocument(formData: FormData) {
@@ -604,6 +654,26 @@ export async function uploadAdminDocument(formData: FormData) {
     size_bytes: file.size,
     from_admin: true,
   });
+
+  // Notification e-mail au client (best effort).
+  try {
+    if (quote?.customer_email) {
+      const { Resend } = await import("resend");
+      const apiKey = process.env.RESEND_API_KEY;
+      const from = process.env.NOTIF_EMAIL;
+      if (apiKey && from) {
+        const resend = new Resend(apiKey);
+        await resend.emails.send({
+          from: `Propul'Sound DJ <${from}>`,
+          to: quote.customer_email,
+          subject: "📄 Un nouveau document est disponible",
+          text: `Bonjour,\n\nUn nouveau document (« ${file.name} ») est disponible dans votre espace client.\n\n— Propul'Sound DJ`,
+        });
+      }
+    }
+  } catch {
+    // best effort
+  }
 
   revalidatePath("/admin/devis");
   revalidatePath(`/mon-espace/devis/${quoteId}`);
@@ -696,7 +766,7 @@ export async function getQuoteFiles(quoteId: string) {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("quote_files")
-    .select("id, name, storage_path, mime_type, size_bytes, created_at, moment, from_admin")
+    .select("id, name, storage_path, mime_type, size_bytes, created_at, moment, from_admin, signed_name, signed_at")
     .eq("quote_id", quoteId)
     .order("created_at", { ascending: true });
   return data ?? [];

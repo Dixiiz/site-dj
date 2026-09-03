@@ -15,7 +15,7 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
   const supabase = createAdminClient();
   const { data: files } = await supabase
     .from("quote_files")
-    .select("id, name, mime_type, size_bytes")
+    .select("id, name, mime_type, size_bytes, signed_name")
     .eq("quote_id", quoteId)
     .eq("from_admin", true)
     .order("created_at", { ascending: true });
@@ -34,7 +34,14 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
             >
               <span className="shrink-0">📄</span>
               <div className="min-w-0 flex-1 basis-40">
-                <p className="truncate font-medium">{file.name}</p>
+                <p className="truncate font-medium">
+                  {file.name}
+                  {file.signed_name ? (
+                    <span className="ml-2 rounded-full bg-green-500/15 px-2 py-0.5 text-xs font-medium text-green-400">
+                      ✓ Signé par {file.signed_name}
+                    </span>
+                  ) : null}
+                </p>
               </div>
               <form action={downloadQuoteFile}>
                 <input type="hidden" name="quote_id" value={quoteId} />

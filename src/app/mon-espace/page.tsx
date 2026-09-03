@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getMyQuotes } from "@/app/client-actions";
 import { ClientBack } from "@/components/client-back";
+import { RenameInline } from "@/components/rename-inline";
 import { formatEuros } from "@/lib/money";
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
@@ -68,8 +69,11 @@ export default async function MonEspacePage() {
                   className="block rounded-xl border border-white/10 bg-white/[0.03] p-4 transition-colors hover:border-accent/40"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-medium">
-                      {quote.client_label || quote.formula_name}
+                    <span className="flex items-center gap-1.5">
+                      <span className="font-medium">
+                        {quote.client_label || quote.formula_name}
+                      </span>
+                      <RenameInline quoteId={quote.id} current={quote.client_label} />
                     </span>
                     <span className="flex flex-wrap items-center gap-1.5">
                       {quote.pending_options ? (

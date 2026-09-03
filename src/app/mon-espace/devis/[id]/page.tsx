@@ -5,6 +5,7 @@ import {
   getQuoteFiles,
   getQuoteMessages,
   renameClientQuote,
+  signClientDocument,
 } from "@/app/client-actions";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { downloadQuoteFile } from "@/app/client-actions";
@@ -195,17 +196,54 @@ export default async function ClientQuotePage({
                   key={file.id}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm"
                 >
-                  <span className="min-w-0 truncate font-medium">📄 {file.name}</span>
-                  <form action={downloadQuoteFile}>
-                    <input type="hidden" name="quote_id" value={id} />
-                    <input type="hidden" name="file_id" value={file.id} />
-                    <button
-                      type="submit"
-                      className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
-                    >
-                      Télécharger
-                    </button>
-                  </form>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">📄 {file.name}</p>
+                    {file.signed_name ? (
+                      <p className="text-xs text-green-400">
+                        ✓ Signé par {file.signed_name} le{" "}
+                        {file.signed_at
+                          ? new Date(file.signed_at).toLocaleDateString("fr-FR")
+                          : ""}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <form action={downloadQuoteFile}>
+                      <input type="hidden" name="quote_id" value={id} />
+                      <input type="hidden" name="file_id" value={file.id} />
+                      <button
+                        type="submit"
+                        className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
+                      >
+                        Télécharger
+                      </button>
+                    </form>
+                    {!file.signed_name ? (
+                      <form
+                        action={async (formData: FormData) => {
+                          "use server";
+                          await signClientDocument(formData);
+                        }}
+                        className="flex items-center gap-1.5"
+                      >
+                        <input type="hidden" name="quote_id" value={id} />
+                        <input type="hidden" name="file_id" value={file.id} />
+                        <input
+                          type="text"
+                          name="name"
+                          required
+                          placeholder="Votre nom pour signer"
+                          className="w-40 rounded-md border border-white/10 bg-background px-2 py-1.5 text-xs outline-none focus:border-accent"
+                        />
+                        <button
+                          type="submit"
+                          className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-500"
+                        >
+                          ✍️ Signer
+                        </button>
+                      </form>
+                    ) : null}
+                  </div>
                 </li>
               ))}
           </ul>

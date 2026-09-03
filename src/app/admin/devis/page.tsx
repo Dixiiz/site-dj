@@ -25,6 +25,16 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   annule: { label: "Annulé", className: "border-zinc-500/60 text-zinc-400" },
 };
 
+function optionShort(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes("fumée")) return "Fumée";
+  if (n.includes("étincelles")) return "Étincelles";
+  if (n.includes("co2")) return "CO2";
+  if (n.includes("cérémonie")) return "Cérémonie";
+  if (n.includes("light+")) return "Light+";
+  return name.length > 14 ? `${name.slice(0, 12)}…` : name;
+}
+
 function eventKind(formulaName: string): string {
   const n = formulaName.toLowerCase();
   if (n.includes("mariage") || n.includes("essential") || n.includes("deluxe") || n.includes("ultime"))
@@ -177,10 +187,20 @@ export default async function DevisPage({
                       {eventKind(quote.formula_name ?? "")}
                     </div>
                   </div>
-                  <div className="min-w-40 flex-1">
+                  <div className="min-w-44 flex-1">
                     <div className="font-medium">{quote.customer_name}</div>
                     <div className="truncate text-xs text-muted-foreground">
                       {quote.event_location ?? ""}
+                    </div>
+                    {/* Type d'événement + aperçu des options */}
+                    <div className="mt-0.5 truncate text-xs">
+                      <span className="text-accent">{eventKind(quote.formula_name ?? "")}</span>
+                      {options.length > 0 ? (
+                        <span className="text-muted-foreground">
+                          {" · 🎛️ "}
+                          {options.map((o) => optionShort(o.name)).join(" · ")}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                   <div>
