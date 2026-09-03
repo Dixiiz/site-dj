@@ -209,16 +209,12 @@ export default async function ClientQuotePage({
                     ) : null}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <form action={downloadQuoteFile}>
-                      <input type="hidden" name="quote_id" value={id} />
-                      <input type="hidden" name="file_id" value={file.id} />
-                      <button
-                        type="submit"
-                        className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
-                      >
-                        Télécharger
-                      </button>
-                    </form>
+                    <a
+                      href={`/api/files/${file.id}`}
+                      className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
+                    >
+                      Télécharger
+                    </a>
                     {!file.signed_name && confirmed ? (
                       <form
                         action={async (formData: FormData) => {

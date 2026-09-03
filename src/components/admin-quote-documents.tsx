@@ -1,4 +1,4 @@
-import { deleteAdminDocument, downloadQuoteFile, uploadAdminDocument } from "@/app/client-actions";
+import { deleteAdminDocument, uploadAdminDocument } from "@/app/client-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -43,13 +43,12 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
                   ) : null}
                 </p>
               </div>
-              <form action={downloadQuoteFile}>
-                <input type="hidden" name="quote_id" value={quoteId} />
-                <input type="hidden" name="file_id" value={file.id} />
-                <Button type="submit" variant="outline" size="sm">
-                  Télécharger
-                </Button>
-              </form>
+              <a
+                href={`/api/files/${file.id}`}
+                className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
+              >
+                Télécharger
+              </a>
               <form action={deleteAdminDocument}>
                 <input type="hidden" name="quote_id" value={quoteId} />
                 <input type="hidden" name="file_id" value={file.id} />

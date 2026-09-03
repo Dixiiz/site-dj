@@ -107,13 +107,12 @@ export function MomentFiles({
                   {sizeLabel(file.size_bytes)}
                 </p>
               </div>
-              <form action={downloadQuoteFile}>
-                <input type="hidden" name="quote_id" value={quoteId} />
-                <input type="hidden" name="file_id" value={file.id} />
-                <Button type="submit" variant="outline" size="sm">
-                  ⬇
-                </Button>
-              </form>
+              <a
+                href={`/api/files/${file.id}`}
+                className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
+              >
+                ⬇ Télécharger
+              </a>
               <form
                 action={(formData) =>
                   startRemove(async () => void (await deleteQuoteFile(formData)))
@@ -156,13 +155,12 @@ export function DiversFiles({ quoteId, files }: { quoteId: string; files: Client
               <p className="truncate font-medium">{file.name}</p>
               <p className="text-xs text-muted-foreground">{sizeLabel(file.size_bytes)}</p>
             </div>
-            <form action={downloadQuoteFile}>
-              <input type="hidden" name="quote_id" value={quoteId} />
-              <input type="hidden" name="file_id" value={file.id} />
-              <Button type="submit" variant="outline" size="sm">
-                Télécharger
-              </Button>
-            </form>
+            <a
+              href={`/api/files/${file.id}`}
+              className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
+            >
+              Télécharger
+            </a>
           </li>
         ))}
       </ul>
