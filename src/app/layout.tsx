@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Providers } from "@/components/providers";
+import { SITE_URL, SITE_NAME } from "@/lib/site-url";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -16,8 +17,33 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Propul'Sound DJ — Devis & réservation",
-  description: "Configurateur de devis et de créneaux en ligne.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} — DJ mariage & soirées à Blois, Vendôme et alentours`,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description:
+    "DJ généraliste et techno pour mariages, anniversaires et soirées privées à Blois, Vendôme, Morée et dans un rayon de 50 km. Devis en ligne gratuit, sonorisation et lumière incluses, options FX (fumée, étincelles, CO2).",
+  keywords: [
+    "DJ Blois",
+    "DJ mariage Blois",
+    "DJ Vendôme",
+    "DJ Loir-et-Cher",
+    "DJ anniversaire",
+    "DJ soirée privée",
+    "sonorisation mariage",
+    "DJ 41",
+    "Propul'Sound DJ",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "fr_FR",
+    siteName: SITE_NAME,
+    url: SITE_URL,
+    title: `${SITE_NAME} — DJ mariage & soirées (Blois, Vendôme, 50 km)`,
+    description:
+      "Animation DJ pour mariages, anniversaires et soirées privées. Devis gratuit en ligne, matériel pro, options FX (fumée, étincelles, CO2).",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

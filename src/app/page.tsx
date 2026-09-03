@@ -10,6 +10,7 @@ import { HeroVideo } from "@/components/hero-video";
 import { VideoShowcase } from "@/components/video-showcase";
 import { TIKTOK_PROFILE_URL } from "@/config/tiktok";
 import { getOrder, listMedia } from "@/lib/site-media";
+import { SITE_URL } from "@/lib/site-url";
 import Link from "next/link";
 
 
@@ -77,6 +78,85 @@ export default async function Home() {
   return (
     <>
       <SiteHeader />
+      {/* Données structurées SEO/GEO : DJ local + FAQ (extraits enrichis Google, compréhension par les IA) */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([
+            {
+              "@context": "https://schema.org",
+              "@type": "DJ",
+              name: "Propul'Sound DJ",
+              description:
+                "DJ généraliste et techno pour mariages, anniversaires et soirées privées. Sonorisation, lumière et options FX incluses.",
+              url: SITE_URL,
+              telephone: "+33674850769",
+              email: "propulsounddj@gmail.com",
+              founder: { "@type": "Person", name: "Maxime SOULAINE" },
+              address: {
+                "@type": "PostalAddress",
+                streetAddress: "5 Clos de la Salamandre",
+                addressLocality: "Huisseau-sur-Cosson",
+                postalCode: "41350",
+                addressRegion: "Centre-Val de Loire",
+                addressCountry: "FR",
+              },
+              areaServed: [
+                { "@type": "City", name: "Blois" },
+                { "@type": "City", name: "Vendôme" },
+                { "@type": "City", name: "Morée" },
+                { "@type": "AdministrativeArea", name: "Loir-et-Cher" },
+              ],
+              geo: { "@type": "GeoCoordinates", latitude: 47.5667, longitude: 1.4667 },
+              priceRange: "€€",
+              sameAs: ["https://www.instagram.com/propulsounddj/"],
+              makesOffer: [
+                { "@type": "Offer", name: "Pack Mariage", description: "Prestation DJ mariage clé en main" },
+                { "@type": "Offer", name: "Pack Anniversaire", description: "Animation DJ anniversaire" },
+                { "@type": "Offer", name: "Pack Soirée privée / Bar-Club", description: "DJ pour soirées privées et bars" },
+              ],
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: [
+                {
+                  "@type": "Question",
+                  name: "Dans quelles zones Propul'Sound DJ intervient-il ?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "Basé à Huisseau-sur-Cosson (41350), Propul'Sound DJ intervient à Blois, Vendôme, Morée et dans un rayon de 50 km autour. Les 30 premiers kilomètres de déplacement sont offerts.",
+                  },
+                },
+                {
+                  "@type": "Question",
+                  name: "Combien coûte une prestation DJ pour un mariage ?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "Les tarifs dépendent de la formule, de la durée et des options. Le site propose un configurateur de devis en ligne gratuit qui calcule le prix en temps réel, acompte de réservation de 20 %, solde arrondi au multiple de 10 €.",
+                  },
+                },
+                {
+                  "@type": "Question",
+                  name: "Comment réserver une date ?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "Créez votre devis en ligne, signez le devis et le contrat électroniquement dans votre espace client, puis réglez l'acompte de réservation. La date est bloquée dès la signature des documents.",
+                  },
+                },
+                {
+                  "@type": "Question",
+                  name: "Les options comme la machine à fumée ou les étincelles froides sont-elles disponibles ?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "Oui : machine à fumée lourde, étincelles froides et pistolet à confettis CO2 sont proposées en options et peuvent être ajoutées au devis en ligne.",
+                  },
+                },
+              ],
+            },
+          ]),
+        }}
+      />
       <main className="relative">
         {/* Héro — avec vidéo de fond si public/videos/hero.mp4 existe */}
         <section className="relative mx-auto w-full max-w-5xl px-4 pt-20 pb-16 text-center sm:pt-28">
