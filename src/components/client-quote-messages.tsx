@@ -109,7 +109,18 @@ export function ClientQuoteMessages({
 
       <form ref={formRef} action={onSubmit} className="mt-4 space-y-3">
         <input type="hidden" name="quote_id" value={quoteId} />
-        <Textarea name="body" required placeholder="Votre message…" rows={3} />
+        <Textarea
+          name="body"
+          required
+          placeholder="Votre message… (Entrée pour envoyer)"
+          rows={3}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              e.currentTarget.form?.requestSubmit();
+            }
+          }}
+        />
         <Button type="submit" size="sm" disabled={pending}>
           {pending ? "Envoi…" : "Envoyer"}
         </Button>

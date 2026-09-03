@@ -92,7 +92,19 @@ export function AdminQuoteConversation({
       </ul>
       <form ref={formRef} action={onSubmit} className="mt-2 flex items-end gap-2">
         <input type="hidden" name="quote_id" value={quoteId} />
-        <Textarea name="body" required rows={2} placeholder="Répondre au client…" className="flex-1" />
+        <Textarea
+          name="body"
+          required
+          rows={2}
+          placeholder="Répondre au client… (Entrée pour envoyer)"
+          className="flex-1"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              e.currentTarget.form?.requestSubmit();
+            }
+          }}
+        />
         <Button type="submit" size="sm">
           Envoyer
         </Button>
