@@ -56,7 +56,10 @@ export function ClientQuoteMessages({
                 }`}
               >
                 <p className="whitespace-pre-wrap">{message.body}</p>
-                <p className="mt-1 text-[11px] text-muted-foreground">
+                <p
+                  className="mt-1 text-[11px] text-muted-foreground"
+                  suppressHydrationWarning
+                >
                   {mine ? "Vous" : "Propul'Sound DJ"} · {timeLabel(message.created_at)}
                 </p>
               </div>

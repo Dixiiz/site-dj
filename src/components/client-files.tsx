@@ -40,47 +40,57 @@ export function MomentFiles({
   moment: string;
   files: ClientFile[];
 }) {
-  const formRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
   const [pendingRemove, startRemove] = useTransition();
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function onSubmit(formData: FormData) {
-    setFeedback(null);
+  function upload(file: File) {
+    const formData = new FormData();
+    formData.set("quote_id", quoteId);
+    formData.set("moment", moment);
+    formData.set("file", file);
     startTransition(async () => {
       const result = await uploadClientFile(formData);
       setFeedback(result.ok ? (result.message ?? null) : (result.error ?? null));
       setIsError(!result.ok);
-      if (result.ok) formRef.current?.reset();
     });
   }
 
   return (
     <div className="mt-3 border-t border-white/5 pt-3">
-      <form
-        ref={formRef}
-        action={onSubmit}
-        className="flex flex-wrap items-center gap-2"
-      >
-        <input type="hidden" name="quote_id" value={quoteId} />
-        <input type="hidden" name="moment" value={moment} />
-        <Input
-          type="file"
-          name="file"
-          required
-          accept="audio/*,video/*,.pdf,.doc,.docx,.txt,.xlsx,.csv"
-          className="max-w-xs cursor-pointer text-xs file:cursor-pointer file:mr-2 file:rounded-md file:border-0 file:bg-accent/15 file:px-2.5 file:py-1 file:text-xs file:text-accent"
-        />
-        <Button type="submit" size="sm" variant="outline" disabled={pending}>
-          {pending ? "Envoi…" : "📎 Joindre à cette catégorie"}
-        </Button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        accept="audio/*,video/*,.pdf,.doc,.docx,.txt,.xlsx,.csv"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (file) upload(file);
+        }}
+      />
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={pending}
+          title={`Joindre un fichier (${moment})`}
+          aria-label={`Joindre un fichier (${moment})`}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-accent/40 text-sm leading-none text-accent transition-colors hover:bg-accent/15 disabled:opacity-50"
+        >
+          +
+        </button>
+        <span className="text-[11px] text-muted-foreground">
+          {pending ? "Envoi du fichier…" : "Ajouter un fichier (MP3, vidéo, doc — 50 Mo max)"}
+        </span>
         {feedback ? (
           <span className={`text-xs ${isError ? "text-destructive" : "text-accent"}`}>
             {feedback}
           </span>
         ) : null}
-      </form>
+      </div>
 
       {files.length > 0 ? (
         <ul className="mt-2 space-y-1.5">
