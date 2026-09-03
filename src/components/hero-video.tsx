@@ -3,11 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 
 const FADE_MS = 700; // durée du fondu de boucle
-const PARALLAX = 0.9; // la vidéo descend presque à la vitesse du scroll
-const MAX_SHIFT_RATIO = 0.5; // course maximale de la vidéo (proportion du héro)
-const SCALE_FROM = 1.45; // zoom initial (marge de sécurité pour la descente)
-const SCALE_TO = 1.2; // zoom en fin de course : léger dé-zoom cinématique
-const LERP = 0.12; // amortissement : plus bas = plus fluide/lent à rattraper
 
 // Vidéo de fond du héro : boucle avec fondu enchaîné, bords estompés par des
 // masques FIXES (la vidéo glisse dessous au scroll → aucun bord jamais visible).
@@ -36,59 +31,25 @@ export function HeroVideo({ src = "/videos/hero.mp4" }: { src?: string }) {
     };
   }, []);
 
-  // Parallaxe lissée : interpolation douce (lerp) vers la position cible,
-  // la vidéo "flotte" avec un léger retard fluide sur le scroll.
+  // Parallaxe : la vidéo glisse sous les masques fixes (version d'origine)
   useEffect(() => {
     let raf = 0;
-    let currentShift = 0;
-    let currentScale = SCALE_FROM;
-    let running = false;
-
-    const tick = () => {
-      const video = videoRef.current;
-      if (!video) {
-        running = false;
-        return;
-      }
-      const box = video.parentElement;
-      if (!box) {
-        running = false;
-        return;
-      }
-      const hero = box.closest("section") ?? box;
-      const heroH = Math.max(hero.clientHeight, 600);
-      const maxShift = heroH * MAX_SHIFT_RATIO;
-      const progress = Math.min(window.scrollY / heroH, 1);
-      const targetShift = Math.min(window.scrollY * PARALLAX, maxShift);
-      const targetScale = SCALE_FROM - (SCALE_FROM - SCALE_TO) * progress;
-      // Amortissement : plus on est loin de la cible, plus on se rapproche vite
-      currentShift += (targetShift - currentShift) * LERP;
-      currentScale += (targetScale - currentScale) * LERP;
-      box.style.transform = `translate3d(0, ${currentShift.toFixed(2)}px, 0)`;
-      video.style.transform = `scale(${currentScale.toFixed(4)})`;
-      // On continue d'animer tant qu'on n'est pas (quasi) arrivé
-      const settled =
-        Math.abs(targetShift - currentShift) < 0.3 &&
-        Math.abs(targetScale - currentScale) < 0.001;
-      if (!settled) {
-        raf = requestAnimationFrame(tick);
-      } else {
-        running = false;
-      }
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const video = videoRef.current;
+        if (!video) return;
+        const hero = video.closest("section");
+        const maxShift = (hero ? hero.offsetHeight : 600) * 0.2;
+        const shift = Math.min(window.scrollY * 0.55, maxShift);
+        video.style.transform = `translateY(${shift}px) scale(1.15)`;
+      });
     };
-    const wake = () => {
-      if (!running) {
-        running = true;
-        raf = requestAnimationFrame(tick);
-      }
-    };
-    wake();
-    window.addEventListener("scroll", wake, { passive: true });
-    window.addEventListener("resize", wake, { passive: true });
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      window.removeEventListener("scroll", wake);
-      window.removeEventListener("resize", wake);
-      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(raf);
     };
   }, []);
 
@@ -126,7 +87,7 @@ export function HeroVideo({ src = "/videos/hero.mp4" }: { src?: string }) {
             playsInline
             preload="auto"
             style={{
-              transform: `scale(${SCALE_FROM})`,
+              transform: "scale(1.15)",
               transitionProperty: "opacity",
               transitionDuration: `${FADE_MS}ms`,
               willChange: "transform",
