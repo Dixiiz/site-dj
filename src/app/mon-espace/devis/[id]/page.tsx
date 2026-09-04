@@ -11,6 +11,7 @@ import {
 import { AutoRefresh } from "@/components/auto-refresh";
 import { HashHighlight } from "@/components/hash-highlight";
 import { RdvCallSection } from "@/components/rdv-call";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { downloadQuoteFile } from "@/app/client-actions";
 import { eventMoments } from "@/components/admin-quote-playlist";
 import { DiversFiles, MomentFiles } from "@/components/client-files";
@@ -129,6 +130,14 @@ export default async function ClientQuotePage({
         </div>
       </div>
 
+      <Tabs defaultValue="soiree" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="soiree">📅 Ma soirée</TabsTrigger>
+          <TabsTrigger value="documents">📄 Documents</TabsTrigger>
+          <TabsTrigger value="playlist">🎵 Musiques</TabsTrigger>
+          <TabsTrigger value="messages">💬 Messagerie</TabsTrigger>
+        </TabsList>
+        <TabsContent value="soiree" className="space-y-6">
       {/* Récapitulatif */}
       <section className="rounded-xl border border-border bg-muted/50 p-5">
         <h2 className="font-medium">Récapitulatif</h2>
@@ -231,6 +240,77 @@ export default async function ClientQuotePage({
 
       {/* RDV téléphonique : proposer des créneaux, Maxime valide */}
       <RdvCallSection quoteId={id} requests={rdvRequests} />
+      {/* Acompte par virement : visible dès que les documents sont signés */}
+      {confirmed || quote.status === "attente_acompte" ? (
+        (() => {
+          const total = (quote.total_cents ?? 0) / 100;
+          const solde = Math.floor((total * 0.8) / 10) * 10;
+          const acompte = total - solde;
+          const libelle = `${quote.customer_name} — ${quote.event_date ?? ""}`;
+          return (
+            <section id="acompte" className="rounded-xl border border-border bg-muted/50 p-5">
+              <h2 className="font-medium">💳 Acompte de réservation</h2>
+              {quote.acompte_paid_at ? (
+                <p className="mt-2 text-sm font-medium text-green-400">
+                  ✓ Acompte reçu, merci ! Votre réservation est entièrement validée.
+                </p>
+              ) : quote.acompte_declared_at ? (
+                <p className="mt-2 text-sm text-orange-300">
+                  ⏳ Acompte déclaré envoyé le{" "}
+                  {new Date(quote.acompte_declared_at).toLocaleDateString("fr-FR")} — en
+                  attente de réception par le prestataire.
+                </p>
+              ) : (
+                <>
+                  <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+                    Afin de confirmer définitivement votre réservation, merci de
+                    régler l&apos;acompte de{" "}
+                    <span className="font-semibold text-accent">
+                      {formatEuros(Math.round(acompte * 100))}
+                    </span>{" "}
+                    par virement avec le libellé&nbsp;:{" "}
+                    <span className="font-mono text-xs text-foreground">{libelle}</span>
+                  </p>
+                  <div className="mt-3 space-y-0.5 rounded-lg border border-border bg-white/5 p-3 text-sm">
+                    <p>
+                      <span className="text-muted-foreground">Titulaire :</span>{" "}
+                      SOULAINE Maxime
+                    </p>
+                    <p className="break-all">
+                      <span className="text-muted-foreground">IBAN :</span>{" "}
+                      <span className="font-mono text-xs">
+                        FR76 1027 8374 6200 0110 8580 173
+                      </span>
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground">BIC :</span>{" "}
+                      <span className="font-mono text-xs">CMCIFR2A</span>
+                    </p>
+                  </div>
+                  <form
+                    action={async (formData: FormData) => {
+                      "use server";
+                      await declareAcompteSent(formData);
+                    }}
+                    className="mt-3"
+                  >
+                    <input type="hidden" name="quote_id" value={id} />
+                    <SubmitButton
+                      pendingLabel="Envoi de la confirmation…"
+                      className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                    >
+                      ✅ J&apos;ai envoyé l&apos;acompte
+                    </SubmitButton>
+                  </form>
+                </>
+              )}
+            </section>
+          );
+        })()
+      ) : null}
+
+        </TabsContent>
+        <TabsContent value="documents" className="space-y-6">
 
       {/* Documents officiels simples envoyés par Propul'Sound DJ */}
       {files.filter((f) => f.from_admin && f.doc_kind !== "a_signer").length > 0 ? (
@@ -349,76 +429,10 @@ export default async function ClientQuotePage({
         </section>
       ) : null}
 
-      {/* Acompte par virement : visible dès que les documents sont signés */}
-      {confirmed || quote.status === "attente_acompte" ? (
-        (() => {
-          const total = (quote.total_cents ?? 0) / 100;
-          const solde = Math.floor((total * 0.8) / 10) * 10;
-          const acompte = total - solde;
-          const libelle = `${quote.customer_name} — ${quote.event_date ?? ""}`;
-          return (
-            <section id="acompte" className="rounded-xl border border-border bg-muted/50 p-5">
-              <h2 className="font-medium">💳 Acompte de réservation</h2>
-              {quote.acompte_paid_at ? (
-                <p className="mt-2 text-sm font-medium text-green-400">
-                  ✓ Acompte reçu, merci ! Votre réservation est entièrement validée.
-                </p>
-              ) : quote.acompte_declared_at ? (
-                <p className="mt-2 text-sm text-orange-300">
-                  ⏳ Acompte déclaré envoyé le{" "}
-                  {new Date(quote.acompte_declared_at).toLocaleDateString("fr-FR")} — en
-                  attente de réception par le prestataire.
-                </p>
-              ) : (
-                <>
-                  <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-                    Afin de confirmer définitivement votre réservation, merci de
-                    régler l&apos;acompte de{" "}
-                    <span className="font-semibold text-accent">
-                      {formatEuros(Math.round(acompte * 100))}
-                    </span>{" "}
-                    par virement avec le libellé&nbsp;:{" "}
-                    <span className="font-mono text-xs text-foreground">{libelle}</span>
-                  </p>
-                  <div className="mt-3 space-y-0.5 rounded-lg border border-border bg-white/5 p-3 text-sm">
-                    <p>
-                      <span className="text-muted-foreground">Titulaire :</span>{" "}
-                      SOULAINE Maxime
-                    </p>
-                    <p className="break-all">
-                      <span className="text-muted-foreground">IBAN :</span>{" "}
-                      <span className="font-mono text-xs">
-                        FR76 1027 8374 6200 0110 8580 173
-                      </span>
-                    </p>
-                    <p>
-                      <span className="text-muted-foreground">BIC :</span>{" "}
-                      <span className="font-mono text-xs">CMCIFR2A</span>
-                    </p>
-                  </div>
-                  <form
-                    action={async (formData: FormData) => {
-                      "use server";
-                      await declareAcompteSent(formData);
-                    }}
-                    className="mt-3"
-                  >
-                    <input type="hidden" name="quote_id" value={id} />
-                    <SubmitButton
-                      pendingLabel="Envoi de la confirmation…"
-                      className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
-                    >
-                      ✅ J&apos;ai envoyé l&apos;acompte
-                    </SubmitButton>
-                  </form>
-                </>
-              )}
-            </section>
-          );
-        })()
-      ) : null}
-
       {/* Musiques + fichiers par catégorie : ouverts dès les documents signés */}
+          <DiversFiles quoteId={id} files={files} />
+        </TabsContent>
+        <TabsContent value="playlist" className="space-y-6">
       <div id="playlist">
       {confirmed || quote.status === "attente_acompte" ? (
         <ClientPlaylistEditor
@@ -444,14 +458,16 @@ export default async function ClientQuotePage({
       )}
       </div>
 
-      {/* Fichiers sans catégorie (anciens envois) */}
-      <DiversFiles quoteId={id} files={files} />
 
       {/* Messagerie */}
       {/* Messagerie — ancre pour les liens « lire le message » des e-mails */}
+        </TabsContent>
+        <TabsContent value="messages" className="space-y-6">
       <div id="messagerie">
         <ClientQuoteMessages quoteId={id} messages={messages} />
       </div>
+        </TabsContent>
+      </Tabs>
     </main>
   );
 }
