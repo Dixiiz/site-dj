@@ -124,24 +124,24 @@ export function TimelinePanel({
         }`}
         style={{ visibility: mounted ? "visible" : "hidden" }}
       >
-        {/* Barre de tiroir : clique dessus pour fermer le panneau */}
+        {/* Zone cliquable invisible sur le bord gauche : survol = liseré discret */}
         <button
           type="button"
           onClick={() => setOpen(false)}
           aria-label="Fermer la timeline"
-          className="group absolute inset-y-0 left-0 flex w-7 items-center justify-center border-r border-border bg-muted/60 transition-colors hover:bg-accent/10"
+          className="group absolute inset-y-0 left-0 flex w-4 cursor-w-resize items-center justify-center transition-colors hover:bg-accent/10"
         >
           <svg
-            width="12"
-            height="12"
+            width="11"
+            height="11"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
             aria-hidden
-            className="text-muted-foreground transition-transform duration-300 group-hover:-translate-x-0.5 group-hover:text-accent"
+            className="text-accent opacity-0 transition-opacity duration-200 group-hover:opacity-100"
           >
             <path d="M15 18l-6-6 6-6" />
           </svg>
