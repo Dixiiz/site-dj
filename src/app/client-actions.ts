@@ -1012,7 +1012,11 @@ export async function generateDevisDocument(formData: FormData) {
   await advanceQuoteStatus(supabase, quoteId, "attente_signature");
 
   // Prévient le client qu'un document attend sa signature.
-  void notifyClientDocument(quoteId, `Devis ${contractNumber}`, { aSigner: true });
+  // Prévient le client qu'un document attend sa signature (sauf si les
+  // documents sont générés en lot : un seul e-mail récapitulatif sera envoyé).
+  if (formData.get("silent") !== "1") {
+    void notifyClientDocuments(quoteId, [`Devis ${contractNumber}`], { aSigner: true });
+  }
 
   revalidatePath("/admin/devis");
   revalidatePath(`/mon-espace/devis/${quoteId}`);
@@ -1099,11 +1103,56 @@ export async function generateContratDocument(formData: FormData) {
   await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
 
   // Prévient le client qu'un document attend sa signature.
-  void notifyClientDocument(quoteId, `Contrat ${contractNumber}`, { aSigner: true });
+  // Prévient le client qu'un document attend sa signature (sauf génération
+  // en lot : voir generateDevisEtContratDocument).
+  if (formData.get("silent") !== "1") {
+    void notifyClientDocuments(quoteId, [`Contrat ${contractNumber}`], { aSigner: true });
+  }
 
   revalidatePath("/admin/devis");
   revalidatePath(`/mon-espace/devis/${quoteId}`);
   return { ok: true as const, message: "Contrat PDF généré et envoyé à la signature ✓" };
+}
+
+// Génère le devis ET le contrat en un clic, puis n'envoie qu'UN SEUL e-mail
+// au client listant les deux documents (au lieu de deux mails séparés).
+export async function generateDevisEtContratDocument(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  // Copie des champs (personnalisation devis…) + drapeau « pas d'e-mail »
+  // pour que chaque génération reste silencieuse individuellement.
+  const silentFd = new FormData();
+  for (const [key, value] of formData.entries()) silentFd.set(key, value);
+  silentFd.set("silent", "1");
+
+  const devisResult = await generateDevisDocument(silentFd);
+  if (devisResult && devisResult.ok === false) return devisResult;
+  const contratResult = await generateContratDocument(silentFd);
+  if (contratResult && contratResult.ok === false) return contratResult;
+
+  // Un seul e-mail récapitulatif avec les documents à signer présents.
+  const supabase = createAdminClient();
+  const { data: files } = await supabase
+    .from("quote_files")
+    .select("name")
+    .eq("quote_id", quoteId)
+    .eq("doc_kind", "a_signer");
+  const names = (files ?? [])
+    .filter((f) => /^Devis |^Contrat /.test(f.name))
+    .map((f) => f.name.replace(/\.pdf$/, ""));
+
+  await notifyClientDocuments(quoteId, names, { aSigner: true });
+
+  revalidatePath("/admin/devis");
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  return {
+    ok: true as const,
+    message: `Devis + contrat générés et envoyés à la signature ✓ (${names.length} document${names.length > 1 ? "s" : ""})`,
+  };
 }
 
 // Génère la facture PDF (même charte que le devis, sans signature) et la
@@ -1174,7 +1223,7 @@ export async function generateFactureDocument(formData: FormData) {
     revalidatePath(`/mon-espace/devis/${quoteId}`);
 
     // Prévient le client que sa facture est disponible.
-    void notifyClientDocument(quoteId, `Facture ${invoiceNumber}`);
+    void notifyClientDocuments(quoteId, [`Facture ${invoiceNumber}`]);
 
     return { ok: true as const, message: `Facture ${invoiceNumber} générée ✓` };
   } catch (e) {
@@ -1297,28 +1346,33 @@ export async function declareAcompteSent(formData: FormData) {
 }
 
 // L'admin confirme la réception de l'acompte.
-// Notification e-mail au client : un document vient d'être déposé/généré
-// dans son espace (devis/contrat à signer, facture…).
-async function notifyClientDocument(
+// Notification e-mail au client : des documents viennent d'être déposés/générés
+// dans son espace (devis/contrat à signer, facture…). Un seul e-mail même si
+// plusieurs documents sont générés en une fois.
+async function notifyClientDocuments(
   quoteId: string,
-  docName: string,
+  docNames: string[],
   opts: { aSigner?: boolean } = {}
 ) {
+  if (docNames.length === 0) return;
   try {
     const supabase = createAdminClient();
     const { data: quote } = await supabase
       .from("quotes")
-      .select("customer_email, customer_name, formula_name")
+      .select("customer_email, customer_name")
       .eq("id", quoteId)
       .single();
     if (!quote?.customer_email) return;
     const { Resend } = await import("resend");
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) return;
+    const single = docNames.length === 1;
     const emailData = {
-      title: opts.aSigner ? "Un document attend votre signature" : "Un document est disponible",
+      title: opts.aSigner
+        ? single ? "Un document attend votre signature" : "Des documents attendent votre signature"
+        : single ? "Un document est disponible" : "Des documents sont disponibles",
       emoji: opts.aSigner ? "✍️" : "🧾",
-      intro: `Bonjour ${quote.customer_name ?? ""},<br/><br/>Le document <strong style="color:#21619A;">« ${docName.replace(/</g, "&lt;")} »</strong> vient d'être déposé dans votre espace client${opts.aSigner ? " et <strong>attend votre signature</strong>" : ""}.`,
+      intro: `Bonjour ${quote.customer_name ?? ""},<br/><br/>${single ? "Le document" : "Les documents"} <strong style="color:#21619A;">« ${docNames.map((n) => n.replace(/</g, "&lt;")).join(" », « ")} »</strong> ${single ? "vient" : "viennent"} d'être déposé${single ? "" : "s"} dans votre espace client${opts.aSigner ? ` et ${single ? "attend" : "attendent"} votre <strong>signature</strong>` : ""}.`,
       sections: opts.aSigner
         ? [
             {
@@ -1332,11 +1386,11 @@ async function notifyClientDocument(
         : [
             {
               title: "Rappel",
-              lines: ["Vous pouvez le consulter et le télécharger à tout moment depuis votre espace."],
+              lines: ["Vous pouvez les consulter et les télécharger à tout moment depuis votre espace."],
             },
           ],
       button: {
-        label: opts.aSigner ? "Signer maintenant" : "Voir le document",
+        label: opts.aSigner ? "Signer maintenant" : "Voir les documents",
         href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}#documents`)}`,
       },
     };
@@ -1346,8 +1400,8 @@ async function notifyClientDocument(
       replyTo: process.env.NOTIF_EMAIL,
       to: quote.customer_email,
       subject: opts.aSigner
-        ? `✍️ ${docName} attend votre signature — Propul'Sound DJ`
-        : `🧾 ${docName} est disponible — Propul'Sound DJ`,
+        ? `✍️ ${docNames.join(" + ")} ${single ? "attend" : "attendent"} votre signature — Propul'Sound DJ`
+        : `🧾 ${docNames.join(" + ")} ${single ? "est" : "sont"} disponible${single ? "" : "s"} — Propul'Sound DJ`,
       html: buildEmailHtml(emailData),
       text: buildEmailText(emailData),
     });

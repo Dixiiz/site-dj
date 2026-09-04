@@ -36,6 +36,7 @@ export function SubmitButton({
   confirm,
   name,
   value,
+  formAction,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -44,6 +45,8 @@ export function SubmitButton({
   confirm?: string;
   name?: string;
   value?: string;
+  /** Server action alternative (ex : générer devis + contrat d'un coup). */
+  formAction?: string | ((formData: FormData) => void | Promise<void>);
 }) {
   const { pending } = useFormStatus();
   return (
@@ -51,6 +54,7 @@ export function SubmitButton({
       type="submit"
       name={name}
       value={value}
+      formAction={formAction}
       disabled={pending}
       onClick={(e) => {
         if (confirm && !window.confirm(confirm)) {

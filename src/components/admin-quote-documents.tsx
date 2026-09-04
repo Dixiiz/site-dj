@@ -3,6 +3,7 @@ import {
   downloadQuoteFile,
   generateContratDocument,
   generateDevisDocument,
+  generateDevisEtContratDocument,
   generateFactureDocument,
   uploadAdminDocument,
 } from "@/app/client-actions";
@@ -165,6 +166,17 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
               className="rounded-lg border border-accent/50 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/15"
             >
               ⚡ Générer le devis PDF
+            </SubmitButton>
+            {/* Génère les DEUX documents d'un coup : un seul e-mail au client */}
+            <SubmitButton
+              pendingLabel="Génération du devis + contrat…"
+              formAction={async (formData: FormData) => {
+                "use server";
+                await generateDevisEtContratDocument(formData);
+              }}
+              className="rounded-lg border border-cyan-500/50 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:border-cyan-400 hover:bg-cyan-400/25 hover:text-cyan-100"
+            >
+              ⚡📝 Générer devis + contrat
             </SubmitButton>
           </form>
           <form
