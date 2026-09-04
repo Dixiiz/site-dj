@@ -12,6 +12,7 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { HashHighlight } from "@/components/hash-highlight";
 import { RdvCallSection } from "@/components/rdv-call";
 import { TimelinePanel, type TimelineRow } from "@/components/timeline-panel";
+import { ConseilPanel } from "@/components/conseil-panel";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { downloadQuoteFile } from "@/app/client-actions";
 import { eventMoments } from "@/components/admin-quote-playlist";
@@ -82,12 +83,32 @@ export default async function ClientQuotePage({
   const packImage = PACK_IMAGES[quote.formula_name] ?? null;
   // Timeline de la soirée (JSON dans quotes.timeline).
   const timeline = (Array.isArray(quote.timeline) ? quote.timeline : []) as TimelineRow[];
+  // Progression pour le « Conseil de jeu ».
+  const DANCE = "Soirée / Piste de danse";
+  const conseil = {
+    documentsSignes: quote.status === "attente_acompte" || confirmed,
+    acompteRegie: Boolean(quote.acompte_paid_at),
+    tempsFortsChoisis: tracks.filter(
+      (t: { kind: string; moment: string }) =>
+        t.kind === "souhait" && t.moment !== DANCE
+    ).length,
+    tempsFortsTotal: eventMoments(quote.formula_name).length,
+    danceCount: tracks.filter(
+      (t: { kind: string; moment: string }) =>
+        t.kind === "souhait" && t.moment === DANCE
+    ).length,
+    blacklistCount: tracks.filter((t: { kind: string }) => t.kind === "blacklist")
+      .length,
+    timelineRenseignee: timeline.length,
+    rdvPris: rdvRequests.some((r) => r.status === "valide"),
+  };
 
   return (
     <main className="space-y-10">
       <AutoRefresh />
       <HashHighlight />
       <TimelinePanel quoteId={id} initial={timeline} />
+      <ConseilPanel progress={conseil} />
       <div className="flex flex-wrap items-center gap-4">
         {packImage ? (
           // eslint-disable-next-line @next/next/no-img-element

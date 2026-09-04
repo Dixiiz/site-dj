@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { FadeIn } from "@/components/fade-in";
 
 export type GoogleReview = {
@@ -14,7 +15,7 @@ type PlacesResponse = {
   reviews?: GoogleReview[];
 };
 
-async function fetchGoogleReviews(): Promise<{
+export async function fetchGoogleReviews(): Promise<{
   rating?: number;
   count?: number;
   reviews: GoogleReview[];
@@ -46,7 +47,7 @@ async function fetchGoogleReviews(): Promise<{
   }
 }
 
-function Stars({ rating }: { rating: number }) {
+export function Stars({ rating }: { rating: number }) {
   return (
     <span className="text-sm text-yellow-400" aria-label={`${rating} sur 5`}>
       {"★".repeat(Math.round(rating))}
@@ -140,6 +141,14 @@ export async function GoogleReviews() {
           </a>
         </FadeIn>
       </div>
+      <FadeIn delay={0.3} className="mt-6 text-center">
+        <Link
+          href="/avis"
+          className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-accent hover:underline"
+        >
+          Voir la page des avis clients
+        </Link>
+      </FadeIn>
     </section>
   );
 }
