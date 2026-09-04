@@ -124,6 +124,29 @@ export function TimelinePanel({
         }`}
         style={{ visibility: mounted ? "visible" : "hidden" }}
       >
+        {/* Barre de tiroir : clique dessus pour fermer le panneau */}
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          aria-label="Fermer la timeline"
+          className="group absolute inset-y-0 left-0 flex w-7 items-center justify-center border-r border-border bg-muted/60 transition-colors hover:bg-accent/10"
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+            className="text-muted-foreground transition-transform duration-300 group-hover:-translate-x-0.5 group-hover:text-accent"
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+        <div className="flex flex-1 flex-col overflow-hidden">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div>
             <h2 className="text-sm font-medium">Timeline de la soirée</h2>
@@ -210,6 +233,7 @@ export function TimelinePanel({
             {pending ? "Enregistrement…" : "Enregistrer ma timeline"}
           </button>
           {saved ? <span className="text-xs font-medium text-green-400">{saved}</span> : null}
+        </div>
         </div>
       </aside>
     </>
