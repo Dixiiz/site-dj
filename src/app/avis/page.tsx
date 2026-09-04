@@ -62,7 +62,27 @@ export default async function AvisPage() {
         </FadeIn>
 
         {/* Tous les avis Google */}
-        <div className="mt-12 space-y-4">
+        {/* Tous les avis Google.
+            Limite connue : l'API Google Places n'expose que 5 avis maximum,
+            triés par pertinence (ni les plus récents, ni les 23 complets). */}
+        <FadeIn delay={0.12}>
+          <p className="text-center text-xs text-muted-foreground">
+            Google n&apos;expose que ses 5 avis « les plus pertinents » via son
+            API — pour lire les{" "}
+            {data.count != null ? `${data.count} avis` : "tous les avis"},{" "}
+            <a
+              href={`https://www.google.com/maps/place/?q=place_id:${process.env.GOOGLE_PLACE_ID ?? ""}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent underline-offset-2 hover:underline"
+            >
+              rends-toi sur notre fiche Google
+            </a>
+            .
+          </p>
+        </FadeIn>
+
+        <div className="mt-6 space-y-4">
           {data && data.reviews.length > 0 ? (
             data.reviews.map((review, index) => {
               const name =

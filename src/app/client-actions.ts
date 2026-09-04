@@ -903,8 +903,17 @@ export async function signClientDocument(formData: FormData) {
             {
               title: "Action à faire en priorité : l'acompte (20 %)",
               lines: [
- "Transmettez l'<strong>acompte de réservation</strong> (20 %) par virement, puis cliquez sur <strong>« ✓ J'ai envoyé l'acompte »</strong> dans votre espace : c'est <strong>ce qui verrouille définitivement votre date</strong>.",
- "Ensuite, renseignez votre <strong>playlist</strong> (temps forts + piste de danse) — elle vous attend dans votre espace !",
+                "Transmettez l'<strong>acompte de réservation</strong> (20 %) par virement, puis cliquez sur <strong>« ✓ J'ai envoyé l'acompte »</strong> dans votre espace : c'est <strong>ce qui verrouille définitivement votre date</strong>.",
+                "Ensuite, renseignez votre <strong>playlist</strong> (temps forts + piste de danse) — elle vous attend dans votre espace !",
+              ],
+            },
+            {
+              title: "Vos conseils de préparation",
+              lines: [
+                "Visez <strong>15 à 30 titres</strong> pour la piste de danse : c'est votre soirée, la playlist doit vous ressembler.",
+                "Utilisez la <strong>blacklist</strong> : le titre que vous ne supportez plus n'y échappera pas.",
+                "Le <strong>panneau « Timeline »</strong> dans votre espace : notez les horaires (cocktail, repas, dessert, ouverture de bal) — la musique se cale dessus au quart d'heure.",
+                "Prévenez-nous des <strong>moments surprises</strong> (discours, jeux, karaoké) : on met la lumière dessus, littéralement.",
               ],
             },
           ],
