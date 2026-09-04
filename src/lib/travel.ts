@@ -152,9 +152,10 @@ export async function estimateTravelWithToll(
   }
   let km: number | null = null;
   let geometry: string | null = null;
+  let highwayKmOneWay = 0;
   try {
     const res = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${ORIGIN.lon},${ORIGIN.lat};${coords.lon},${coords.lat}?overview=full`,
+      `https://router.project-osrm.org/route/v1/driving/${ORIGIN.lon},${ORIGIN.lat};${coords.lon},${coords.lat}?overview=full&steps=true`,
       { cache: "no-store" }
     );
     if (res.ok) {
@@ -162,6 +163,17 @@ export async function estimateTravelWithToll(
       const meters = data?.routes?.[0]?.distance;
       geometry = data?.routes?.[0]?.geometry ?? null;
       if (typeof meters === "number") km = meters / 1000;
+      // Détection gratuite des portions d'autoroute (noms de routes OSM
+      // du type « A10 », « E05 », « Autoroute… ») pour estimer le péage.
+      const legs = data?.routes?.[0]?.legs ?? [];
+      for (const leg of legs) {
+        for (const step of leg?.steps ?? []) {
+          const name = String(step?.name ?? "");
+          if (/^(a|e)\s?\d/i.test(name) || /autoroute/i.test(name)) {
+            highwayKmOneWay += (step?.distance ?? 0) / 1000;
+          }
+        }
+      }
     }
   } catch {
     // km reste null
@@ -170,13 +182,23 @@ export async function estimateTravelWithToll(
     return { ok: false, error: "Calcul d'itinéraire momentanément indisponible. Réessaie dans un instant." };
   }
   const estimate = computeTravelFee(km);
-  const tollCents = geometry
+
+  // Péage : 1) TollGuru si clé configurée (précis), sinon 2) estimation
+  // gratuite : kilomètres d'autoroute détectés × tarif moyen cat. 2.
+  let tollCents = geometry
     ? await tollForRoute(
         geometry,
         "Huisseau-sur-Cosson, 41350, France",
         `${address}, France`
       )
     : null;
+  if (tollCents == null) {
+    const eurPerKm = Number(process.env.TOLL_ESTIMATE_EUR_PER_KM ?? 0.12);
+    const roundTripHighwayKm = highwayKmOneWay * 2;
+    if (roundTripHighwayKm > 5) {
+      tollCents = Math.round(roundTripHighwayKm * eurPerKm * 100);
+    }
+  }
   return { ok: true, estimate, tollCents };
 }
 

@@ -86,7 +86,7 @@ export function AdminQuoteEdit({
         setTravelFee(euros(res.travelFeeCents));
         if (res.tollCents && res.tollCents > 0) {
           setExtraFee(euros(res.tollCents));
-          if (!/p(é|e)age/i.test(extraLabel)) setExtraLabel("Péage (aller-retour, cat. 2)");
+          if (!/p(é|e)age/i.test(extraLabel)) setExtraLabel("Péage estimé (aller-retour, cat. 2)");
           setTravelMsg(`Distance ${res.distanceKm} km aller — péage estimé inclus ✓`);
         } else {
           setTravelMsg(`Distance ${res.distanceKm} km aller ✓ (péage non estimé)`);
