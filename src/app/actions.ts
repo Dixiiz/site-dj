@@ -9,6 +9,7 @@ import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
 import { ADMIN_FX_OPTIONS } from "@/components/pricing-section";
 import { formatEuros } from "@/lib/money";
 import { SITE_URL } from "@/lib/site-url";
+import { EMAIL_FROM } from "@/lib/emails";
 
 function formatPrice(cents: number) {
   return formatEuros(cents);
@@ -290,7 +291,7 @@ export async function submitQuoteAndBooking(formData: FormData) {
         };
         const resend = new Resend(apiKey);
         await resend.emails.send({
-          from: `Propul'Sound DJ <${from}>`,
+          from: EMAIL_FROM,
           replyTo: NOTIF_EMAIL,
           to: customer_email,
           subject: "🎧 Nous avons bien reçu votre devis — Propul'Sound DJ",
@@ -529,7 +530,7 @@ export async function updateQuoteStatus(formData: FormData) {
             },
           };
           await resend.emails.send({
-            from: `Propul'Sound DJ <${from}>`,
+            from: EMAIL_FROM,
             replyTo: quote.customer_email,
             to: quote.customer_email,
             subject: "🎉 Votre devis est confirmé ! — Propul'Sound DJ",

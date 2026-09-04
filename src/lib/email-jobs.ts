@@ -4,7 +4,7 @@
 //     avec rappel de validité (15 jours) et lien pour demander plus de temps.
 //  2. Après la soirée : demande d'avis Google / Mariages.net.
 import { createAdminClient } from "@/lib/supabase/admin";
-import { buildEmailHtml, buildEmailText, stepsSection } from "@/lib/emails";
+import { buildEmailHtml, buildEmailText, stepsSection, EMAIL_FROM } from "@/lib/emails";
 import { SITE_URL as SITE } from "@/lib/site-url";
 
 const MARK_RELANCE = "[[relance-10j:";
@@ -18,7 +18,7 @@ async function sendEmail(to: string, subject: string, emailData: Parameters<type
   if (!apiKey || !from) return false;
   const resend = new Resend(apiKey);
   const { error } = await resend.emails.send({
-    from: `Propul'Sound DJ <${from}>`,
+    from: EMAIL_FROM,
     replyTo: to,
     to,
     subject,

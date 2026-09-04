@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createAuthClient } from "@/lib/supabase/server";
 import type { SelectedOption } from "@/lib/types";
 import { SITE_URL } from "@/lib/site-url";
+import { EMAIL_FROM } from "@/lib/emails";
 
 // ---------- Session ----------
 
@@ -649,7 +650,7 @@ export async function resolveQuoteOptions(formData: FormData) {
               button: { label: "Accéder à mon dossier client", href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}`)}` },
             };
         await resend.emails.send({
-          from: `Propul'Sound DJ <${from}>`,
+          from: EMAIL_FROM,
           to: quote.customer_email,
           subject: approve
             ? "✅ Vos options ont été validées — Propul'Sound DJ"
@@ -849,7 +850,7 @@ export async function signClientDocument(formData: FormData) {
           button: { label: "Régler mon acompte dans mon espace", href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}#acompte`)}` },
         };
         await resend.emails.send({
-          from: `Propul'Sound DJ <${from}>`,
+          from: EMAIL_FROM,
           replyTo: quote.customer_email,
           to: quote.customer_email,
           subject: "✅ Documents signés — votre playlist est débloquée !",
@@ -1306,7 +1307,7 @@ export async function uploadAdminDocument(formData: FormData) {
           button: { label: "Ouvrir mon dossier client", href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}`)}` },
         };
         await resend.emails.send({
-          from: `Propul'Sound DJ <${from}>`,
+          from: EMAIL_FROM,
           replyTo: quote.customer_email,
           to: quote.customer_email,
           subject: "📄 Un nouveau document est disponible — Propul'Sound DJ",

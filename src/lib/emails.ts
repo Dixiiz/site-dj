@@ -4,6 +4,11 @@ import { SITE_URL } from "@/lib/site-url";
 
 const LOGO_URL = `${SITE_URL}/logo-bleu-transparent.png`;
 
+// Expéditeur unique de tous les e-mails : le domaine du site (vérifié sur
+// Resend). Ne JAMAIS utiliser une adresse gmail.com comme expéditeur :
+// Resend refuse (domaine non vérifiable).
+export const EMAIL_FROM = "Propul'Sound DJ <contact@propulsounddj.fr>";
+
 // Couleurs de la charte (cf. devis PDF)
 const COLORS = {
   anthracite: "#2E363D",
