@@ -66,6 +66,16 @@ export function TimelinePanel({
     };
   }, [mounted, open]);
 
+  // Fermeture avec la touche Échap.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   function update(i: number, field: keyof TimelineRow, value: string) {
     setRows((current) => {
       const next = current.map((r, idx) => (idx === i ? { ...r, [field]: value } : r));
@@ -93,6 +103,15 @@ export function TimelinePanel({
 
   return (
     <>
+      {/* Overlay : clic sur la gauche = fermeture animée */}
+      <div
+        aria-hidden
+        onClick={() => setOpen(false)}
+        className={`fixed inset-0 z-30 bg-black/30 backdrop-blur-[2px] transition-opacity duration-300 ${
+          open ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      />
+
       {/* Poignée fixe sur le bord droit */}
       <button
         type="button"
@@ -138,7 +157,11 @@ export function TimelinePanel({
             <div className="absolute bottom-3 left-[13px] top-3 w-px bg-border" aria-hidden />
             <div className="space-y-3">
               {rows.map((row, i) => (
-                <div key={i} className="relative flex items-center gap-3 pl-8">
+                <div
+                  key={`${open}-${i}`}
+                  className="timeline-row relative flex items-center gap-3 pl-8"
+                  style={{ animationDelay: `${i * 45}ms` }}
+                >
                   <span
                     className="absolute left-[9px] h-2.5 w-2.5 rounded-full border-2 border-accent bg-background"
                     aria-hidden

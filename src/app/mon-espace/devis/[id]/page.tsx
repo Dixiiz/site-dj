@@ -144,7 +144,7 @@ export default async function ClientQuotePage({
           <TabsTrigger value="playlist" className="md:flex-none">Musiques</TabsTrigger>
           <TabsTrigger value="messages" className="md:flex-none">Messagerie</TabsTrigger>
         </TabsList>
-        <TabsContent value="soiree" className="min-w-0 flex-1 space-y-6">
+        <TabsContent value="soiree" className="tab-anim min-w-0 flex-1 space-y-6">
       {/* Récapitulatif */}
       <section className="rounded-xl border border-border bg-muted/50 p-5">
         <h2 className="font-medium">Récapitulatif</h2>
@@ -446,7 +446,7 @@ export default async function ClientQuotePage({
         </div>
       ) : null}
         </TabsContent>
-        <TabsContent value="playlist" className="min-w-0 flex-1 space-y-6">
+        <TabsContent value="playlist" className="tab-anim min-w-0 flex-1 space-y-6">
       <div id="playlist">
       {confirmed || quote.status === "attente_acompte" ? (
         <ClientPlaylistEditor
@@ -476,7 +476,7 @@ export default async function ClientQuotePage({
       {/* Messagerie */}
       {/* Messagerie — ancre pour les liens « lire le message » des e-mails */}
         </TabsContent>
-        <TabsContent value="messages" className="min-w-0 flex-1 space-y-6">
+        <TabsContent value="messages" className="tab-anim min-w-0 flex-1 space-y-6">
       <div id="messagerie">
         <ClientQuoteMessages quoteId={id} messages={messages} />
       </div>
