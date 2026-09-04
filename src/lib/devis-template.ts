@@ -22,7 +22,7 @@ export const DEVIS_TEMPLATE: DevisTemplate = {
   title: "DEVIS — Propul'Sound DJ",
   subtitle: "DJ & Show Lumière — Huisseau-sur-Cosson (41350)",
   accent: { r: 0.05, g: 0.35, b: 0.7 },
-  conditions: "Devis valable 15 jours. Bon pour accord (signature) :",
+  conditions: "Devis valable 15 jours.",
   validityDays: 15,
   signatureNote:
     "Signature du client — approuver le document dans l'espace client",

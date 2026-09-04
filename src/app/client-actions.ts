@@ -1454,12 +1454,10 @@ export async function downloadQuoteFile(formData: FormData) {
     .single();
   if (!file) return;
 
-  const { data: signed } = await supabase.storage
-    .from(FILES_BUCKET)
-    .createSignedUrl(file.storage_path, 600, {
-      download: file.name,
-    });
-  if (signed?.signedUrl) redirect(signed.signedUrl);
+  // Passe par la route de téléchargement sécurisée (/api/files/[id]) qui
+  // sert le fichier directement (pas de redirection vers une URL signée,
+  // qui pouvait échouer et renvoyer vers la page d'accueil).
+  redirect(`/api/files/${fileId}`);
 }
 
 export async function deleteQuoteFile(formData: FormData) {
