@@ -456,6 +456,22 @@ export async function updateQuoteAdmin(formData: FormData) {
   redirect(`/admin/devis?modifie=1`);
 }
 
+// Estimation admin : distance réelle + frais de déplacement + péage estimé
+// (TollGuru si TOLLGURU_API_KEY est configurée, sinon péage non calculé).
+export async function estimateTravelAdmin(formData: FormData) {
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+  const location = String(formData.get("location") ?? "");
+  const { estimateTravelWithToll } = await import("@/lib/travel");
+  const result = await estimateTravelWithToll(location);
+  if (!result.ok) return result;
+  return {
+    ok: true as const,
+    distanceKm: result.estimate.distanceKm,
+    travelFeeCents: result.estimate.feeCents,
+    tollCents: result.tollCents,
+  };
+}
+
 export async function getUnavailableDates(): Promise<string[]> {
   "use server";
   const today = new Date().toISOString().slice(0, 10);

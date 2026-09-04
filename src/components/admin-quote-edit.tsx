@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateQuoteAdmin } from "@/app/actions";
+import { updateQuoteAdmin, estimateTravelAdmin } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
 import { ADMIN_PACK_LIST, ADMIN_FX_OPTIONS } from "@/components/pricing-section";
 import type { SelectedOption } from "@/lib/types";
@@ -64,6 +64,42 @@ export function AdminQuoteEdit({
   const [travelDist, setTravelDist] = useState(String(quote.travel_distance_km ?? ""));
   const [travelFee, setTravelFee] = useState(euros(quote.travel_fee_cents));
   const [extraFee, setExtraFee] = useState(euros(quote.extra_fee_cents));
+  const [extraLabel, setExtraLabel] = useState(quote.extra_fee_label ?? "");
+  const [travelBusy, setTravelBusy] = useState(false);
+  const [travelMsg, setTravelMsg] = useState<string | null>(null);
+
+  // Bouton « magique » : géocode l'adresse, calcule la distance réelle,
+  // les frais de déplacement et le péage estimé (si TollGuru configuré).
+  async function calcTravel() {
+    if (!quote.event_location) {
+      setTravelMsg("Ajoute d'abord un lieu de réception au devis.");
+      return;
+    }
+    setTravelBusy(true);
+    setTravelMsg(null);
+    try {
+      const fd = new FormData();
+      fd.set("location", quote.event_location);
+      const res = await estimateTravelAdmin(fd);
+      if (res && res.ok) {
+        setTravelDist(String(res.distanceKm));
+        setTravelFee(euros(res.travelFeeCents));
+        if (res.tollCents && res.tollCents > 0) {
+          setExtraFee(euros(res.tollCents));
+          if (!/p(é|e)age/i.test(extraLabel)) setExtraLabel("Péage (aller-retour)");
+          setTravelMsg(`Distance ${res.distanceKm} km aller — péage estimé inclus ✓`);
+        } else {
+          setTravelMsg(`Distance ${res.distanceKm} km aller ✓ (péage non estimé)`);
+        }
+      } else if (res && !res.ok) {
+        setTravelMsg(res.error);
+      }
+    } catch {
+      setTravelMsg("Calcul impossible pour le moment.");
+    } finally {
+      setTravelBusy(false);
+    }
+  }
 
   // Options cochées -> format "Nom | prix"
   const selectedOptions = checked
@@ -189,11 +225,23 @@ export function AdminQuoteEdit({
           <label className={label}>Libellé du supplément (visible par le client)</label>
           <input
             name="extra_fee_label"
-            defaultValue={quote.extra_fee_label ?? ""}
+            value={extraLabel}
+            onChange={(e) => setExtraLabel(e.target.value)}
             placeholder="Ex : Péage, Heures supplémentaires…"
             className={input}
           />
         </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={calcTravel}
+          disabled={travelBusy}
+          className="rounded-lg border border-accent/50 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-60"
+        >
+          {travelBusy ? "🛣️ Calcul en cours…" : "🛣️ Calculer distance + péage depuis le lieu"}
+        </button>
+        {travelMsg ? <span className="text-xs text-muted-foreground">{travelMsg}</span> : null}
       </div>
 
       {/* Pack : clic pour choisir */}
