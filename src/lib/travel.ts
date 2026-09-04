@@ -60,6 +60,11 @@ export function computeTravelFee(distanceKm: number): TravelEstimate {
 async function tollForRoute(geometryPolyline: string): Promise<number | null> {
   const key = process.env.TOLLGURU_API_KEY;
   if (!key) return null;
+  // Catégorie du véhicule : configurable via TOLLGURU_VEHICLE_TYPE.
+  // Catégorie 2 française (utilitaire léger / camion 2 essieux haut ≥ 2 m)
+  // = « 2AxlesVan » chez TollGuru. Valeurs possibles : Car, 2AxlesVan,
+  // 2AxlesTruck, 3AxlesTruck…
+  const vehicleType = process.env.TOLLGURU_VEHICLE_TYPE || "2AxlesVan";
   try {
     const res = await fetch("https://apis.tollguru.com/toll/v2/complete-route-data", {
       method: "POST",
@@ -70,7 +75,7 @@ async function tollForRoute(geometryPolyline: string): Promise<number | null> {
       body: JSON.stringify({
         source: { polyline: geometryPolyline },
         destination: { polyline: geometryPolyline },
-        vehicleType: "Car",
+        vehicleType,
       }),
       cache: "no-store",
     });
