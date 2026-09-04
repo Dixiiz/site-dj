@@ -1496,6 +1496,9 @@ export async function adminRdvDecision(formData: FormData) {
 
   const rdvId = String(formData.get("rdv_id") ?? "");
   const decision = String(formData.get("decision") ?? "");
+  // Date/heure exacte choisie par l'admin (requis pour valider une
+  // disponibilité hebdo, optionnel pour un créneau daté).
+  const rdvDatetime = String(formData.get("rdv_datetime") ?? "").trim();
   if (!rdvId || !["valide", "refuse"].includes(decision)) {
     return { ok: false as const, error: "Requête invalide." };
   }
@@ -1503,13 +1506,23 @@ export async function adminRdvDecision(formData: FormData) {
   const supabase = createAdminClient();
   const { data: rdv } = await supabase
     .from("rdv_requests")
-    .select("id, quote_id, proposed_at")
+    .select("id, quote_id, proposed_at, availability")
     .eq("id", rdvId)
     .single();
   if (!rdv) return { ok: false as const, error: "Créneau introuvable." };
 
+  const whenIso = rdvDatetime
+    ? new Date(rdvDatetime).toISOString()
+    : (rdv.proposed_at ?? "");
+  if (decision === "valide" && !whenIso) {
+    return { ok: false as const, error: "Choisis d'abord la date et l'heure du rappel." };
+  }
+
   if (decision === "valide") {
-    await supabase.from("rdv_requests").update({ status: "valide" }).eq("id", rdvId);
+    await supabase
+      .from("rdv_requests")
+      .update({ status: "valide", proposed_at: whenIso })
+      .eq("id", rdvId);
     await supabase
       .from("rdv_requests")
       .update({ status: "refuse" })
@@ -1532,7 +1545,7 @@ export async function adminRdvDecision(formData: FormData) {
       if (apiKey) {
         const { EMAIL_FROM, buildEmailHtml, buildEmailText } = await import("@/lib/emails");
         if (decision === "valide") {
-          const when = new Date(rdv.proposed_at).toLocaleString("fr-FR", {
+          const when = new Date(whenIso).toLocaleString("fr-FR", {
             weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
           });
           const emailData = {
@@ -1576,6 +1589,70 @@ export async function adminRdvDecision(formData: FormData) {
   revalidatePath("/admin/devis");
   revalidatePath(`/mon-espace/devis/${rdv.quote_id}`);
   return { ok: true as const, message: decision === "valide" ? "RDV validé ✓" : "Créneau refusé ✓" };
+}
+
+// Le client envoie ses disponibilités hebdo (jours + moments en texte libre
+// structuré). L'admin choisit ensuite la date exacte pour valider.
+export async function proposeRdvAvailability(formData: FormData) {
+  const { createAuthClient } = await import("@/lib/supabase/server");
+  const auth = await createAuthClient();
+  const { data: { user } } = await auth.auth.getUser();
+  if (!user?.email) return { ok: false as const, error: "Non autorisé." };
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const availability = String(formData.get("availability") ?? "").trim();
+  if (!quoteId || !availability) return { ok: false as const, error: "Requête invalide." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("customer_email")
+    .eq("id", quoteId)
+    .single();
+  if (!quote || quote.customer_email?.toLowerCase() !== user.email.toLowerCase()) {
+    return { ok: false as const, error: "Non autorisé." };
+  }
+
+  const { error } = await supabase.from("rdv_requests").insert({
+    quote_id: quoteId,
+    availability,
+    status: "propose",
+  });
+  if (error) {
+    console.error("[rdv] Erreur insertion:", error.message);
+    return { ok: false as const, error: "Échec de l'enregistrement." };
+  }
+
+  // Notification admin.
+  try {
+    const { Resend } = await import("resend");
+    const apiKey = process.env.RESEND_API_KEY;
+    const to = process.env.NOTIF_EMAIL;
+    if (apiKey && to) {
+      const { EMAIL_FROM, buildEmailHtml, buildEmailText } = await import("@/lib/emails");
+      const emailData = {
+        title: "Demande de RDV téléphonique",
+        emoji: "",
+        intro: `<strong>${quote.customer_email}</strong> souhaite un point téléphonique. Disponibilités :`,
+        sections: [{ lines: [`<strong>${availability}</strong>`] }],
+        button: { label: "Choisir un créneau (admin)", href: `${SITE_URL}/admin/devis` },
+      };
+      const resend = new Resend(apiKey);
+      await resend.emails.send({
+        from: EMAIL_FROM,
+        replyTo: user.email,
+        to,
+        subject: "📞 Demande de RDV téléphonique — à valider",
+        html: buildEmailHtml(emailData),
+        text: buildEmailText(emailData),
+      });
+    }
+  } catch (err) {
+    console.error("[rdv] Echec e-mail admin:", err);
+  }
+
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  return { ok: true as const, message: "Disponibilités envoyées ✓" };
 }
 
 export async function confirmAcompteReceived(formData: FormData) {

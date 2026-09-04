@@ -63,14 +63,14 @@ export default async function ClientQuotePage({
   const confirmed = quote.status === "confirme";
   // Créneaux de RDV téléphonique proposés par le client.
   // (La table rdv_requests doit exister — SQL fourni ; repli silencieux sinon.)
-  let rdvRequests: { id: string; proposed_at: string; status: string }[] = [];
+  let rdvRequests: { id: string; proposed_at: string | null; availability: string | null; status: string }[] = [];
   try {
     const { data: rdv } = await supabase
       .from("rdv_requests")
-      .select("id, proposed_at, status")
+      .select("id, proposed_at, availability, status")
       .eq("quote_id", id)
-      .order("proposed_at", { ascending: true });
-    rdvRequests = (rdv ?? []) as { id: string; proposed_at: string; status: string }[];
+      .order("created_at", { ascending: true });
+    rdvRequests = (rdv ?? []) as { id: string; proposed_at: string | null; availability: string | null; status: string }[];
   } catch {
     rdvRequests = [];
   }
