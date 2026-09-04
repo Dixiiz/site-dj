@@ -57,86 +57,6 @@ export function computeTravelFee(distanceKm: number): TravelEstimate {
 
 // Estimation du PÉAGE via TollGuru (API gratuite avec clé). Requiert
 // TOLLGURU_API_KEY dans .env.local ; renvoie null si indisponible.
-async function tollForRoute(
-  geometryPolyline: string,
-  originAddress: string,
-  destAddress: string
-): Promise<number | null> {
-  const key = process.env.TOLLGURU_API_KEY;
-  if (!key) return null;
-  // Catégorie du véhicule : configurable via TOLLGURU_VEHICLE_TYPE.
-  // Catégorie 2 française (utilitaire léger / camion 2 essieux haut ≥ 2 m)
-  // = « 2AxlesVan » chez TollGuru. Valeurs possibles : Car, 2AxlesVan,
-  // 2AxlesTruck, 3AxlesTruck…
-  const vehicleType = process.env.TOLLGURU_VEHICLE_TYPE || "2AxlesVan";
-  const headers = {
- "x-api-key": key,
- "Content-Type": "application/json",
-  };
-  const parseCost = (data: unknown): number | null => {
-    const d = data as {
-      routes?: Array<{
-        summary?: {
-          cost?: {
-            tagOrCash?: { cost?: number };
-            cash?: { cost?: number };
-            minimum?: { cost?: number };
-            tag?: { cost?: number };
-          };
-        };
-      }> | null;
-    };
-    const cost = d?.routes?.[0]?.summary?.cost;
-    const found =
-      cost?.tagOrCash?.cost ?? cost?.cash?.cost ?? cost?.minimum?.cost ?? cost?.tag?.cost;
-    return typeof found === "number" && found > 0 ? Math.round(found * 100) : null;
-  };
-
-  // Tentative 1 : format polyline (ancienne API, toujours opérationnelle).
-  try {
-    const res = await fetch("https://apis.tollguru.com/toll/v2/complete-route-data", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        source: { polyline: geometryPolyline },
-        destination: { polyline: geometryPolyline },
-        vehicleType,
-      }),
-      cache: "no-store",
-    });
-    if (res.ok) {
-      const cost = parseCost(await res.json());
-      if (cost != null) return cost;
-    }
-  } catch (err) {
-    console.error("[toll] TollGuru polyline indisponible:", err);
-  }
-
-  // Tentative 2 : format adresses (API actuelle « v2/calc/route »).
-  try {
-    const res = await fetch("https://apis.tollguru.com/v2/calc/route", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        from: { address: originAddress },
-        to: { address: destAddress },
-        vehicle: { type: vehicleType },
-      }),
-      cache: "no-store",
-    });
-    if (res.ok) {
-      const cost = parseCost(await res.json());
-      if (cost != null) return cost;
-    }
-  } catch (err) {
-    console.error("[toll] TollGuru v2 indisponible:", err);
-  }
-
-  return null;
-}
-
-// Comme estimateTravelFromAddress, mais récupère aussi l'itinéraire complet
-// (polyline OSRM) pour l'estimation du péage aller-retour.
 export async function estimateTravelWithToll(
   address: string
 ): Promise<
@@ -150,56 +70,11 @@ export async function estimateTravelWithToll(
   if (!coords) {
     return { ok: false, error: "Adresse introuvable. Précise la ville ou le code postal." };
   }
-  let km: number | null = null;
-  let geometry: string | null = null;
-  let highwayKmOneWay = 0;
-  try {
-    const res = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${ORIGIN.lon},${ORIGIN.lat};${coords.lon},${coords.lat}?overview=full&steps=true`,
-      { cache: "no-store" }
-    );
-    if (res.ok) {
-      const data = await res.json();
-      const meters = data?.routes?.[0]?.distance;
-      geometry = data?.routes?.[0]?.geometry ?? null;
-      if (typeof meters === "number") km = meters / 1000;
-      // Détection gratuite des portions d'autoroute (noms de routes OSM
-      // du type « A10 », « E05 », « Autoroute… ») pour estimer le péage.
-      const legs = data?.routes?.[0]?.legs ?? [];
-      for (const leg of legs) {
-        for (const step of leg?.steps ?? []) {
-          const name = String(step?.name ?? "");
-          if (/^(a|e)\s?\d/i.test(name) || /autoroute/i.test(name)) {
-            highwayKmOneWay += (step?.distance ?? 0) / 1000;
-          }
-        }
-      }
-    }
-  } catch {
-    // km reste null
-  }
+  const km = await routeDistanceKm(coords);
   if (km == null) {
     return { ok: false, error: "Calcul d'itinéraire momentanément indisponible. Réessaie dans un instant." };
   }
-  const estimate = computeTravelFee(km);
-
-  // Péage : 1) TollGuru si clé configurée (précis), sinon 2) estimation
-  // gratuite : kilomètres d'autoroute détectés × tarif moyen cat. 2.
-  let tollCents = geometry
-    ? await tollForRoute(
-        geometry,
- "Huisseau-sur-Cosson, 41350, France",
-        `${address}, France`
-      )
-    : null;
-  if (tollCents == null) {
-    const eurPerKm = Number(process.env.TOLL_ESTIMATE_EUR_PER_KM ?? 0.12);
-    const roundTripHighwayKm = highwayKmOneWay * 2;
-    if (roundTripHighwayKm > 5) {
-      tollCents = Math.round(roundTripHighwayKm * eurPerKm * 100);
-    }
-  }
-  return { ok: true, estimate, tollCents };
+  return { ok: true, estimate: computeTravelFee(km), tollCents: null };
 }
 
 export async function estimateTravelFromAddress(

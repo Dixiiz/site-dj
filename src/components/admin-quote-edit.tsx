@@ -84,13 +84,7 @@ export function AdminQuoteEdit({
       if (res && res.ok) {
         setTravelDist(String(res.distanceKm));
         setTravelFee(euros(res.travelFeeCents));
-        if (res.tollCents && res.tollCents > 0) {
-          setExtraFee(euros(res.tollCents));
-          if (!/p(é|e)age/i.test(extraLabel)) setExtraLabel("Péage estimé (aller-retour, cat. 2)");
-          setTravelMsg(`Distance ${res.distanceKm} km aller — péage estimé inclus ✓`);
-        } else {
-          setTravelMsg(`Distance ${res.distanceKm} km aller ✓ (péage non estimé)`);
-        }
+        setTravelMsg(`Distance ${res.distanceKm} km aller ✓ — pense à ajouter le péage dans « Supplément » si besoin.`);
       } else if (res && !res.ok) {
         setTravelMsg(res.error);
       }
@@ -239,7 +233,7 @@ export function AdminQuoteEdit({
           disabled={travelBusy}
           className="rounded-lg border border-accent/50 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-60"
         >
-          {travelBusy ? "🛣️ Calcul en cours…" : "🛣️ Calculer distance + péage depuis le lieu"}
+          {travelBusy ? "Calcul en cours…" : "Calculer la distance et les frais de déplacement"}
         </button>
         {travelMsg ? <span className="text-xs text-muted-foreground">{travelMsg}</span> : null}
       </div>
