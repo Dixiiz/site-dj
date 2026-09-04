@@ -103,15 +103,6 @@ export function TimelinePanel({
 
   return (
     <>
-      {/* Overlay : clic sur la gauche = fermeture animée */}
-      <div
-        aria-hidden
-        onClick={() => setOpen(false)}
-        className={`fixed inset-0 z-30 bg-black/30 backdrop-blur-[2px] transition-opacity duration-300 ${
-          open ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-      />
-
       {/* Poignée fixe sur le bord droit */}
       <button
         type="button"
