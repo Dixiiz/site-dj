@@ -137,7 +137,6 @@ export default async function ClientQuotePage({
       >
         <TabsList className="flex w-full flex-col md:sticky md:top-20 md:w-44 md:self-start">
           <TabsTrigger value="soiree">Ma soirée</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="playlist">Musiques</TabsTrigger>
           <TabsTrigger value="messages">Messagerie</TabsTrigger>
         </TabsList>
@@ -248,8 +247,10 @@ export default async function ClientQuotePage({
         </div>
       ) : null}
 
-      {/* RDV téléphonique : proposer des créneaux, Maxime valide */}
-      <RdvCallSection quoteId={id} requests={rdvRequests} />
+      {/* RDV téléphonique : visible uniquement une fois le devis confirmé */}
+      {confirmed ? (
+        <RdvCallSection quoteId={id} requests={rdvRequests} />
+      ) : null}
       {/* Acompte par virement : visible dès que les documents sont signés */}
       {confirmed || quote.status === "attente_acompte" ? (
         (() => {
@@ -319,8 +320,6 @@ export default async function ClientQuotePage({
         })()
       ) : null}
 
-        </TabsContent>
-        <TabsContent value="documents" className="min-w-0 flex-1 space-y-6">
 
       {/* Documents officiels simples envoyés par Propul'Sound DJ */}
       {files.filter((f) => f.from_admin && f.doc_kind !== "a_signer").length > 0 ? (
