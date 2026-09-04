@@ -15,6 +15,7 @@ import { QuoteStatusSelect } from "@/components/quote-status-select";
 import { Badge } from "@/components/ui/badge";
 import { formatEuros } from "@/lib/money";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendScheduledEmails } from "@/lib/email-jobs";
 import type { SelectedOption } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -71,6 +72,10 @@ export default async function DevisPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  // Filet de sécurité : si le Cron Vercel n'a pas tourné, on traite les
+  // e-mails planifiés (relance J+10, avis post-soirée) à l'ouverture de l'admin.
+  sendScheduledEmails().catch((e) => console.error("[email-jobs]", e));
+
   const { q, tri } = await searchParams as { q?: string; tri?: string };
   const query = (q ?? "").trim().toLowerCase();
   const supabase = createAdminClient();

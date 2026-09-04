@@ -7,13 +7,18 @@ export const metadata = {
   description: "Accédez à vos devis, échangez et préparez vos playlists.",
 };
 
-export default async function ConnexionPage() {
+export default async function ConnexionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
   const user = await getClientUser();
-  if (user) redirect("/mon-espace");
+  const { next } = await searchParams;
+  if (user) redirect(next?.startsWith("/mon-espace") ? next : "/mon-espace");
 
   return (
     <main className="mx-auto w-full max-w-md px-4 py-16">
-      <ConnexionForm />
+      <ConnexionForm next={next} />
     </main>
   );
 }

@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function ConnexionForm() {
+export function ConnexionForm({ next }: { next?: string }) {
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // Destination après connexion (ex : section acompte depuis un e-mail).
+  const safeNext = next?.startsWith("/mon-espace") ? next : undefined;
 
   function onSubmit(action: (formData: FormData) => Promise<{ ok?: boolean; error?: string; message?: string } | undefined>) {
     return (formData: FormData) => {
@@ -59,6 +61,7 @@ export function ConnexionForm() {
 
       {mode === "login" ? (
         <form action={onSubmit(loginClient)} className="space-y-4">
+          {safeNext ? <input type="hidden" name="next" value={safeNext} /> : null}
           <div className="space-y-1.5">
             <Label htmlFor="email">E-mail</Label>
             <Input id="email" name="email" type="email" required autoComplete="email" />

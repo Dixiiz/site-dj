@@ -166,3 +166,25 @@ body {
   overscroll-behavior-x: none;
   scroll-behavior: smooth;
 }
+
+/* Mise en évidence d'une section arrivée depuis un lien d'e-mail
+   (ex : /mon-espace/devis/xxx#acompte) : halo + léger grossissement */
+@keyframes anchor-flash {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-accent) 0%, transparent);
+    transform: scale(1);
+  }
+  35% {
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-accent) 45%, transparent);
+    transform: scale(1.02);
+  }
+  70% {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 30%, transparent);
+    transform: scale(1.01);
+  }
+}
+.anchor-flash {
+  animation: anchor-flash 1.4s ease-in-out 2;
+  scroll-margin-top: 96px;
+}

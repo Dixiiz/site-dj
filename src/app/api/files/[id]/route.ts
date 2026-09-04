@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createAuthClient } from "@/lib/supabase/server";
 
-// Téléchargement sécurisé d'un fichier : lien signé de courte durée,
-// réservé au propriétaire du devis ou à l'admin.
+// Téléchargement sécurisé d'un fichier : réservé au propriétaire du devis
+// ou à l'admin. Le fichier est servi directement (pas de redirection vers
+// une URL signée, qui pouvait échouer et renvoyer vers la page d'accueil).
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -13,7 +14,7 @@ export async function GET(
 
   const { data: file } = await supabase
     .from("quote_files")
-    .select("quote_id, storage_path, name")
+    .select("quote_id, storage_path, name, mime_type")
     .eq("id", id)
     .single();
   if (!file) return new NextResponse("Introuvable", { status: 404 });
@@ -41,14 +42,27 @@ export async function GET(
     }
   }
 
-  const { data: signed } = await supabase.storage
+  // Téléchargement du fichier côté serveur, puis réponse directe :
+  // forcer le téléchargement avec le nom d'origine, sans redirection.
+  const { data: blob, error } = await supabase.storage
     .from("client-files")
-    .createSignedUrl(file.storage_path, 300, { download: file.name });
-  if (!signed) return new NextResponse("Erreur", { status: 500 });
+    .download(file.storage_path);
+  if (error || !blob) {
+    console.error("[files] Téléchargement storage échoué:", error?.message);
+    return new NextResponse("Fichier indisponible", { status: 500 });
+  }
 
-  // Pas de cache : le PDF peut être remplacé (ex. version signée).
-  return NextResponse.redirect(signed.signedUrl, {
-    status: 302,
-    headers: { "Cache-Control": "no-store" },
+  // Nom de fichier ASCII sûr + version UTF-8 pour les noms accentués.
+  const asciiName =
+    file.name.replace(/[^\w.\- ]+/g, "_").trim() || "document.pdf";
+  const utf8Name = encodeURIComponent(file.name);
+
+  return new NextResponse(blob, {
+    headers: {
+      "Content-Type": file.mime_type || "application/octet-stream",
+      "Content-Disposition": `attachment; filename="${asciiName}"; filename*=UTF-8''${utf8Name}`,
+      "Cache-Control": "no-store",
+    },
   });
 }
+

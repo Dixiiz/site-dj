@@ -170,6 +170,12 @@ export function AdminQuoteDetails({
           })}
         </span>
         <div className="flex items-center gap-2">
+          <a
+            href={`/api/admin/fiche/${quote.id}`}
+            className="rounded-lg border border-accent/50 bg-accent/10 px-4 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+          >
+            🎵 Fiche soirée PDF
+          </a>
           <AdminQuoteEdit quote={quote} options={options} />
           <QuoteStatusSelect id={quote.id} status={quote.status} />
         </div>

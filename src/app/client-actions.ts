@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createAuthClient } from "@/lib/supabase/server";
 import type { SelectedOption } from "@/lib/types";
+import { SITE_URL } from "@/lib/site-url";
 
 // ---------- Session ----------
 
@@ -99,6 +100,8 @@ export async function updatePassword(formData: FormData) {
 export async function loginClient(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
+  // Destination optionnelle (ex : bouton d'un e-mail vers la section acompte).
+  const next = String(formData.get("next") ?? "").trim();
 
   if (!email || !password) {
     return { ok: false as const, error: "E-mail et mot de passe requis." };
@@ -111,7 +114,8 @@ export async function loginClient(formData: FormData) {
     return { ok: false as const, error: "E-mail ou mot de passe incorrect." };
   }
 
-  redirect("/mon-espace");
+  // Uniquement des chemins internes (pas de redirection externe).
+  redirect(next.startsWith("/mon-espace") ? next : "/mon-espace");
 }
 
 export async function logoutClient() {
@@ -611,16 +615,47 @@ export async function resolveQuoteOptions(formData: FormData) {
       const from = process.env.NOTIF_EMAIL;
       if (apiKey && from) {
         const resend = new Resend(apiKey);
+        const { buildEmailHtml, buildEmailText } = await import("@/lib/emails");
+        const emailData = approve
+          ? {
+              title: "Vos options ont été validées !",
+              emoji: "✅",
+              intro:
+                "Bonjour,<br/><br/>Bonne nouvelle : vos modifications d'options ont été <strong>validées</strong> et appliquées à votre devis.",
+              sections: [
+                {
+                  title: "Et maintenant ?",
+                  lines: [
+                    "Le <strong>nouveau montant</strong> de votre devis est visible dans votre espace.",
+                    "Vous pouvez poursuivre la préparation de votre soirée normalement.",
+                  ],
+                },
+              ],
+              button: { label: "Voir mon devis mis à jour", href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}`)}` },
+            }
+          : {
+              title: "À propos de votre demande d'options",
+              emoji: "❌",
+              intro:
+                "Bonjour,<br/><br/>Après étude, nous ne pouvons pas retenir votre demande de modification d'options.",
+              sections: [
+                {
+                  title: "Une question ?",
+                  lines: [
+                    "N'hésitez pas à nous contacter pour en discuter : on trouvera sûrement une <strong>alternative</strong> !",
+                  ],
+                },
+              ],
+              button: { label: "Accéder à mon dossier client", href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}`)}` },
+            };
         await resend.emails.send({
           from: `Propul'Sound DJ <${from}>`,
           to: quote.customer_email,
-          subject:
-            approve
-              ? "✅ Vos options ont été validées"
-              : "❌ Demande d'options non retenue",
-          text: approve
-            ? "Bonjour,\n\nBonne nouvelle : vos modifications d'options ont été validées et appliquées à votre devis.\n\nRetrouvez le détail dans votre espace client.\n\n— Propul'Sound DJ"
-            : "Bonjour,\n\nAprès étude, nous ne pouvons pas retenir votre demande de modification d'options. N'hésitez pas à nous contacter pour en discuter.\n\n— Propul'Sound DJ",
+          subject: approve
+            ? "✅ Vos options ont été validées — Propul'Sound DJ"
+            : "❌ Demande d'options non retenue — Propul'Sound DJ",
+          html: buildEmailHtml(emailData),
+          text: buildEmailText(emailData),
         });
       }
     }
@@ -795,11 +830,31 @@ export async function signClientDocument(formData: FormData) {
       const from = process.env.NOTIF_EMAIL;
       if (apiKey && from) {
         const resend = new Resend(apiKey);
+        const { buildEmailHtml, buildEmailText, stepsSection } = await import("@/lib/emails");
+        const emailData = {
+          title: "Document signé — devis confirmé !",
+          emoji: "✅",
+          intro:
+            "Bonjour,<br/><br/>Nous avons bien reçu votre signature : vos documents sont désormais <strong style=\"color:#219653;\">validés</strong> !<br/><br/>Votre <strong>playlist est débloquée</strong> dans votre espace client — à vous de nous faire vos propositions musicales !",
+          sections: [
+            stepsSection("attente_acompte"),
+            {
+              title: "Action à faire en priorité : l'acompte (20 %)",
+              lines: [
+                "💳 Transmettez l'<strong>acompte de réservation</strong> (20 %) par virement, puis cliquez sur <strong>« ✅ J'ai envoyé l'acompte »</strong> dans votre espace : c'est <strong>ce qui verrouille définitivement votre date</strong>.",
+                "🎵 Ensuite, renseignez votre <strong>playlist</strong> (temps forts + piste de danse) — elle vous attend dans votre espace !",
+              ],
+            },
+          ],
+          button: { label: "Régler mon acompte dans mon espace", href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}#acompte`)}` },
+        };
         await resend.emails.send({
           from: `Propul'Sound DJ <${from}>`,
+          replyTo: quote.customer_email,
           to: quote.customer_email,
-          subject: "✅ Document signé — devis confirmé !",
-          text: `Bonjour,\n\nNous avons bien reçu votre signature. Votre devis est désormais confirmé !\n\nMerci de votre confiance.\n\n— Propul'Sound DJ`,
+          subject: "✅ Documents signés — votre playlist est débloquée !",
+          html: buildEmailHtml(emailData),
+          text: buildEmailText(emailData),
         });
       }
     }
@@ -1207,7 +1262,7 @@ export async function uploadAdminDocument(formData: FormData) {
   // Propriétaire du devis (pour la clé user_id).
   const { data: quote } = await supabase
     .from("quotes")
-    .select("customer_email")
+    .select("customer_email, status")
     .eq("id", quoteId)
     .single();
   const { data: owner } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
@@ -1234,11 +1289,29 @@ export async function uploadAdminDocument(formData: FormData) {
       const from = process.env.NOTIF_EMAIL;
       if (apiKey && from) {
         const resend = new Resend(apiKey);
+        const { buildEmailHtml, buildEmailText, stepsSection } = await import("@/lib/emails");
+        const emailData = {
+          title: "Un nouveau document est disponible",
+          emoji: "📄",
+          intro: `Bonjour,<br/><br/>Un nouveau document vient d'être déposé dans votre espace client :<br/><br/><strong style="color:#21619A;">« ${file.name.replace(/</g, "&lt;")} »</strong>`,
+          sections: [
+            stepsSection(quote?.status ?? "contacte"),
+            {
+              title: "Rappel",
+              lines: [
+                "Si ce document est <strong>à signer</strong>, vous pouvez le signer directement en ligne depuis votre espace.",
+              ],
+            },
+          ],
+          button: { label: "Ouvrir mon dossier client", href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}`)}` },
+        };
         await resend.emails.send({
           from: `Propul'Sound DJ <${from}>`,
+          replyTo: quote.customer_email,
           to: quote.customer_email,
-          subject: "📄 Un nouveau document est disponible",
-          text: `Bonjour,\n\nUn nouveau document (« ${file.name} ») est disponible dans votre espace client.\n\n— Propul'Sound DJ`,
+          subject: "📄 Un nouveau document est disponible — Propul'Sound DJ",
+          html: buildEmailHtml(emailData),
+          text: buildEmailText(emailData),
         });
       }
     }

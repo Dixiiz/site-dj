@@ -9,6 +9,7 @@ import {
   signClientDocument,
 } from "@/app/client-actions";
 import { AutoRefresh } from "@/components/auto-refresh";
+import { HashHighlight } from "@/components/hash-highlight";
 import { downloadQuoteFile } from "@/app/client-actions";
 import { eventMoments } from "@/components/admin-quote-playlist";
 import { DiversFiles, MomentFiles } from "@/components/client-files";
@@ -63,6 +64,7 @@ export default async function ClientQuotePage({
   return (
     <main className="space-y-10">
       <AutoRefresh />
+      <HashHighlight />
       <div className="flex flex-wrap items-center gap-4">
         {packImage ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -194,7 +196,6 @@ export default async function ClientQuotePage({
         />
       </section>
 
-      {/* Playlist */}
       {/* Documents officiels simples envoyés par Propul'Sound DJ */}
       {files.filter((f) => f.from_admin && f.doc_kind !== "a_signer").length > 0 ? (
         <section className="rounded-xl border border-accent/30 bg-accent/5 p-5">
@@ -320,7 +321,7 @@ export default async function ClientQuotePage({
           const acompte = total - solde;
           const libelle = `${quote.customer_name} — ${quote.event_date ?? ""}`;
           return (
-            <section className="rounded-xl border border-border bg-muted/50 p-5">
+            <section id="acompte" className="rounded-xl border border-border bg-muted/50 p-5">
               <h2 className="font-medium">💳 Acompte de réservation</h2>
               {quote.acompte_paid_at ? (
                 <p className="mt-2 text-sm font-medium text-green-400">
@@ -382,6 +383,7 @@ export default async function ClientQuotePage({
       ) : null}
 
       {/* Musiques + fichiers par catégorie : ouverts dès les documents signés */}
+      <div id="playlist">
       {confirmed || quote.status === "attente_acompte" ? (
         <ClientPlaylistEditor
           quoteId={id}
@@ -404,6 +406,7 @@ export default async function ClientQuotePage({
           </p>
         </section>
       )}
+      </div>
 
       {/* Fichiers sans catégorie (anciens envois) */}
       <DiversFiles quoteId={id} files={files} />

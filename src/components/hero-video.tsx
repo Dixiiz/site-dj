@@ -87,7 +87,7 @@ export function HeroVideo({ src = "/videos/hero.mp4" }: { src?: string }) {
             muted
             loop
             playsInline
-            preload="auto"
+            preload="metadata"
             style={{
               transform: "scale(1.15)",
               transitionDuration: `${FADE_MS}ms`,

@@ -37,13 +37,15 @@ function shuffleByDay<T>(items: T[]): T[] {
 }
 
 export async function Gallery() {
-  const storage = await listMedia("galerie").catch(() => []);
+  const [storage, order] = await Promise.all([
+    listMedia("galerie").catch(() => []),
+    getOrder("galerie").catch(() => [] as string[]),
+  ]);
   const local = listGalleryPhotos().filter((src) => src !== "/galerie/moi.jpg");
   const storageUrls = storage.map((f) => f.url);
   const all = [...storageUrls, ...local.filter((src) => !storageUrls.some((u) => u.endsWith(src.split("/").pop() ?? "")))]
     .filter((url) => (url.split("/").pop() ?? "") !== "moi.jpg"); // réservée à "Qui suis-je ?"
   // Ordre défini dans l'admin s'il existe, sinon mélange journalier.
-  const order = await getOrder("galerie").catch(() => [] as string[]);
   let photos: string[];
   if (order.length > 0) {
     const byName = new Map(

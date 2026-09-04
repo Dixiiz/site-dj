@@ -13,6 +13,9 @@ import { getOrder, listMedia } from "@/lib/site-media";
 import { SITE_URL } from "@/lib/site-url";
 import Link from "next/link";
 
+// La page d'accueil est régénérée au maximum toutes les 5 minutes (cache) :
+// les médias ne changent que via l'admin, pas besoin de tout requêter à chaque visite.
+export const revalidate = 300;
 
 export const metadata = {
   title: "Propul'Sound DJ — DJ & animations événementielles",
@@ -52,11 +55,18 @@ export default async function Home() {
         .sort()
         .map((f) => `/videos/showcase/${encodeURIComponent(f)}`)
     : [];
-  const storageShowcase = await listMedia("videos/showcase")
-    .then((files) => files.map((f) => f.url))
-    .catch(() => [] as string[]);
+  // Requêtes Supabase en parallèle (au lieu de séquentiel) : la page démarre
+  // bien plus vite, et la page est régénérée au max toutes les 5 min (cache).
+  const [storageShowcase, showcaseOrder, storageHero] = await Promise.all([
+    listMedia("videos/showcase")
+      .then((files) => files.map((f) => f.url))
+      .catch(() => [] as string[]),
+    getOrder("videos/showcase").catch(() => [] as string[]),
+    listMedia("videos")
+      .then((files) => files.find((f) => /^hero/i.test(f.name))?.url ?? files[0]?.url ?? null)
+      .catch(() => null),
+  ]);
   const showcaseAll = [...storageShowcase, ...localShowcase.filter((src) => !storageShowcase.some((u) => u.endsWith(src.split("/").pop() ?? "")))];
-  const showcaseOrder = await getOrder("videos/showcase").catch(() => [] as string[]);
   let showcaseVideos: string[];
   if (showcaseOrder.length > 0) {
     const byName = new Map(
@@ -70,9 +80,6 @@ export default async function Home() {
   } else {
     showcaseVideos = showcaseAll;
   }
-  const storageHero = await listMedia("videos")
-    .then((files) => files.find((f) => /^hero/i.test(f.name))?.url ?? files[0]?.url ?? null)
-    .catch(() => null);
   const heroSrc = storageHero ?? (hasHeroVideo ? "/videos/hero.mp4" : null);
 
   return (
@@ -82,10 +89,11 @@ export default async function Home() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify([
-            {
-              "@context": "https://schema.org",
-              "@type": "DJ",
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "DJ",
               name: "Propul'Sound DJ",
               description:
                 "DJ généraliste et techno pour mariages, anniversaires et soirées privées. Sonorisation, lumière et options FX incluses.",
@@ -127,7 +135,6 @@ export default async function Home() {
               ],
             },
             {
-              "@context": "https://schema.org",
               "@type": "FAQPage",
               mainEntity: [
                 {
@@ -164,7 +171,8 @@ export default async function Home() {
                 },
               ],
             },
-          ]),
+            ],
+          }),
         }}
       />
       <main className="relative">
