@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { clearAdminSession, isAdmin, setAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { estimateTravelFromAddress } from "@/lib/travel";
@@ -249,76 +250,78 @@ export async function submitQuoteAndBooking(formData: FormData) {
     return { ok: false as const, error: "Impossible d’enregistrer le devis. Réessaie dans un instant." };
   }
 
-  // E-mail de confirmation au client : « on a bien reçu votre devis ».
-  try {
-    if (customer_email) {
-      const { Resend } = await import("resend");
-      const { buildEmailHtml, buildEmailText, stepsSection } = await import("@/lib/emails");
-      const apiKey = process.env.RESEND_API_KEY;
-      const from = process.env.NOTIF_EMAIL;
-      if (apiKey && from) {
-        const dateFr = event_date
-          ? new Date(event_date).toLocaleDateString("fr-FR", {
-              weekday: "long", day: "numeric", month: "long", year: "numeric",
-            })
-          : null;
-        const emailData = {
-          title: "Nous avons bien reçu votre devis !",
-          emoji: "🎧",
-          intro: `Bonjour ${customer_name},<br/><br/>Merci pour votre confiance ! Votre demande de devis a bien été enregistrée dans notre système. Vous recevrez très rapidement une réponse de notre part — généralement sous <strong>24 à 48 h</strong>.`,
-          sections: [
-            {
-              title: "Récapitulatif de votre demande",
-              lines: [
-                `<strong>Événement :</strong> ${pack_name || formula.name}`,
-                dateFr ? `<strong>Date :</strong> ${dateFr}` : "",
-                `<strong>Horaires :</strong> ${start_time} - ${end_time}`,
-                event_location ? `<strong>Lieu :</strong> ${event_location}` : "",
-                selected.length > 0
-                  ? `<strong>Options :</strong> ${selected.map((o) => o.name).join(", ")}`
-                  : "",
-                `<strong>Total estimé :</strong> <strong>${formatPrice(total_cents)}</strong>`,
-              ].filter(Boolean),
+  // E-mails (client + admin) envoyés APRÈS la réponse au navigateur :
+  // le formulaire s'affiche immédiatement, sans attendre les envois.
+  after(async () => {
+    try {
+      if (customer_email) {
+        const { Resend } = await import("resend");
+        const { buildEmailHtml, buildEmailText, stepsSection } = await import("@/lib/emails");
+        const apiKey = process.env.RESEND_API_KEY;
+        if (apiKey) {
+          const dateFr = event_date
+            ? new Date(event_date).toLocaleDateString("fr-FR", {
+                weekday: "long", day: "numeric", month: "long", year: "numeric",
+              })
+            : null;
+          const emailData = {
+            title: "Nous avons bien reçu votre devis !",
+            emoji: "🎧",
+            intro: `Bonjour ${customer_name},<br/><br/>Merci pour votre confiance ! Votre demande de devis a bien été enregistrée dans notre système. Vous recevrez très rapidement une réponse de notre part — généralement sous <strong>24 à 48 h</strong>.`,
+            sections: [
+              {
+                title: "Récapitulatif de votre demande",
+                lines: [
+                  `<strong>Événement :</strong> ${pack_name || formula.name}`,
+                  dateFr ? `<strong>Date :</strong> ${dateFr}` : "",
+                  `<strong>Horaires :</strong> ${start_time} - ${end_time}`,
+                  event_location ? `<strong>Lieu :</strong> ${event_location}` : "",
+                  selected.length > 0
+                    ? `<strong>Options :</strong> ${selected.map((o) => o.name).join(", ")}`
+                    : "",
+                  `<strong>Total estimé :</strong> <strong>${formatPrice(total_cents)}</strong>`,
+                ].filter(Boolean),
+              },
+              stepsSection("nouveau"),
+            ],
+            button: {
+              label: "Suivre ma demande dans mon espace client",
+              href: `${SITE_URL}/connexion`,
             },
-            stepsSection("nouveau"),
-          ],
-          button: {
-            label: "Suivre ma demande dans mon espace client",
-            href: `${SITE_URL}/connexion`,
-          },
-          footer:
-            "Ce devis est une estimation : il sera confirmé après notre échange et la signature des documents.",
-        };
-        const resend = new Resend(apiKey);
-        await resend.emails.send({
-          from: EMAIL_FROM,
-          replyTo: NOTIF_EMAIL,
-          to: customer_email,
-          subject: "🎧 Nous avons bien reçu votre devis — Propul'Sound DJ",
-          html: buildEmailHtml(emailData),
-          text: buildEmailText(emailData),
-        });
+            footer:
+              "Ce devis est une estimation : il sera confirmé après notre échange et la signature des documents.",
+          };
+          const resend = new Resend(apiKey);
+          await resend.emails.send({
+            from: EMAIL_FROM,
+            replyTo: NOTIF_EMAIL,
+            to: customer_email,
+            subject: "🎧 Nous avons bien reçu votre devis — Propul'Sound DJ",
+            html: buildEmailHtml(emailData),
+            text: buildEmailText(emailData),
+          });
+        }
       }
+    } catch (err) {
+      console.error("[notif] Echec e-mail de confirmation client:", err);
     }
-  } catch (err) {
-    console.error("[notif] Echec e-mail de confirmation client:", err);
-  }
 
-  await sendQuoteNotification([
-    "Nouveau devis reçu sur le site :",
-    `Client : ${customer_name}`,
-    `E-mail : ${customer_email}`,
-    customer_phone ? `Téléphone : ${customer_phone}` : null,
-    `Pack : ${pack_name || formula.name} (${formatPrice(packPriceCents)})`,
-    `Date : ${event_date}`,
-    `Horaires : ${start_time} - ${end_time}`,
-    event_location ? `Lieu : ${event_location}` : null,
-    selected.length > 0
-      ? `Options : ${selected.map((o) => o.name).join(", ")}`
-      : "Options : aucune",
-    `Total : ${formatPrice(total_cents)}`,
-    notes ? `Message : ${notes}` : null,
-  ].filter(Boolean) as string[]);
+    await sendQuoteNotification([
+      "Nouveau devis reçu sur le site :",
+      `Client : ${customer_name}`,
+      `E-mail : ${customer_email}`,
+      customer_phone ? `Téléphone : ${customer_phone}` : null,
+      `Pack : ${pack_name || formula.name} (${formatPrice(packPriceCents)})`,
+      `Date : ${event_date}`,
+      `Horaires : ${start_time} - ${end_time}`,
+      event_location ? `Lieu : ${event_location}` : null,
+      selected.length > 0
+        ? `Options : ${selected.map((o) => o.name).join(", ")}`
+        : "Options : aucune",
+      `Total : ${formatPrice(total_cents)}`,
+      notes ? `Message : ${notes}` : null,
+    ].filter(Boolean) as string[]);
+  });
 
   redirect(`/merci?nom=${encodeURIComponent(customer_name)}`);
 }

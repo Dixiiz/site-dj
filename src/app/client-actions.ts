@@ -1183,7 +1183,25 @@ export async function declareAcompteSent(formData: FormData) {
     .eq("id", quoteId);
   if (error) return { ok: false as const, error: "Échec de la déclaration." };
 
-  // Notification admin (email/fire éventuel) : pour l'instant, log serveur.
+  // Notification e-mail à l'admin : le client dit avoir envoyé l'acompte.
+  try {
+    const { Resend } = await import("resend");
+    const apiKey = process.env.RESEND_API_KEY;
+    const to = process.env.NOTIF_EMAIL;
+    if (apiKey && to) {
+      const resend = new Resend(apiKey);
+      await resend.emails.send({
+        from: EMAIL_FROM,
+        replyTo: user.email,
+        to,
+        subject: "💳 Acompte déclaré — à vérifier sur ton compte",
+        text: `Le client ${quote.customer_email ?? user.email} déclare avoir envoyé l'acompte du devis ${quoteId}.\n\nVérifie la réception du virement sur ton compte bancaire, puis passe le devis en « Confirmé » depuis l'admin pour valider sa réservation.\n\n— Site Propul'Sound DJ`,
+      });
+    }
+  } catch (err) {
+    console.error("[acompte] Echec e-mail admin:", err);
+  }
+
   console.log(`[acompte] Le client ${user.email} a déclaré avoir envoyé l'acompte du devis ${quoteId}`);
 
   revalidatePath(`/mon-espace/devis/${quoteId}`);
