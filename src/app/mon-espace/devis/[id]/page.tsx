@@ -133,15 +133,15 @@ export default async function ClientQuotePage({
       <Tabs
         defaultValue="soiree"
         orientation="vertical"
-        className="flex-col gap-6 md:flex-row"
+        className="flex-col gap-4 md:flex-row md:gap-8 md:items-start"
       >
-        <TabsList className="w-full md:sticky md:top-20 md:w-48 md:self-start">
+        <TabsList className="flex w-full flex-col md:sticky md:top-20 md:w-44 md:self-start">
           <TabsTrigger value="soiree">Ma soirée</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="playlist">Musiques</TabsTrigger>
           <TabsTrigger value="messages">Messagerie</TabsTrigger>
         </TabsList>
-        <TabsContent value="soiree" className="space-y-6">
+        <TabsContent value="soiree" className="min-w-0 flex-1 space-y-6">
       {/* Récapitulatif */}
       <section className="rounded-xl border border-border bg-muted/50 p-5">
         <h2 className="font-medium">Récapitulatif</h2>
@@ -320,7 +320,7 @@ export default async function ClientQuotePage({
       ) : null}
 
         </TabsContent>
-        <TabsContent value="documents" className="space-y-6">
+        <TabsContent value="documents" className="min-w-0 flex-1 space-y-6">
 
       {/* Documents officiels simples envoyés par Propul'Sound DJ */}
       {files.filter((f) => f.from_admin && f.doc_kind !== "a_signer").length > 0 ? (
@@ -442,7 +442,7 @@ export default async function ClientQuotePage({
       {/* Musiques + fichiers par catégorie : ouverts dès les documents signés */}
           <DiversFiles quoteId={id} files={files} />
         </TabsContent>
-        <TabsContent value="playlist" className="space-y-6">
+        <TabsContent value="playlist" className="min-w-0 flex-1 space-y-6">
       <div id="playlist">
       {confirmed || quote.status === "attente_acompte" ? (
         <ClientPlaylistEditor
@@ -472,7 +472,7 @@ export default async function ClientQuotePage({
       {/* Messagerie */}
       {/* Messagerie — ancre pour les liens « lire le message » des e-mails */}
         </TabsContent>
-        <TabsContent value="messages" className="space-y-6">
+        <TabsContent value="messages" className="min-w-0 flex-1 space-y-6">
       <div id="messagerie">
         <ClientQuoteMessages quoteId={id} messages={messages} />
       </div>
