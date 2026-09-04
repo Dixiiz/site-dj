@@ -196,5 +196,86 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
     }
   }
 
+  // ---------- 3. Rappel J-7 avant la soirée ----------
+  const in7Days = new Date(now + 7 * 86400_000).toISOString().slice(0, 10);
+
+  const { data: upcoming } = await supabase
+    .from("quotes")
+    .select("id, customer_name, customer_email, event_date, start_time, end_time, event_location, notes")
+    .eq("status", "confirme")
+    .gte("event_date", in7Days)
+    .lte("event_date", in7Days)
+    .limit(20);
+
+  for (const q of upcoming ?? []) {
+    if ((q.notes ?? "").includes("[[rappel-j7:")) continue;
+    if (!q.customer_email) continue;
+
+    const eventFr = q.event_date
+      ? new Date(q.event_date).toLocaleDateString("fr-FR", {
+          weekday: "long", day: "numeric", month: "long", year: "numeric",
+        })
+      : "ta soirée";
+    const ok = await sendEmail(q.customer_email, "🗓️ J-7 — c'est bientôt la soirée !", {
+      title: "J-7, on arrive !",
+      emoji: "🗓️",
+      intro: `Bonjour ${q.customer_name ?? ""},<br/><br/>Plus que <strong>7 jours</strong> avant ta soirée du <strong>${eventFr}</strong> ! Voici le rappel de tous les détails pour qu'elle soit parfaite.`,
+      sections: [
+        {
+          title: "Le récap",
+          lines: [
+            q.start_time || q.end_time ? `<strong>Horaires :</strong> ${q.start_time ?? "?"} - ${q.end_time ?? "?"}` : "",
+            q.event_location ? `<strong>Lieu :</strong> ${q.event_location}` : "",
+            `<strong>Playlist :</strong> vérifie qu'elle est complète (temps forts + piste de danse)`,
+            `<strong>Une urgence le jour J ?</strong> Appelle-moi directement au <strong>06 74 85 07 69</strong>`,
+          ].filter(Boolean),
+        },
+      ],
+      button: { label: "Vérifier ma playlist", href: `${SITE}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${q.id}#playlist`)}` },
+      footer: "Hâte de mettre l'ambiance ! — Maxime, Propul'Sound DJ",
+    });
+    if (ok) {
+      await supabase
+        .from("quotes")
+        .update({ notes: addMarker(q.notes, "[[rappel-j7:") })
+        .eq("id", q.id);
+    }
+  }
+
   return { relances, avis, acomptes };
 }
+
+// ---------- Sauvegarde hebdomadaire des documents signés ----------
+// Copie les PDF signés récents vers un bucket « backups » séparé.
+export async function backupSignedDocuments(): Promise<{ copied: number }> {
+  const supabase = createAdminClient();
+  const BACKUP_BUCKET = "backups";
+  let copied = 0;
+
+  // S'assure que le bucket existe.
+  const { data: buckets } = await supabase.storage.listBuckets();
+  if (!buckets?.some((b) => b.name === BACKUP_BUCKET)) {
+    const { error } = await supabase.storage.createBucket(BACKUP_BUCKET, { public: false });
+    if (error) return { copied: 0 };
+  }
+
+  const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
+  const { data: recent } = await supabase
+    .from("quote_files")
+    .select("name, storage_path")
+    .eq("doc_kind", "a_signer")
+    .not("signed_at", "is", null)
+    .gte("signed_at", weekAgo)
+    .limit(50);
+
+  for (const f of recent ?? []) {
+    const { data: blob } = await supabase.storage.from("client-files").download(f.storage_path);
+    if (!blob) continue;
+    const { error } = await supabase.storage
+      .from(BACKUP_BUCKET)
+      .upload(`signes/${f.name}`, blob, { contentType: "application/pdf", upsert: true });
+    if (!error) copied++;
+  }
+  return { copied };
+}
+

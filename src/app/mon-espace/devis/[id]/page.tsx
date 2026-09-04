@@ -10,6 +10,7 @@ import {
 } from "@/app/client-actions";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { HashHighlight } from "@/components/hash-highlight";
+import { RdvCallSection } from "@/components/rdv-call";
 import { downloadQuoteFile } from "@/app/client-actions";
 import { eventMoments } from "@/components/admin-quote-playlist";
 import { DiversFiles, MomentFiles } from "@/components/client-files";
@@ -59,6 +60,19 @@ export default async function ClientQuotePage({
   const pendingOptions = (quote.pending_options ?? null) as SelectedOption[] | null;
   const editable = optionsEditable(quote.status) && !pendingOptions;
   const confirmed = quote.status === "confirme";
+  // Créneaux de RDV téléphonique proposés par le client.
+  // (La table rdv_requests doit exister — SQL fourni ; repli silencieux sinon.)
+  let rdvRequests: { id: string; proposed_at: string; status: string }[] = [];
+  try {
+    const { data: rdv } = await supabase
+      .from("rdv_requests")
+      .select("id, proposed_at, status")
+      .eq("quote_id", id)
+      .order("proposed_at", { ascending: true });
+    rdvRequests = (rdv ?? []) as { id: string; proposed_at: string; status: string }[];
+  } catch {
+    rdvRequests = [];
+  }
   // Le client voit son dossier : on efface le drapeau « contenu non lu ».
   // (Indispensable pour que les notifications e-mail de messagerie
   // fonctionnent à nouveau lors d'un prochain message.)
@@ -199,6 +213,24 @@ export default async function ClientQuotePage({
           notice={pendingOptions ? "pending" : editable ? "review" : undefined}
         />
       </section>
+
+      {/* Ajouter la soirée à mon calendrier (.ics universel) */}
+      {quote.event_date ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/30 bg-accent/5 p-4">
+          <p className="text-sm text-muted-foreground">
+            📅 Garde la date sous la main — rappel automatique la veille.
+          </p>
+          <a
+            href={`/api/calendar/soiree/${id}`}
+            className="rounded-lg border border-accent/50 bg-accent/10 px-4 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+          >
+            📅 Ajouter la soirée à mon calendrier
+          </a>
+        </div>
+      ) : null}
+
+      {/* RDV téléphonique : proposer des créneaux, Maxime valide */}
+      <RdvCallSection quoteId={id} requests={rdvRequests} />
 
       {/* Documents officiels simples envoyés par Propul'Sound DJ */}
       {files.filter((f) => f.from_admin && f.doc_kind !== "a_signer").length > 0 ? (

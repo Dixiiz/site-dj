@@ -1,8 +1,11 @@
-import { sendScheduledEmails } from "@/lib/email-jobs";
+import { sendScheduledEmails, backupSignedDocuments } from "@/lib/email-jobs";
 
 // Tâche planifiée (Cron Vercel, 9h chaque jour) :
 //  - relance J+10 des devis non confirmés
+//  - relance acompte J+5 après signature
+//  - rappel J-7 avant les soirées confirmées
 //  - demande d'avis après les soirées
+//  - sauvegarde des documents signés récents (bucket « backups »)
 // Protégée par CRON_SECRET si défini (Bearer token).
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -13,5 +16,6 @@ export async function GET(request: Request) {
     }
   }
   const result = await sendScheduledEmails();
-  return Response.json({ ok: true, ...result });
+  const backup = await backupSignedDocuments();
+  return Response.json({ ok: true, ...result, backup });
 }

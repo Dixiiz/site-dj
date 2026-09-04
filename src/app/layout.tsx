@@ -65,6 +65,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body className="min-h-full flex flex-col overflow-x-hidden bg-background text-foreground">
         <Providers>{children}</Providers>
+        <Analytics />
         <WhatsAppButton />
         {/* Analytics uniquement en production (warning script en dev) */}
         {process.env.NODE_ENV === "production" ? <Analytics /> : null}

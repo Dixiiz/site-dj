@@ -9,6 +9,7 @@ import { AdminQuoteDocuments } from "@/components/admin-quote-documents";
 import { AdminQuoteFiles } from "@/components/admin-quote-files";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { AdminQuotePlaylist, eventMoments } from "@/components/admin-quote-playlist";
+import { AdminRdvRequests } from "@/components/rdv-call";
 import { updateQuoteStatus } from "@/app/actions";
 
 import { QuoteStatusSelect } from "@/components/quote-status-select";
@@ -347,6 +348,7 @@ export default async function DevisPage({
                   </div>
                 ) : null}
                 <AdminQuoteDetails quote={quote} options={options} />
+                <AdminRdvRequests quoteId={quote.id} />
                 {/* Dossier complet : conversation, musiques et fichiers du client */}
                 <div className="space-y-6 border-t border-border px-4 pb-5 pt-4">
                   <AdminQuoteConversation
