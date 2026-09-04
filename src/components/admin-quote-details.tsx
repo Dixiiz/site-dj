@@ -18,6 +18,7 @@ type Quote = {
   travel_distance_km: number | null;
   travel_fee_cents: number | null;
   extra_fee_cents: number | null;
+  extra_fee_label: string | null;
   total_cents: number | null;
   created_at: string;
   status: string;
@@ -151,7 +152,10 @@ export function AdminQuoteDetails({
         ))}
         {extras > 0 ? (
           <div className="flex justify-between text-muted-foreground">
-            <span>Suppléments (heures supp, déplacement…)</span>
+            <span>
+              Suppléments
+              {quote.extra_fee_label ? ` — ${quote.extra_fee_label}` : " (heures supp, déplacement…)"}
+            </span>
             <span>{formatEuros(extras)}</span>
           </div>
         ) : null}

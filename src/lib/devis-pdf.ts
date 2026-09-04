@@ -18,6 +18,7 @@ export type DevisQuoteData = {
   selected_options?: { name: string; qty?: number | null; price_cents: number }[] | null;
   travel_fee_cents?: number | null;
   extra_fee_cents?: number | null;
+  extra_fee_label?: string | null;
   travel_distance_km?: number | null;
   extra_hours?: number | null;
   total_cents?: number | null;
@@ -192,10 +193,14 @@ export async function buildDevisPdf(
     ]);
   }
   if ((quote.extra_fee_cents ?? 0) > 0) {
+    // Libellé personnalisé (ex : « Péage ») sinon « Heures supplémentaires ».
+    const label =
+      quote.extra_fee_label?.trim() ||
+      `Heures supplémentaires${quote.extra_hours ? ` (${quote.extra_hours} h)` : ""}`;
     rows.push([
-      `Heures supplémentaires${quote.extra_hours ? ` (${quote.extra_hours} h)` : ""}`,
-      quote.extra_hours ? String(quote.extra_hours) : "",
-      fmt(quote.extra_fee_cents! / 100 / (quote.extra_hours || 1)),
+      label,
+      quote.extra_hours && !quote.extra_fee_label ? String(quote.extra_hours) : "",
+      fmt(quote.extra_fee_cents! / 100 / (quote.extra_hours && !quote.extra_fee_label ? quote.extra_hours : 1)),
       fmt(quote.extra_fee_cents! / 100),
     ]);
   }

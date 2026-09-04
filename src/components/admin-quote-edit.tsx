@@ -21,6 +21,7 @@ type Quote = {
   travel_distance_km: number | null;
   travel_fee_cents: number | null;
   extra_fee_cents: number | null;
+  extra_fee_label?: string | null;
   total_cents: number | null;
   status: string;
 };
@@ -176,11 +177,20 @@ export function AdminQuoteEdit({
           />
         </div>
         <div>
-          <label className={label}>Suppléments (heures supp…) (€)</label>
+          <label className={label}>Supplément (heures supp, péage…) (€)</label>
           <input
             name="extra_fee"
             value={extraFee}
             onChange={(e) => setExtraFee(e.target.value)}
+            className={input}
+          />
+        </div>
+        <div>
+          <label className={label}>Libellé du supplément (visible par le client)</label>
+          <input
+            name="extra_fee_label"
+            defaultValue={quote.extra_fee_label ?? ""}
+            placeholder="Ex : Péage, Heures supplémentaires…"
             className={input}
           />
         </div>

@@ -439,6 +439,8 @@ export async function updateQuoteAdmin(formData: FormData) {
       travel_distance_km: Number.parseFloat(String(formData.get("travel_distance_km") ?? "")) || null,
       travel_fee_cents: toCents(formData.get("travel_fee")),
       extra_fee_cents: toCents(formData.get("extra_fee")),
+      extra_fee_label:
+        String(formData.get("extra_fee_label") ?? "").trim() || null,
       total_cents: toCents(formData.get("total")),
       status: String(formData.get("status") ?? "nouveau"),
       selected_options: selected,
