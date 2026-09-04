@@ -163,6 +163,12 @@ export default async function ClientQuotePage({
               <span>{formatEuros(quote.travel_fee_cents)}</span>
             </div>
           ) : null}
+          {(quote.extra_fee_cents ?? 0) > 0 ? (
+            <div className="flex justify-between gap-4 text-muted-foreground">
+              <span>{quote.extra_fee_label ?? "Supplément"}</span>
+              <span>{formatEuros(quote.extra_fee_cents)}</span>
+            </div>
+          ) : null}
           <div className="flex justify-between border-t border-border pt-3 text-base font-medium">
             <span>Total</span>
             <span>{formatEuros(quote.total_cents)}</span>
