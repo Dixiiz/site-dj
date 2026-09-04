@@ -1011,6 +1011,9 @@ export async function generateDevisDocument(formData: FormData) {
   await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
   await advanceQuoteStatus(supabase, quoteId, "attente_signature");
 
+  // Prévient le client qu'un document attend sa signature.
+  void notifyClientDocument(quoteId, `Devis ${contractNumber}`, { aSigner: true });
+
   revalidatePath("/admin/devis");
   revalidatePath(`/mon-espace/devis/${quoteId}`);
   return { ok: true as const, message: "Devis PDF généré et envoyé à la signature ✓" };
@@ -1095,6 +1098,9 @@ export async function generateContratDocument(formData: FormData) {
   // Pastille nouveautés côté client.
   await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
 
+  // Prévient le client qu'un document attend sa signature.
+  void notifyClientDocument(quoteId, `Contrat ${contractNumber}`, { aSigner: true });
+
   revalidatePath("/admin/devis");
   revalidatePath(`/mon-espace/devis/${quoteId}`);
   return { ok: true as const, message: "Contrat PDF généré et envoyé à la signature ✓" };
@@ -1166,6 +1172,10 @@ export async function generateFactureDocument(formData: FormData) {
 
     revalidatePath("/admin/devis");
     revalidatePath(`/mon-espace/devis/${quoteId}`);
+
+    // Prévient le client que sa facture est disponible.
+    void notifyClientDocument(quoteId, `Facture ${invoiceNumber}`);
+
     return { ok: true as const, message: `Facture ${invoiceNumber} générée ✓` };
   } catch (e) {
     console.error("Erreur inattendue génération facture", e);
@@ -1287,6 +1297,65 @@ export async function declareAcompteSent(formData: FormData) {
 }
 
 // L'admin confirme la réception de l'acompte.
+// Notification e-mail au client : un document vient d'être déposé/généré
+// dans son espace (devis/contrat à signer, facture…).
+async function notifyClientDocument(
+  quoteId: string,
+  docName: string,
+  opts: { aSigner?: boolean } = {}
+) {
+  try {
+    const supabase = createAdminClient();
+    const { data: quote } = await supabase
+      .from("quotes")
+      .select("customer_email, customer_name, formula_name")
+      .eq("id", quoteId)
+      .single();
+    if (!quote?.customer_email) return;
+    const { Resend } = await import("resend");
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return;
+    const emailData = {
+      title: opts.aSigner ? "Un document attend votre signature" : "Un document est disponible",
+      emoji: opts.aSigner ? "✍️" : "🧾",
+      intro: `Bonjour ${quote.customer_name ?? ""},<br/><br/>Le document <strong style="color:#21619A;">« ${docName.replace(/</g, "&lt;")} »</strong> vient d'être déposé dans votre espace client${opts.aSigner ? " et <strong>attend votre signature</strong>" : ""}.`,
+      sections: opts.aSigner
+        ? [
+            {
+              title: "Rappel",
+              lines: [
+                "La signature <strong>débloque votre playlist</strong> et réserve votre date.",
+                "Signature en ligne, en 2 minutes, depuis votre espace.",
+              ],
+            },
+          ]
+        : [
+            {
+              title: "Rappel",
+              lines: ["Vous pouvez le consulter et le télécharger à tout moment depuis votre espace."],
+            },
+          ],
+      button: {
+        label: opts.aSigner ? "Signer maintenant" : "Voir le document",
+        href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}#documents`)}`,
+      },
+    };
+    const resend = new Resend(apiKey);
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      replyTo: process.env.NOTIF_EMAIL,
+      to: quote.customer_email,
+      subject: opts.aSigner
+        ? `✍️ ${docName} attend votre signature — Propul'Sound DJ`
+        : `🧾 ${docName} est disponible — Propul'Sound DJ`,
+      html: buildEmailHtml(emailData),
+      text: buildEmailText(emailData),
+    });
+  } catch (err) {
+    console.error("[documents] Echec e-mail client:", err);
+  }
+}
+
 export async function confirmAcompteReceived(formData: FormData) {
   const { isAdmin } = await import("@/lib/admin-auth");
   if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };

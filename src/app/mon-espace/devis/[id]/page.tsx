@@ -242,7 +242,7 @@ export default async function ClientQuotePage({
 
       {/* Documents à signer */}
       {files.filter((f) => f.from_admin && f.doc_kind === "a_signer").length > 0 ? (
-        <section className="rounded-xl border border-orange-500/40 bg-orange-500/[0.06] p-5">
+        <section id="documents" className="rounded-xl border border-orange-500/40 bg-orange-500/[0.06] p-5">
           <h2 className="font-medium text-orange-300">✍️ Documents à signer</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Signez pour valider — votre devis sera confirmé automatiquement.
