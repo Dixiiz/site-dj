@@ -912,8 +912,8 @@ export async function signClientDocument(formData: FormData) {
               lines: [
                 "Visez <strong>15 à 30 titres</strong> pour la piste de danse : c'est votre soirée, la playlist doit vous ressembler.",
                 "Utilisez la <strong>blacklist</strong> : le titre que vous ne supportez plus n'y échappera pas.",
-                "Le <strong>panneau « Timeline »</strong> dans votre espace : notez les horaires (cocktail, repas, dessert, ouverture de bal) — la musique se cale dessus au quart d'heure.",
-                "Prévenez-nous des <strong>moments surprises</strong> (discours, jeux, karaoké) : on met la lumière dessus, littéralement.",
+                "Le <strong>panneau « Timeline »</strong> dans votre espace : notez les horaires (cocktail, repas, dessert, ouverture de bal) et nous suivons ce déroulé à la lettre.",
+                "Prévenez-nous des <strong>moments surprises</strong> (discours, jeux, karaoké) : nous préparons l'ambiance en conséquence.",
               ],
             },
           ],
