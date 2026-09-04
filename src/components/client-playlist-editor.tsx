@@ -382,7 +382,7 @@ function SectionSearch({
                   onClick={() => playPreview(suggestion.previewUrl, suggestion.key)}
                   className="shrink-0 rounded-full border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
                 >
-                  {previewing === suggestion.key ? "■ Stop" : "▶ Écouter"}
+                  {previewing === suggestion.key ? "■ Stop" : "Écouter"}
                 </button>
               ) : null}
             </li>
@@ -474,7 +474,7 @@ function DanceSection({
   return (
     <div className="rounded-xl border border-border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-medium text-accent">🎵 Soirée / Piste de danse</h3>
+        <h3 className="font-medium text-accent">Soirée / Piste de danse</h3>
         <span className="text-xs text-muted-foreground">
           {danceTracks.length}/30 titres
         </span>
@@ -497,7 +497,7 @@ function DanceSection({
             danceKind === "souhait" ? "text-accent" : "text-muted-foreground"
           }`}
         >
-          ▶ À passer
+          À passer
         </button>
         <button
           type="button"
@@ -506,7 +506,7 @@ function DanceSection({
             danceKind === "blacklist" ? "text-red-400" : "text-red-400/60"
           }`}
         >
-          🚫 À ne PAS passer
+          À ne PAS passer
         </button>
       </div>
 

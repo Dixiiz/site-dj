@@ -42,10 +42,10 @@ export async function AdminQuoteFiles({ quoteId }: { quoteId: string }) {
             >
               <span className="shrink-0">
                 {file.mime_type?.startsWith("video")
-                  ? "🎬"
+                  ? ""
                   : file.mime_type?.startsWith("audio")
-                    ? "🎵"
-                    : "📄"}
+                    ? ""
+                    : ""}
               </span>
               <div className="min-w-0 flex-1 basis-40">
                 <p className="truncate font-medium">{file.name}</p>
@@ -58,7 +58,7 @@ export async function AdminQuoteFiles({ quoteId }: { quoteId: string }) {
                 href={`/api/files/${file.id}`}
                 className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
               >
-                ⬇ Télécharger
+                ↓ Télécharger
               </a>
             </li>
           ))}

@@ -42,9 +42,9 @@ function toMinutes(time: string) {
 }
 
 const END_TIMES = [
-  "23:00", "23:30", "00:00", "00:30", "01:00", "01:30",
-  "02:00", "02:30", "03:00", "03:30", "04:00", "04:30", "05:00",
-  "05:30", "06:00",
+ "23:00", "23:30", "00:00", "00:30", "01:00", "01:30",
+ "02:00", "02:30", "03:00", "03:30", "04:00", "04:30", "05:00",
+ "05:30", "06:00",
 ];
 
 function isMariageFormula(name: string) {
@@ -490,7 +490,7 @@ export function QuoteBookingForm({
                 </p>
               ) : endTime ? (
                 <p className="text-sm text-muted-foreground">
-                  ✅ Cette heure de fin est incluse dans le forfait.
+                  ✓ Cette heure de fin est incluse dans le forfait.
                 </p>
               ) : null}
 

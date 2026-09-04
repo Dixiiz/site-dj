@@ -25,5 +25,5 @@ export const DEVIS_TEMPLATE: DevisTemplate = {
   conditions: "Devis valable 15 jours.",
   validityDays: 15,
   signatureNote:
-    "Signature du client — approuver le document dans l'espace client",
+ "Signature du client — approuver le document dans l'espace client",
 };

@@ -20,8 +20,8 @@ async function geocodeAddress(address: string): Promise<{ lat: number; lon: numb
   try {
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "propulsounddj-site/1.0 (contact@propulsounddj.fr)",
-        "Accept-Language": "fr",
+ "User-Agent": "propulsounddj-site/1.0 (contact@propulsounddj.fr)",
+ "Accept-Language": "fr",
       },
       cache: "no-store",
     });
@@ -70,8 +70,8 @@ async function tollForRoute(
   // 2AxlesTruck, 3AxlesTruck…
   const vehicleType = process.env.TOLLGURU_VEHICLE_TYPE || "2AxlesVan";
   const headers = {
-    "x-api-key": key,
-    "Content-Type": "application/json",
+ "x-api-key": key,
+ "Content-Type": "application/json",
   };
   const parseCost = (data: unknown): number | null => {
     const d = data as {
@@ -188,7 +188,7 @@ export async function estimateTravelWithToll(
   let tollCents = geometry
     ? await tollForRoute(
         geometry,
-        "Huisseau-sur-Cosson, 41350, France",
+ "Huisseau-sur-Cosson, 41350, France",
         `${address}, France`
       )
     : null;

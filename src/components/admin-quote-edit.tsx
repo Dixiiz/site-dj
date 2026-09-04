@@ -131,7 +131,7 @@ export function AdminQuoteEdit({
   }
 
   const input =
-    "w-full rounded-lg border border-border bg-background/60 px-3 py-1.5 text-sm text-foreground outline-none focus:border-accent";
+ "w-full rounded-lg border border-border bg-background/60 px-3 py-1.5 text-sm text-foreground outline-none focus:border-accent";
   const label = "block text-xs text-muted-foreground mb-1";
 
   return (

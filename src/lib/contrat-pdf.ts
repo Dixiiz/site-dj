@@ -30,38 +30,38 @@ const ARTICLES: { titre: string; paragraphes: string[] }[] = [
   {
     titre: "Article 1 - Objet du contrat et choix du forfait",
     paragraphes: [
-      "Le client a souhaité faire appel à Propul'Sound pour l'animation musicale de leur évènement, dont la date est précisée sur le devis joint au présent contrat.",
+ "Le client a souhaité faire appel à Propul'Sound pour l'animation musicale de leur évènement, dont la date est précisée sur le devis joint au présent contrat.",
     ],
   },
   {
     titre: "Article 2 - Transport - Modalités de paiement",
     paragraphes: [
-      "1. Transport, Déplacement & Hébergement",
-      "• Les frais de déplacement non inclus dans le forfait (frais de train, avion, bateau, voiture) et d'hébergement sont à la charge du Client.",
-      "2. Modalité de paiement",
-      "• Un acompte précisé sur le devis est demandé lors de la signature du contrat, fixant ainsi définitivement la date.",
-      "• Après déduction de l'acompte, le solde restant devra être réglé au plus tard le jour du montage du matériel.",
-      "• Le montant du paiement final peut changer avant la prestation si certaines options sont souscrites. Chaque supplément fera l'objet d'une facture séparée. Toutes les options sont soumises à la disponibilité de Propul'Sound.",
+ "1. Transport, Déplacement & Hébergement",
+ "• Les frais de déplacement non inclus dans le forfait (frais de train, avion, bateau, voiture) et d'hébergement sont à la charge du Client.",
+ "2. Modalité de paiement",
+ "• Un acompte précisé sur le devis est demandé lors de la signature du contrat, fixant ainsi définitivement la date.",
+ "• Après déduction de l'acompte, le solde restant devra être réglé au plus tard le jour du montage du matériel.",
+ "• Le montant du paiement final peut changer avant la prestation si certaines options sont souscrites. Chaque supplément fera l'objet d'une facture séparée. Toutes les options sont soumises à la disponibilité de Propul'Sound.",
     ],
   },
   {
     titre: "Article 3 - Paiement et prix",
     paragraphes: [
-      "Pour réserver la prestation de DJ pour la date de son évènement, l'organisateur doit signer le présent contrat et payer l'acompte précisé sur le devis.",
-      "Les prix indiqués dans ce contrat sont garantis pour une durée de 15 jours à compter de son envoi.",
-      "L'acompte versé à la signature du contrat est le témoin d'un engagement ferme et définitif. Aucune annulation ne pourra intervenir, sauf en cas de force majeure, tel que défini ci-après.",
-      "L'acompte est un premier versement sur la prestation de services. Il implique une obligation pour Propul'Sound de fournir la prestation de services et une obligation d'achat pour le Client, sauf accord contraire entre les parties. Les deux parties sont engagées et peuvent être condamnées à payer des dommages-intérêts si l'une ou l'autre se rétracte.",
-      "Tout défaut de paiement autorisera Propul'Sound à cesser toute prestation et pourra donner lieu à des poursuites. Tout retard de paiement entraînera le paiement d'intérêts au taux minimal prévu par l'article L441-6 du Code de Commerce (intérêt légal multiplié par trois), exigibles de plein droit et sans rappel.",
+ "Pour réserver la prestation de DJ pour la date de son évènement, l'organisateur doit signer le présent contrat et payer l'acompte précisé sur le devis.",
+ "Les prix indiqués dans ce contrat sont garantis pour une durée de 15 jours à compter de son envoi.",
+ "L'acompte versé à la signature du contrat est le témoin d'un engagement ferme et définitif. Aucune annulation ne pourra intervenir, sauf en cas de force majeure, tel que défini ci-après.",
+ "L'acompte est un premier versement sur la prestation de services. Il implique une obligation pour Propul'Sound de fournir la prestation de services et une obligation d'achat pour le Client, sauf accord contraire entre les parties. Les deux parties sont engagées et peuvent être condamnées à payer des dommages-intérêts si l'une ou l'autre se rétracte.",
+ "Tout défaut de paiement autorisera Propul'Sound à cesser toute prestation et pourra donner lieu à des poursuites. Tout retard de paiement entraînera le paiement d'intérêts au taux minimal prévu par l'article L441-6 du Code de Commerce (intérêt légal multiplié par trois), exigibles de plein droit et sans rappel.",
     ],
   },
   {
     titre: "Article 4 - Obligations",
     paragraphes: [
-      "Le client s'engage à fournir l'emplacement nécessaire à l'installation du matériel de sonorisation et éclairages, une puissance électrique suffisante à proximité du matériel (prises de courant 220 V, 16/20 ampères - 4 prises disponibles à moins de 10 mètres de la disco-mobile).",
-      "Le Client s'engage à laisser l'accès libre au DJ 2 heures à l'avance pour l'installation du matériel et les réglages, ainsi qu'une place de parking à proximité de la manifestation.",
-      "Le Client est responsable de tout le matériel (sonorisation, éclairages, platines, ordinateurs) entreposé dans les locaux mis à disposition par Propul'Sound, et prendra toutes mesures nécessaires à la sécurité de la disco-mobile dès son arrivée et jusqu'à son départ. Pour cela, il est obligatoire d'avoir souscrit, auprès d'une compagnie d'assurance, un contrat de responsabilité civile.",
-      "Le Client doit prévoir, pour le DJ, un repas pendant la manifestation.",
-      "En aucun cas, le DJ et son matériel ne seront soumis aux intempéries : froid, chaleur, pluie, neige, grêle ou autres. Propul'Sound s'engage à fournir une animation de soirée conforme à la demande du Client.",
+ "Le client s'engage à fournir l'emplacement nécessaire à l'installation du matériel de sonorisation et éclairages, une puissance électrique suffisante à proximité du matériel (prises de courant 220 V, 16/20 ampères - 4 prises disponibles à moins de 10 mètres de la disco-mobile).",
+ "Le Client s'engage à laisser l'accès libre au DJ 2 heures à l'avance pour l'installation du matériel et les réglages, ainsi qu'une place de parking à proximité de la manifestation.",
+ "Le Client est responsable de tout le matériel (sonorisation, éclairages, platines, ordinateurs) entreposé dans les locaux mis à disposition par Propul'Sound, et prendra toutes mesures nécessaires à la sécurité de la disco-mobile dès son arrivée et jusqu'à son départ. Pour cela, il est obligatoire d'avoir souscrit, auprès d'une compagnie d'assurance, un contrat de responsabilité civile.",
+ "Le Client doit prévoir, pour le DJ, un repas pendant la manifestation.",
+ "En aucun cas, le DJ et son matériel ne seront soumis aux intempéries : froid, chaleur, pluie, neige, grêle ou autres. Propul'Sound s'engage à fournir une animation de soirée conforme à la demande du Client.",
     ],
   },
 ];
@@ -69,39 +69,39 @@ const ARTICLES_2: { titre: string; paragraphes: string[] }[] = [
   {
     titre: "Article 5 - Responsabilités",
     paragraphes: [
-      "Le Client est seul responsable de la soirée. Il se charge de toutes les déclarations et demandes d'autorisations administratives en temps opportun. (SACEM et SPRE si évènement public)",
-      "Le Client assume l'entière responsabilité du comportement et des actes de ses invités. Il sera responsable de tous les dégâts qui pourraient être causés au matériel et/ou au prestataire par les invités.",
-      "Dans le cas où le lieu choisi par le Client ne serait pas équipé de limiteur de pression acoustique, Propul'Sound n'est pas tenu responsable en cas d'acouphènes ou de nuisances auditives que le Client et/ou ses convives pourraient subir. De même, en cas de nuisances sonores auprès du voisinage, et sans que le Client puisse prétendre à un remboursement de la prestation, le prestataire n'est pas responsable en cas de coupure du son par les pouvoirs publics. Tout dégât électrique dû à une non-conformité du réseau électrique de la salle ou du lieu de la prestation entraînera la responsabilité du Client et celui-ci devra participer aux réparations du matériel.",
-      "En cas de litige mettant en cause notre responsabilité, notre assurance professionnelle prendra en charge le dossier.",
-      "En cas de dégradation du matériel par une tierce personne, les frais de remise en état seront à la charge de cette dernière ; il en va de même pour les frais de location engagés jusqu'à réception du matériel réparé, afin de ne pas compromettre les engagements à venir. Si le matériel n'est pas réparable, le responsable des dégâts sera facturé du prix du matériel neuf suivant les tarifs en cours.",
-      "La responsabilité de Propul'Sound ne pourra être mise en cause qu'en cas de manquement à son obligation de moyens. En outre, le Client ne pourra pas l'invoquer dans les cas suivants :",
-      "• S'il a omis de remettre à Propul'Sound un document ou une information nécessaire pour la mission.",
-      "• En cas de force majeure ou d'autres causes indépendantes de la volonté du DJ.",
-      "• En cas de dysfonctionnement du matériel.",
-      "• Le prestataire ne saurait être engagé suite au non ou mauvais fonctionnement de ses appareils installés, lié à une installation électrique défectueuse ou un manque de puissance électrique du site de réception.",
+ "Le Client est seul responsable de la soirée. Il se charge de toutes les déclarations et demandes d'autorisations administratives en temps opportun. (SACEM et SPRE si évènement public)",
+ "Le Client assume l'entière responsabilité du comportement et des actes de ses invités. Il sera responsable de tous les dégâts qui pourraient être causés au matériel et/ou au prestataire par les invités.",
+ "Dans le cas où le lieu choisi par le Client ne serait pas équipé de limiteur de pression acoustique, Propul'Sound n'est pas tenu responsable en cas d'acouphènes ou de nuisances auditives que le Client et/ou ses convives pourraient subir. De même, en cas de nuisances sonores auprès du voisinage, et sans que le Client puisse prétendre à un remboursement de la prestation, le prestataire n'est pas responsable en cas de coupure du son par les pouvoirs publics. Tout dégât électrique dû à une non-conformité du réseau électrique de la salle ou du lieu de la prestation entraînera la responsabilité du Client et celui-ci devra participer aux réparations du matériel.",
+ "En cas de litige mettant en cause notre responsabilité, notre assurance professionnelle prendra en charge le dossier.",
+ "En cas de dégradation du matériel par une tierce personne, les frais de remise en état seront à la charge de cette dernière ; il en va de même pour les frais de location engagés jusqu'à réception du matériel réparé, afin de ne pas compromettre les engagements à venir. Si le matériel n'est pas réparable, le responsable des dégâts sera facturé du prix du matériel neuf suivant les tarifs en cours.",
+ "La responsabilité de Propul'Sound ne pourra être mise en cause qu'en cas de manquement à son obligation de moyens. En outre, le Client ne pourra pas l'invoquer dans les cas suivants :",
+ "• S'il a omis de remettre à Propul'Sound un document ou une information nécessaire pour la mission.",
+ "• En cas de force majeure ou d'autres causes indépendantes de la volonté du DJ.",
+ "• En cas de dysfonctionnement du matériel.",
+ "• Le prestataire ne saurait être engagé suite au non ou mauvais fonctionnement de ses appareils installés, lié à une installation électrique défectueuse ou un manque de puissance électrique du site de réception.",
     ],
   },
   {
     titre: "Article 6 - Validation du contrat",
     paragraphes: [
-      "Le contrat sera validé pour la prestation réservée à la date indiquée sur celui-ci, lorsque le contrat sera retourné, signé par les deux parties avec un acompte par chèque, virement bancaire ou espèce selon le montant précisé sur le devis associé à l'évènement.",
-      "La loi autorise le Client à se rétracter pendant 14 jours à compter de la signature (Art. L121-29 du Code de la Consommation). En cas de rétractation dans le délai légal, l'acompte sera intégralement restitué.",
+ "Le contrat sera validé pour la prestation réservée à la date indiquée sur celui-ci, lorsque le contrat sera retourné, signé par les deux parties avec un acompte par chèque, virement bancaire ou espèce selon le montant précisé sur le devis associé à l'évènement.",
+ "La loi autorise le Client à se rétracter pendant 14 jours à compter de la signature (Art. L121-29 du Code de la Consommation). En cas de rétractation dans le délai légal, l'acompte sera intégralement restitué.",
     ],
   },
   {
     titre: "Article 7 - Annulation du contrat & Changement de date - Cas de force majeure",
     paragraphes: [
-      "Aucune annulation ne pourra intervenir du fait de Propul'Sound, excepté les cas de force majeure dûment justifiés.",
-      "En cas de force majeure, Propul'Sound s'engage à prendre contact avec un autre DJ partenaire pour réaliser la prestation. Cependant, il peut être difficile de trouver, à qualité égale et dans un délai parfois court, un DJ professionnel de remplacement au même tarif et au même niveau de qualité. En cas d'impossibilité de trouver une alternative, et sous réserve de démontrer le cas de force majeure qui empêche l'exécution de sa prestation, aucune indemnisation ne pourra être réclamée à Propul'Sound.",
-      "Tout changement de date de la prestation fait office d'annulation. Si le DJ est disponible pour la nouvelle date fixée, il proposera un nouveau contrat. Le prestataire ne pourra pas être tenu pour responsable s'il se trouve dans l'impossibilité d'assurer la prestation à la date finalement fixée. Si l'annulation est due à un cas de force majeure dûment démontré par le Client, l'acompte et les éventuelles pénalités prévues seront restitués au Client.",
-      "Ne sont considérés comme « cas de force majeure » que les événements extérieurs, indépendants de la volonté de Propul'Sound et du Client, imprévisibles et insurmontables rendant impossible l'exécution des obligations. La partie qui invoque un cas de force majeure devra en rapporter la preuve.",
+ "Aucune annulation ne pourra intervenir du fait de Propul'Sound, excepté les cas de force majeure dûment justifiés.",
+ "En cas de force majeure, Propul'Sound s'engage à prendre contact avec un autre DJ partenaire pour réaliser la prestation. Cependant, il peut être difficile de trouver, à qualité égale et dans un délai parfois court, un DJ professionnel de remplacement au même tarif et au même niveau de qualité. En cas d'impossibilité de trouver une alternative, et sous réserve de démontrer le cas de force majeure qui empêche l'exécution de sa prestation, aucune indemnisation ne pourra être réclamée à Propul'Sound.",
+ "Tout changement de date de la prestation fait office d'annulation. Si le DJ est disponible pour la nouvelle date fixée, il proposera un nouveau contrat. Le prestataire ne pourra pas être tenu pour responsable s'il se trouve dans l'impossibilité d'assurer la prestation à la date finalement fixée. Si l'annulation est due à un cas de force majeure dûment démontré par le Client, l'acompte et les éventuelles pénalités prévues seront restitués au Client.",
+ "Ne sont considérés comme « cas de force majeure » que les événements extérieurs, indépendants de la volonté de Propul'Sound et du Client, imprévisibles et insurmontables rendant impossible l'exécution des obligations. La partie qui invoque un cas de force majeure devra en rapporter la preuve.",
     ],
   },
   {
     titre: "Article 8 - La SACEM",
     paragraphes: [
-      "La SACEM est à charge du Client qui organise l'événement.",
-      "Dans le cas d'une manifestation familiale - privée - (Mariage, Anniversaire, Baptême…), la prestation est exonérée des droits de SACEM.",
+ "La SACEM est à charge du Client qui organise l'événement.",
+ "Dans le cas d'une manifestation familiale - privée - (Mariage, Anniversaire, Baptême…), la prestation est exonérée des droits de SACEM.",
     ],
   },
 ];
@@ -109,21 +109,21 @@ const ARTICLES_3: { titre: string; paragraphes: string[] }[] = [
   {
     titre: "Article 9 - Dispositions diverses",
     paragraphes: [
-      "• Le DJ n'ouvre ni ne ferme les lieux de réception.",
-      "• Les jeux, même définis, peuvent être modifiés ou enlevés par l'animateur selon l'ambiance de la soirée.",
-      "• Le Client s'engage à informer le DJ de la présence de caméras et/ou de photographes professionnels durant la prestation. Propul'Sound décline toute responsabilité en cas de mauvaise qualité des photos ou vidéos réalisées par des professionnels en raison de l'éclairage ou des effets spéciaux utilisés.",
+ "• Le DJ n'ouvre ni ne ferme les lieux de réception.",
+ "• Les jeux, même définis, peuvent être modifiés ou enlevés par l'animateur selon l'ambiance de la soirée.",
+ "• Le Client s'engage à informer le DJ de la présence de caméras et/ou de photographes professionnels durant la prestation. Propul'Sound décline toute responsabilité en cas de mauvaise qualité des photos ou vidéos réalisées par des professionnels en raison de l'éclairage ou des effets spéciaux utilisés.",
     ],
   },
   {
     titre: "Article 10 - Rupture du contrat",
     paragraphes: [
-      "Le DJ pourra quitter les lieux de la prestation sans qu'il ne soit question de remboursement d'aucune sorte et le Client lui restera redevable des sommes éventuellement dues dans les cas suivants :",
-      "• En cas de mauvais traitements, insultes, ou comportement anormal de la part du Client, de ses représentants ou invités.",
-      "• En cas de dégradation volontaire du matériel fourni par le prestataire.",
-      "• En cas de mise en péril de l'intégrité physique et/ou morale du prestataire.",
-      "• En cas de mise en péril de l'intégrité du matériel.",
-      "• En cas de non-respect par le Client des clauses du présent contrat.",
-      "En cas de litige, les deux parties se soumettront à la juridiction des tribunaux compétents du lieu de conclusion du contrat.",
+ "Le DJ pourra quitter les lieux de la prestation sans qu'il ne soit question de remboursement d'aucune sorte et le Client lui restera redevable des sommes éventuellement dues dans les cas suivants :",
+ "• En cas de mauvais traitements, insultes, ou comportement anormal de la part du Client, de ses représentants ou invités.",
+ "• En cas de dégradation volontaire du matériel fourni par le prestataire.",
+ "• En cas de mise en péril de l'intégrité physique et/ou morale du prestataire.",
+ "• En cas de mise en péril de l'intégrité du matériel.",
+ "• En cas de non-respect par le Client des clauses du présent contrat.",
+ "En cas de litige, les deux parties se soumettront à la juridiction des tribunaux compétents du lieu de conclusion du contrat.",
     ],
   },
 ];
@@ -131,17 +131,17 @@ const ARTICLES_4: { titre: string; paragraphes: string[] }[] = [
   {
     titre: "Article 11 - Droit à l'image",
     paragraphes: [
-      "• Consentement : Le Client consent à ce que le DJ puisse prendre des photographies et des vidéos de l'événement pour des fins promotionnelles, y compris mais sans s'y limiter, l'utilisation sur le site internet, les réseaux sociaux et le matériel publicitaire Propul'Sound.",
-      "• Droits des Invités : Le Client est responsable d'informer ses invités de la présence de caméras et/ou de photographes professionnels pendant l'événement et d'obtenir leur consentement à être photographiés ou filmés.",
-      "• Utilisation des Images : Les photographies et les vidéos prises par le prestataire ne seront utilisées qu'à des fins promotionnelles et commerciales et ne seront pas vendues à des tiers sans le consentement du Client.",
-      "• Opposition : Si le Client ou un invité ne souhaite pas apparaître sur les photographies ou les vidéos, il est de la responsabilité du Client d'informer le prestataire par écrit avant l'événement.",
-      "• Durée et Révocation : Le consentement donné pour l'utilisation des images est valable pour une durée de cinq ans à compter de la date de l'événement. Le Client peut révoquer ce consentement à tout moment par écrit, auquel cas le prestataire s'engage à cesser l'utilisation des images concernées dans les meilleurs délais.",
+ "• Consentement : Le Client consent à ce que le DJ puisse prendre des photographies et des vidéos de l'événement pour des fins promotionnelles, y compris mais sans s'y limiter, l'utilisation sur le site internet, les réseaux sociaux et le matériel publicitaire Propul'Sound.",
+ "• Droits des Invités : Le Client est responsable d'informer ses invités de la présence de caméras et/ou de photographes professionnels pendant l'événement et d'obtenir leur consentement à être photographiés ou filmés.",
+ "• Utilisation des Images : Les photographies et les vidéos prises par le prestataire ne seront utilisées qu'à des fins promotionnelles et commerciales et ne seront pas vendues à des tiers sans le consentement du Client.",
+ "• Opposition : Si le Client ou un invité ne souhaite pas apparaître sur les photographies ou les vidéos, il est de la responsabilité du Client d'informer le prestataire par écrit avant l'événement.",
+ "• Durée et Révocation : Le consentement donné pour l'utilisation des images est valable pour une durée de cinq ans à compter de la date de l'événement. Le Client peut révoquer ce consentement à tout moment par écrit, auquel cas le prestataire s'engage à cesser l'utilisation des images concernées dans les meilleurs délais.",
     ],
   },
   {
     titre: "Article 12 - Confidentialité",
     paragraphes: [
-      "Les informations échangées entre les parties dans le cadre de ce contrat sont strictement confidentielles. Aucune des parties ne divulguera ces informations à des tiers sans le consentement écrit préalable de l'autre partie, sauf si la loi l'exige.",
+ "Les informations échangées entre les parties dans le cadre de ce contrat sont strictement confidentielles. Aucune des parties ne divulguera ces informations à des tiers sans le consentement écrit préalable de l'autre partie, sauf si la loi l'exige.",
     ],
   },
 ];
@@ -227,10 +227,10 @@ export async function buildContratPdf(
   t("Propul'Sound DJ", M, H - 30, 13, b, C.texte);
   let ey = H - 48;
   for (const l of [
-    "5 Clos de la Salamandre",
-    "41350 Huisseau-sur-Cosson",
-    "06 74 85 07 69  ·  propulsounddj@gmail.com",
-    "SIRET : 93222079100010",
+ "5 Clos de la Salamandre",
+ "41350 Huisseau-sur-Cosson",
+ "06 74 85 07 69  ·  propulsounddj@gmail.com",
+ "SIRET : 93222079100010",
   ]) {
     t(l, M, ey, 8.5, r, C.gris);
     ey -= 13;

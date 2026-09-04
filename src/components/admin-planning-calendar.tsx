@@ -4,8 +4,8 @@ import { useState, useTransition } from "react";
 import { toggleBlockedDate } from "@/app/actions";
 
 const MONTHS = [
-  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
+ "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+ "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
 ];
 const DAYS = ["L", "M", "M", "J", "V", "S", "D"];
 

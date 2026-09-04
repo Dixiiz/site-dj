@@ -111,7 +111,7 @@ export default async function AdminMessagesPage() {
                 {/* Musiques + fichiers du dossier — partagés avec le client */}
                 <details className="mt-4 rounded-lg border border-border p-3">
                   <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
-                    🎵 Musiques &amp; fichiers du dossier
+                    Musiques &amp; fichiers du dossier
                   </summary>
                   <AdminQuotePlaylist
                     quoteId={quoteId}

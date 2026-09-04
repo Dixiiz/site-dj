@@ -72,8 +72,8 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
         {
           title: "Important",
           lines: [
-            "La <strong>date peut partir à tout moment</strong> pour quelqu'un d'autre : elle n'est réservée qu'à la <strong>signature des documents</strong>.",
-            "Besoin d'un peu plus de temps ? <strong>Cliquez sur le bouton ci-dessous</strong> : un e-mail pré-rempli s'ouvre, vous n'avez qu'à l'envoyer.",
+ "La <strong>date peut partir à tout moment</strong> pour quelqu'un d'autre : elle n'est réservée qu'à la <strong>signature des documents</strong>.",
+ "Besoin d'un peu plus de temps ? <strong>Cliquez sur le bouton ci-dessous</strong> : un e-mail pré-rempli s'ouvre, vous n'avez qu'à l'envoyer.",
           ],
         },
         stepsSection(q.status ?? "contacte"),
@@ -124,17 +124,17 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
         })
       : null;
 
-    const ok = await sendEmail(q.customer_email, "💳 Dernière étape : l'acompte de réservation", {
+    const ok = await sendEmail(q.customer_email, "Dernière étape : l'acompte de réservation", {
       title: "Il ne manque plus que l'acompte !",
-      emoji: "💳",
+      emoji: "",
       intro: `Bonjour ${q.customer_name ?? ""},<br/><br/>Vos documents sont signés${eventFr ? ` pour le <strong>${eventFr}</strong>` : ""}, il ne reste qu'<strong>une seule chose</strong> à faire : l'<strong>acompte de réservation (20 %)</strong>.<br/><br/>C'est lui qui <strong>verrouille définitivement votre date</strong> : tant qu'il n'est pas reçu, la soirée peut malheureusement être <strong>attribuée à quelqu'un d'autre</strong>.`,
       sections: [
         {
           title: "Comment faire (2 minutes)",
           lines: [
-            "1. Connectez-vous à votre <strong>espace client</strong>",
-            "2. Cliquez sur le bouton <strong style=\"color:#219653;\">« ✅ J'ai envoyé l'acompte »</strong> (l'IBAN pour le virement y est indiqué)",
-            "3. C'est tout : votre date est <strong>bloquée pour vous</strong> !",
+ "1. Connectez-vous à votre <strong>espace client</strong>",
+ "2. Cliquez sur le bouton <strong style=\"color:#219653;\">« ✓ J'ai envoyé l'acompte »</strong> (l'IBAN pour le virement y est indiqué)",
+ "3. C'est tout : votre date est <strong>bloquée pour vous</strong> !",
           ],
         },
         stepsSection("attente_acompte"),
@@ -170,17 +170,17 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
     const eventFr = q.event_date
       ? new Date(q.event_date).toLocaleDateString("fr-FR")
       : null;
-    const ok = await sendEmail(q.customer_email, "🌟 Merci pour cette soirée ! Votre avis compte énormément", {
+    const ok = await sendEmail(q.customer_email, "Merci pour cette soirée ! Votre avis compte énormément", {
       title: "Merci pour cette soirée !",
-      emoji: "🌟",
+      emoji: "",
       intro: `Bonjour ${q.customer_name ?? ""},<br/><br/>J'espère que cette soirée${eventFr ? ` du <strong>${eventFr}</strong>` : ""} restera un beau souvenir !<br/><br/>Ce fut un plaisir d'animer votre événement. <strong>Votre avis compte énormément</strong> pour un DJ indépendant comme moi : c'est ce qui permet aux futurs mariés et organisateurs de me faire confiance.`,
       sections: [
         {
           title: "2 minutes pour m'aider",
           lines: [
-            `⭐ <a href="https://g.page/r/CYgCQMSAgDcWEAE/review" style="color:#21619A;"><strong>Laisser un avis Google</strong></a> — le plus utile pour me faire connaître`,
-            `⭐ <a href="https://www.mariages.net/musique-mariage/propulsound-dj--e366139" style="color:#21619A;"><strong>Laisser un avis Mariages.net</strong></a> — pour les couples en préparation`,
-            "🎬 Et si vous avez des photos ou vidéos de la piste de danse, je suis preneur !",
+            `<a href="https://g.page/r/CYgCQMSAgDcWEAE/review" style="color:#21619A;"><strong>Laisser un avis Google</strong></a> — le plus utile pour me faire connaître`,
+            `<a href="https://www.mariages.net/musique-mariage/propulsound-dj--e366139" style="color:#21619A;"><strong>Laisser un avis Mariages.net</strong></a> — pour les couples en préparation`,
+ "Et si vous avez des photos ou vidéos de la piste de danse, je suis preneur !",
           ],
         },
       ],
@@ -216,9 +216,9 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
           weekday: "long", day: "numeric", month: "long", year: "numeric",
         })
       : "ta soirée";
-    const ok = await sendEmail(q.customer_email, "🗓️ J-7 — c'est bientôt la soirée !", {
+    const ok = await sendEmail(q.customer_email, "J-7 — c'est bientôt la soirée !", {
       title: "J-7, on arrive !",
-      emoji: "🗓️",
+      emoji: "",
       intro: `Bonjour ${q.customer_name ?? ""},<br/><br/>Plus que <strong>7 jours</strong> avant ta soirée du <strong>${eventFr}</strong> ! Voici le rappel de tous les détails pour qu'elle soit parfaite.`,
       sections: [
         {

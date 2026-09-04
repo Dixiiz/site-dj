@@ -106,7 +106,7 @@ export default async function ClientQuotePage({
           {/* Renommage du devis */}
           <form
             action={async (formData: FormData) => {
-              "use server";
+ "use server";
               await renameClientQuote(formData);
             }}
             className="mt-2 flex max-w-md items-center gap-2"
@@ -130,12 +130,16 @@ export default async function ClientQuotePage({
         </div>
       </div>
 
-      <Tabs defaultValue="soiree" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="soiree">📅 Ma soirée</TabsTrigger>
-          <TabsTrigger value="documents">📄 Documents</TabsTrigger>
-          <TabsTrigger value="playlist">🎵 Musiques</TabsTrigger>
-          <TabsTrigger value="messages">💬 Messagerie</TabsTrigger>
+      <Tabs
+        defaultValue="soiree"
+        orientation="vertical"
+        className="flex-col gap-6 md:flex-row"
+      >
+        <TabsList className="w-full md:sticky md:top-20 md:w-48 md:self-start">
+          <TabsTrigger value="soiree">Ma soirée</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="playlist">Musiques</TabsTrigger>
+          <TabsTrigger value="messages">Messagerie</TabsTrigger>
         </TabsList>
         <TabsContent value="soiree" className="space-y-6">
       {/* Récapitulatif */}
@@ -233,13 +237,13 @@ export default async function ClientQuotePage({
       {quote.event_date ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/30 bg-accent/5 p-4">
           <p className="text-sm text-muted-foreground">
-            📅 Garde la date sous la main — rappel automatique la veille.
+            Garde la date sous la main — rappel automatique la veille.
           </p>
           <a
             href={`/api/calendar/soiree/${id}`}
             className="rounded-lg border border-accent/50 bg-accent/10 px-4 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
           >
-            📅 Ajouter la soirée à mon calendrier
+            Ajouter la soirée à mon calendrier
           </a>
         </div>
       ) : null}
@@ -255,7 +259,7 @@ export default async function ClientQuotePage({
           const libelle = `${quote.customer_name} — ${quote.event_date ?? ""}`;
           return (
             <section id="acompte" className="rounded-xl border border-border bg-muted/50 p-5">
-              <h2 className="font-medium">💳 Acompte de réservation</h2>
+              <h2 className="font-medium">Acompte de réservation</h2>
               {quote.acompte_paid_at ? (
                 <p className="mt-2 text-sm font-medium text-green-400">
                   ✓ Acompte reçu, merci ! Votre réservation est entièrement validée.
@@ -295,7 +299,7 @@ export default async function ClientQuotePage({
                   </div>
                   <form
                     action={async (formData: FormData) => {
-                      "use server";
+ "use server";
                       await declareAcompteSent(formData);
                     }}
                     className="mt-3"
@@ -305,7 +309,7 @@ export default async function ClientQuotePage({
                       pendingLabel="Envoi de la confirmation…"
                       className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
                     >
-                      ✅ J&apos;ai envoyé l&apos;acompte
+                      ✓ J&apos;ai envoyé l&apos;acompte
                     </SubmitButton>
                   </form>
                 </>
@@ -321,7 +325,7 @@ export default async function ClientQuotePage({
       {/* Documents officiels simples envoyés par Propul'Sound DJ */}
       {files.filter((f) => f.from_admin && f.doc_kind !== "a_signer").length > 0 ? (
         <section className="rounded-xl border border-accent/30 bg-accent/5 p-5">
-          <h2 className="font-medium">📄 Documents officiels</h2>
+          <h2 className="font-medium">Documents officiels</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Contrat, devis signé et documents importants de votre événement.
           </p>
@@ -334,7 +338,7 @@ export default async function ClientQuotePage({
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
                 >
                   <div className="min-w-0">
-                    <p className="truncate font-medium">📄 {file.name}</p>
+                    <p className="truncate font-medium">{file.name}</p>
                     {file.signed_name ? (
                       <p className="text-xs text-green-400">
                         ✓ Signé par {file.signed_name} le{" "}
@@ -361,7 +365,7 @@ export default async function ClientQuotePage({
       {/* Documents à signer */}
       {files.filter((f) => f.from_admin && f.doc_kind === "a_signer").length > 0 ? (
         <section id="documents" className="rounded-xl border border-orange-500/40 bg-orange-500/[0.06] p-5">
-          <h2 className="font-medium text-orange-300">✍️ Documents à signer</h2>
+          <h2 className="font-medium text-orange-300">Documents à signer</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Signez pour valider — votre devis sera confirmé automatiquement.
           </p>
@@ -374,7 +378,7 @@ export default async function ClientQuotePage({
                   className="rounded-lg border border-border px-3 py-2.5 text-sm"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="min-w-0 truncate font-medium">📄 {file.name}</span>
+                    <span className="min-w-0 truncate font-medium">{file.name}</span>
                     <a
                       href={`/api/files/${file.id}`}
                       className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
@@ -394,7 +398,7 @@ export default async function ClientQuotePage({
                     confirmed ? (
                     <form
                       action={async (formData: FormData) => {
-                        "use server";
+ "use server";
                         await signClientDocument(formData);
                       }}
                       className="mt-2"
@@ -421,7 +425,7 @@ export default async function ClientQuotePage({
                         pendingLabel="Signature en cours…"
                         className="mt-2 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-500"
                       >
-                        ✍️ Signer le document
+                        Signer le document
                       </SubmitButton>
                     </form>
                   ) : (
@@ -449,7 +453,7 @@ export default async function ClientQuotePage({
         />
       ) : (
         <section className="rounded-xl border border-border bg-muted/50 p-5 text-center">
-          <h2 className="font-medium">🎵 Musiques &amp; fichiers</h2>
+          <h2 className="font-medium">Musiques &amp; fichiers</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
             Cette section s&apos;ouvrira dès que vos documents (devis et contrat)
             seront <span className="font-medium text-green-400">signés</span> :

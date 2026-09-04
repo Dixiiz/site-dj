@@ -23,11 +23,11 @@ type FileRow = {
 const DANCE = "Soirée / Piste de danse";
 // Temps forts par défaut (mariage) ; la liste réelle est passée en prop.
 const DEFAULT_MOMENTS = [
-  "Cérémonie laïque",
-  "Entrée des mariés",
-  "Cocktail / Vin d'honneur",
-  "Repas",
-  "Ouverture de bal",
+ "Cérémonie laïque",
+ "Entrée des mariés",
+ "Cocktail / Vin d'honneur",
+ "Repas",
+ "Ouverture de bal",
 ];
 
 function sizeLabel(bytes: number | null) {
@@ -37,9 +37,9 @@ function sizeLabel(bytes: number | null) {
 }
 
 function fileIcon(mime: string | null) {
-  if (mime?.startsWith("video")) return "🎬";
-  if (mime?.startsWith("audio")) return "🎵";
-  return "📄";
+  if (mime?.startsWith("video")) return "";
+  if (mime?.startsWith("audio")) return "";
+  return "";
 }
 
 function trackRow(track: Track) {
@@ -88,7 +88,7 @@ function fileRow(quoteId: string, file: FileRow) {
         href={`/api/files/${file.id}`}
         className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
       >
-        ⬇
+        ↓
       </a>
     </li>
   );
@@ -98,11 +98,11 @@ function fileRow(quoteId: string, file: FileRow) {
 export function eventMoments(formulaName: string | null | undefined): string[] {
   return /mariage|essential|deluxe|ultime/i.test(formulaName ?? "")
     ? [
-        "Cérémonie laïque",
-        "Cocktail / Vin d'honneur",
-        "Entrée des mariés",
-        "Dessert",
-        "Ouverture de bal",
+ "Cérémonie laïque",
+ "Cocktail / Vin d'honneur",
+ "Entrée des mariés",
+ "Dessert",
+ "Ouverture de bal",
       ]
     : ["Entrée en salle", "Animation", "Dessert"];
 }
@@ -144,12 +144,12 @@ export async function AdminQuotePlaylist({
       {/* Gauche : soirée / danse + blacklist */}
       <div className="rounded-xl border border-border p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-medium text-accent">🎵 Soirée / Piste de danse</h3>
+          <h3 className="font-medium text-accent">Soirée / Piste de danse</h3>
           <span className="text-xs text-muted-foreground">{dance.length}/30 titres</span>
         </div>
 
         <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-accent">
-          ▶ À passer ({dance.length})
+          À passer ({dance.length})
         </p>
         {dance.length > 0 ? (
           <ul className="mt-2 space-y-2">{dance.map(trackRow)}</ul>
@@ -158,7 +158,7 @@ export async function AdminQuotePlaylist({
         )}
 
         <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-red-400">
-          🚫 À ne PAS passer ({danceBlacklist.length})
+          À ne PAS passer ({danceBlacklist.length})
         </p>
         {danceBlacklist.length > 0 ? (
           <ul className="mt-2 space-y-2">{danceBlacklist.map(trackRow)}</ul>

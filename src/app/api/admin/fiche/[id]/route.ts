@@ -58,9 +58,9 @@ export async function GET(
 
   return new NextResponse(Buffer.from(bytes), {
     headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${encodeURIComponent(name)}"`,
-      "Cache-Control": "no-store",
+ "Content-Type": "application/pdf",
+ "Content-Disposition": `attachment; filename="${encodeURIComponent(name)}"`,
+ "Cache-Control": "no-store",
     },
   });
 }

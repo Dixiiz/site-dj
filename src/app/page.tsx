@@ -20,29 +20,29 @@ export const revalidate = 300;
 export const metadata = {
   title: "Propul'Sound DJ — DJ & animations événementielles",
   description:
-    "DJ professionnel basé à Huisseau-sur-Cosson : mariages, anniversaires, soirées privées et événements d'entreprise en Loir-et-Cher et alentours.",
+ "DJ professionnel basé à Huisseau-sur-Cosson : mariages, anniversaires, soirées privées et événements d'entreprise en Loir-et-Cher et alentours.",
 };
 
 const services = [
   {
     title: "Mariages",
     description:
-      "Une ambiance sur-mesure pour le plus beau jour de votre vie : cérémonie, cocktail, dîner et piste de danse jusqu'au bout de la nuit.",
+ "Une ambiance sur-mesure pour le plus beau jour de votre vie : cérémonie, cocktail, dîner et piste de danse jusqu'au bout de la nuit.",
   },
   {
     title: "Anniversaires & soirées privées",
     description:
-      "Anniversaires, fiançailles, fêtes entre amis : une programmation musicale qui met tout le monde d'accord.",
+ "Anniversaires, fiançailles, fêtes entre amis : une programmation musicale qui met tout le monde d'accord.",
   },
   {
     title: "Événements d'entreprise",
     description:
-      "Séminaires, soirées de gala, arbres de Noël : une prestation professionnelle et adaptée à votre image.",
+ "Séminaires, soirées de gala, arbres de Noël : une prestation professionnelle et adaptée à votre image.",
   },
   {
     title: "Bars, clubs & soirées pro",
     description:
-      "Sets adaptés à votre public : électro, house, hits du moment — je m'adapte à l'ambiance de votre établissement et de votre clientèle.",
+ "Sets adaptés à votre public : électro, house, hits du moment — je m'adapte à l'ambiance de votre établissement et de votre clientèle.",
   },
 ];
 
@@ -90,19 +90,19 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@graph": [
+ "@context": "https://schema.org",
+ "@graph": [
               {
-                "@type": "DJ",
+ "@type": "DJ",
               name: "Propul'Sound DJ",
               description:
-                "DJ généraliste et techno pour mariages, anniversaires et soirées privées. Sonorisation, lumière et options FX incluses.",
+ "DJ généraliste et techno pour mariages, anniversaires et soirées privées. Sonorisation, lumière et options FX incluses.",
               url: SITE_URL,
               telephone: "+33674850769",
               email: "propulsounddj@gmail.com",
               founder: { "@type": "Person", name: "Maxime SOULAINE" },
               address: {
-                "@type": "PostalAddress",
+ "@type": "PostalAddress",
                 streetAddress: "5 Clos de la Salamandre",
                 addressLocality: "Huisseau-sur-Cosson",
                 postalCode: "41350",
@@ -123,10 +123,10 @@ export default async function Home() {
               geo: { "@type": "GeoCoordinates", latitude: 47.5667, longitude: 1.4667 },
               priceRange: "€€",
               sameAs: [
-                "https://www.instagram.com/propulsounddj/",
-                "https://linkaband.com/propulsound-dj",
-                "https://www.mariages.net/musique-mariage/propulsound-dj--e366139",
-                "https://g.page/r/CYgCQMSAgDcWEAE",
+ "https://www.instagram.com/propulsounddj/",
+ "https://linkaband.com/propulsound-dj",
+ "https://www.mariages.net/musique-mariage/propulsound-dj--e366139",
+ "https://g.page/r/CYgCQMSAgDcWEAE",
               ],
               makesOffer: [
                 { "@type": "Offer", name: "Pack Mariage", description: "Prestation DJ mariage clé en main" },
@@ -135,37 +135,37 @@ export default async function Home() {
               ],
             },
             {
-              "@type": "FAQPage",
+ "@type": "FAQPage",
               mainEntity: [
                 {
-                  "@type": "Question",
+ "@type": "Question",
                   name: "Dans quelles zones Propul'Sound DJ intervient-il ?",
                   acceptedAnswer: {
-                    "@type": "Answer",
+ "@type": "Answer",
                     text: "Basé à Huisseau-sur-Cosson (41350), Propul'Sound DJ intervient à Blois, Vendôme, Morée et dans un rayon de 50 km autour. Les 30 premiers kilomètres de déplacement sont offerts.",
                   },
                 },
                 {
-                  "@type": "Question",
+ "@type": "Question",
                   name: "Combien coûte une prestation DJ pour un mariage ?",
                   acceptedAnswer: {
-                    "@type": "Answer",
+ "@type": "Answer",
                     text: "Les tarifs dépendent de la formule, de la durée et des options. Le site propose un configurateur de devis en ligne gratuit qui calcule le prix en temps réel, acompte de réservation de 20 %, solde arrondi au multiple de 10 €.",
                   },
                 },
                 {
-                  "@type": "Question",
+ "@type": "Question",
                   name: "Comment réserver une date ?",
                   acceptedAnswer: {
-                    "@type": "Answer",
+ "@type": "Answer",
                     text: "Créez votre devis en ligne, signez le devis et le contrat électroniquement dans votre espace client, puis réglez l'acompte de réservation. La date est bloquée dès la signature des documents.",
                   },
                 },
                 {
-                  "@type": "Question",
+ "@type": "Question",
                   name: "Les options comme la machine à fumée ou les étincelles froides sont-elles disponibles ?",
                   acceptedAnswer: {
-                    "@type": "Answer",
+ "@type": "Answer",
                     text: "Oui : machine à fumée lourde, étincelles froides et pistolet à confettis CO2 sont proposées en options et peuvent être ajoutées au devis en ligne.",
                   },
                 },

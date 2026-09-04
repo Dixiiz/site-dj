@@ -104,7 +104,7 @@ export default async function MonEspacePage() {
                 {quote.status === "nouveau" ? (
                   <form
                     action={async (formData: FormData) => {
-                      "use server";
+ "use server";
                       await deleteClientQuote(formData);
                     }}
                     className="mt-1 text-right"

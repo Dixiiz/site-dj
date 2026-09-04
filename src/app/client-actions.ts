@@ -52,7 +52,7 @@ export async function signUpClient(formData: FormData) {
       ok: true as const,
       needsConfirmation: true as const,
       message:
-        "Compte créé ! Vérifiez votre boîte mail pour confirmer votre adresse, puis connectez-vous.",
+ "Compte créé ! Vérifiez votre boîte mail pour confirmer votre adresse, puis connectez-vous.",
     };
   }
 
@@ -74,7 +74,7 @@ export async function requestPasswordReset(formData: FormData) {
   return {
     ok: true as const,
     message:
-      "E-mail envoyé ! Vérifiez votre boîte mail (et vos spams) pour définir un nouveau mot de passe.",
+ "E-mail envoyé ! Vérifiez votre boîte mail (et vos spams) pour définir un nouveau mot de passe.",
   };
 }
 
@@ -147,7 +147,7 @@ export async function getMyQuotes() {
   const { data } = await supabase
     .from("quotes")
     .select(
-      "id, event_date, event_type, formula_name, total_cents, status, created_at, pending_options, client_label"
+ "id, event_date, event_type, formula_name, total_cents, status, created_at, pending_options, client_label"
     )
     .eq("customer_email", user.email)
     .order("created_at", { ascending: false });
@@ -264,7 +264,7 @@ export async function sendQuoteMessage(formData: FormData) {
       const excerpt = body.length > 400 ? `${body.slice(0, 400)}…` : body;
       const emailData = {
         title: "Nouveau message client",
-        emoji: "💬",
+        emoji: "",
         intro: `<strong>${quote.customer_name ?? user.email}</strong> t'a envoyé un message${quote.event_date ? ` (soirée du ${new Date(quote.event_date).toLocaleDateString("fr-FR")})` : ""} :`,
         sections: [
           {
@@ -280,7 +280,7 @@ export async function sendQuoteMessage(formData: FormData) {
         from: EMAIL_FROM,
         replyTo: user.email ?? undefined,
         to,
-        subject: `💬 Nouveau message client — ${quote.formula_name}`,
+        subject: `Nouveau message client — ${quote.formula_name}`,
         html: buildEmailHtml(emailData),
         text: buildEmailText(emailData),
       });
@@ -354,7 +354,7 @@ export async function sendAdminMessage(formData: FormData) {
         const excerpt = body.length > 160 ? `${body.slice(0, 160)}…` : body;
         const emailData = {
           title: "Vous avez reçu un message",
-          emoji: "💬",
+          emoji: "",
           intro: `Bonjour,<br/><br/>Maxime vous a envoyé un message concernant <strong>${quote.client_label || quote.formula_name || "votre événement"}</strong> :`,
           sections: [
             {
@@ -373,7 +373,7 @@ export async function sendAdminMessage(formData: FormData) {
           from: EMAIL_FROM,
           replyTo: process.env.NOTIF_EMAIL,
           to: customerEmail,
-          subject: "💬 Un nouveau message vous attend — Propul'Sound DJ",
+          subject: "Un nouveau message vous attend — Propul'Sound DJ",
           html: buildEmailHtml(emailData),
           text: buildEmailText(emailData),
         });
@@ -681,15 +681,15 @@ export async function resolveQuoteOptions(formData: FormData) {
         const emailData = approve
           ? {
               title: "Vos options ont été validées !",
-              emoji: "✅",
+              emoji: "✓",
               intro:
-                "Bonjour,<br/><br/>Bonne nouvelle : vos modifications d'options ont été <strong>validées</strong> et appliquées à votre devis.",
+ "Bonjour,<br/><br/>Bonne nouvelle : vos modifications d'options ont été <strong>validées</strong> et appliquées à votre devis.",
               sections: [
                 {
                   title: "Et maintenant ?",
                   lines: [
-                    "Le <strong>nouveau montant</strong> de votre devis est visible dans votre espace.",
-                    "Vous pouvez poursuivre la préparation de votre soirée normalement.",
+ "Le <strong>nouveau montant</strong> de votre devis est visible dans votre espace.",
+ "Vous pouvez poursuivre la préparation de votre soirée normalement.",
                   ],
                 },
               ],
@@ -699,12 +699,12 @@ export async function resolveQuoteOptions(formData: FormData) {
               title: "À propos de votre demande d'options",
               emoji: "❌",
               intro:
-                "Bonjour,<br/><br/>Après étude, nous ne pouvons pas retenir votre demande de modification d'options.",
+ "Bonjour,<br/><br/>Après étude, nous ne pouvons pas retenir votre demande de modification d'options.",
               sections: [
                 {
                   title: "Une question ?",
                   lines: [
-                    "N'hésitez pas à nous contacter pour en discuter : on trouvera sûrement une <strong>alternative</strong> !",
+ "N'hésitez pas à nous contacter pour en discuter : on trouvera sûrement une <strong>alternative</strong> !",
                   ],
                 },
               ],
@@ -714,7 +714,7 @@ export async function resolveQuoteOptions(formData: FormData) {
           from: EMAIL_FROM,
           to: quote.customer_email,
           subject: approve
-            ? "✅ Vos options ont été validées — Propul'Sound DJ"
+            ? "✓ Vos options ont été validées — Propul'Sound DJ"
             : "❌ Demande d'options non retenue — Propul'Sound DJ",
           html: buildEmailHtml(emailData),
           text: buildEmailText(emailData),
@@ -895,16 +895,16 @@ export async function signClientDocument(formData: FormData) {
         const { buildEmailHtml, buildEmailText, stepsSection } = await import("@/lib/emails");
         const emailData = {
           title: "Document signé — devis confirmé !",
-          emoji: "✅",
+          emoji: "✓",
           intro:
-            "Bonjour,<br/><br/>Nous avons bien reçu votre signature : vos documents sont désormais <strong style=\"color:#219653;\">validés</strong> !<br/><br/>Votre <strong>playlist est débloquée</strong> dans votre espace client — à vous de nous faire vos propositions musicales !",
+ "Bonjour,<br/><br/>Nous avons bien reçu votre signature : vos documents sont désormais <strong style=\"color:#219653;\">validés</strong> !<br/><br/>Votre <strong>playlist est débloquée</strong> dans votre espace client — à vous de nous faire vos propositions musicales !",
           sections: [
             stepsSection("attente_acompte"),
             {
               title: "Action à faire en priorité : l'acompte (20 %)",
               lines: [
-                "💳 Transmettez l'<strong>acompte de réservation</strong> (20 %) par virement, puis cliquez sur <strong>« ✅ J'ai envoyé l'acompte »</strong> dans votre espace : c'est <strong>ce qui verrouille définitivement votre date</strong>.",
-                "🎵 Ensuite, renseignez votre <strong>playlist</strong> (temps forts + piste de danse) — elle vous attend dans votre espace !",
+ "Transmettez l'<strong>acompte de réservation</strong> (20 %) par virement, puis cliquez sur <strong>« ✓ J'ai envoyé l'acompte »</strong> dans votre espace : c'est <strong>ce qui verrouille définitivement votre date</strong>.",
+ "Ensuite, renseignez votre <strong>playlist</strong> (temps forts + piste de danse) — elle vous attend dans votre espace !",
               ],
             },
           ],
@@ -914,7 +914,7 @@ export async function signClientDocument(formData: FormData) {
           from: EMAIL_FROM,
           replyTo: quote.customer_email,
           to: quote.customer_email,
-          subject: "✅ Documents signés — votre playlist est débloquée !",
+          subject: "✓ Documents signés — votre playlist est débloquée !",
           html: buildEmailHtml(emailData),
           text: buildEmailText(emailData),
         });
@@ -1312,14 +1312,14 @@ export async function declareAcompteSent(formData: FormData) {
       const resend = new Resend(apiKey);
       const emailData = {
         title: "Acompte déclaré par le client",
-        emoji: "💳",
+        emoji: "",
         intro: `<strong>${quote.customer_email ?? user.email}</strong> déclare avoir envoyé l'acompte du devis.`,
         sections: [
           {
             title: "À faire",
             lines: [
-              "1. Vérifie la <strong>réception du virement</strong> sur ton compte bancaire",
-              "2. Passe le devis en <strong>« Confirmé »</strong> depuis l'admin → sa réservation sera entièrement validée",
+ "1. Vérifie la <strong>réception du virement</strong> sur ton compte bancaire",
+ "2. Passe le devis en <strong>« Confirmé »</strong> depuis l'admin → sa réservation sera entièrement validée",
             ],
           },
         ],
@@ -1329,7 +1329,7 @@ export async function declareAcompteSent(formData: FormData) {
         from: EMAIL_FROM,
         replyTo: user.email,
         to,
-        subject: "💳 Acompte déclaré — à vérifier sur ton compte",
+        subject: "Acompte déclaré — à vérifier sur ton compte",
         html: buildEmailHtml(emailData),
         text: buildEmailText(emailData),
       });
@@ -1371,15 +1371,15 @@ async function notifyClientDocuments(
       title: opts.aSigner
         ? single ? "Un document attend votre signature" : "Des documents attendent votre signature"
         : single ? "Un document est disponible" : "Des documents sont disponibles",
-      emoji: opts.aSigner ? "✍️" : "🧾",
+      emoji: opts.aSigner ? "" : "",
       intro: `Bonjour ${quote.customer_name ?? ""},<br/><br/>${single ? "Le document" : "Les documents"} <strong style="color:#21619A;">« ${docNames.map((n) => n.replace(/</g, "&lt;")).join(" », « ")} »</strong> ${single ? "vient" : "viennent"} d'être déposé${single ? "" : "s"} dans votre espace client${opts.aSigner ? ` et ${single ? "attend" : "attendent"} votre <strong>signature</strong>` : ""}.`,
       sections: opts.aSigner
         ? [
             {
               title: "Rappel",
               lines: [
-                "La signature <strong>débloque votre playlist</strong> et réserve votre date.",
-                "Signature en ligne, en 2 minutes, depuis votre espace.",
+ "La signature <strong>débloque votre playlist</strong> et réserve votre date.",
+ "Signature en ligne, en 2 minutes, depuis votre espace.",
               ],
             },
           ]
@@ -1400,8 +1400,8 @@ async function notifyClientDocuments(
       replyTo: process.env.NOTIF_EMAIL,
       to: quote.customer_email,
       subject: opts.aSigner
-        ? `✍️ ${docNames.join(" + ")} ${single ? "attend" : "attendent"} votre signature — Propul'Sound DJ`
-        : `🧾 ${docNames.join(" + ")} ${single ? "est" : "sont"} disponible${single ? "" : "s"} — Propul'Sound DJ`,
+        ? `${docNames.join(" + ")} ${single ? "attend" : "attendent"} votre signature — Propul'Sound DJ`
+        : `${docNames.join(" + ")} ${single ? "est" : "sont"} disponible${single ? "" : "s"} — Propul'Sound DJ`,
       html: buildEmailHtml(emailData),
       text: buildEmailText(emailData),
     });
@@ -1466,7 +1466,7 @@ export async function proposeRdvCall(formData: FormData) {
         .map((s) => `• ${s}`);
       const emailData = {
         title: "Demande de RDV téléphonique",
-        emoji: "📞",
+        emoji: "",
         intro: `<strong>${quote.customer_email}</strong> souhaite un point téléphonique avec toi. Créneaux proposés :`,
         sections: [{ lines: slotsFr }],
         button: { label: "Valider un créneau (admin)", href: `${SITE_URL}/admin/devis` },
@@ -1476,7 +1476,7 @@ export async function proposeRdvCall(formData: FormData) {
         from: EMAIL_FROM,
         replyTo: user.email,
         to,
-        subject: "📞 Demande de RDV téléphonique — à valider",
+        subject: "Demande de RDV téléphonique — à valider",
         html: buildEmailHtml(emailData),
         text: buildEmailText(emailData),
       });
@@ -1537,10 +1537,10 @@ export async function adminRdvDecision(formData: FormData) {
           });
           const emailData = {
             title: "Ton RDV téléphonique est confirmé !",
-            emoji: "📞",
+            emoji: "",
             intro: `Bonjour,<br/><br/>C'est confirmé : je t'appelle le <strong>${when}</strong>.<br/><br/>Prépare tes questions, on fait le point sur ta soirée !`,
             sections: [
-              { lines: ["📱 Ajoute-le à ton calendrier depuis ton espace client."] },
+              { lines: ["Ajoute-le à ton calendrier depuis ton espace client."] },
             ],
             button: {
               label: "Voir dans mon espace",
@@ -1552,7 +1552,7 @@ export async function adminRdvDecision(formData: FormData) {
             from: EMAIL_FROM,
             replyTo: process.env.NOTIF_EMAIL,
             to: quote.customer_email,
-            subject: "📞 RDV téléphonique confirmé — Propul'Sound DJ",
+            subject: "RDV téléphonique confirmé — Propul'Sound DJ",
             html: buildEmailHtml(emailData),
             text: buildEmailText(emailData),
           });
@@ -1563,7 +1563,7 @@ export async function adminRdvDecision(formData: FormData) {
             from: EMAIL_FROM,
             replyTo: process.env.NOTIF_EMAIL,
             to: quote.customer_email,
-            subject: "📞 Créneau indisponible — propose-en un autre",
+            subject: "Créneau indisponible — propose-en un autre",
             text: "Bonjour,\n\nLe créneau que tu avais proposé ne m'est malheureusement pas possible. Propose-en un autre depuis ton espace client, on trouvera un moment !\n\n— Maxime, Propul'Sound DJ",
           });
         }
@@ -1679,14 +1679,14 @@ export async function uploadAdminDocument(formData: FormData) {
         const { buildEmailHtml, buildEmailText, stepsSection } = await import("@/lib/emails");
         const emailData = {
           title: "Un nouveau document est disponible",
-          emoji: "📄",
+          emoji: "",
           intro: `Bonjour,<br/><br/>Un nouveau document vient d'être déposé dans votre espace client :<br/><br/><strong style="color:#21619A;">« ${file.name.replace(/</g, "&lt;")} »</strong>`,
           sections: [
             stepsSection(quote?.status ?? "contacte"),
             {
               title: "Rappel",
               lines: [
-                "Si ce document est <strong>à signer</strong>, vous pouvez le signer directement en ligne depuis votre espace.",
+ "Si ce document est <strong>à signer</strong>, vous pouvez le signer directement en ligne depuis votre espace.",
               ],
             },
           ],
@@ -1696,7 +1696,7 @@ export async function uploadAdminDocument(formData: FormData) {
           from: EMAIL_FROM,
           replyTo: quote.customer_email,
           to: quote.customer_email,
-          subject: "📄 Un nouveau document est disponible — Propul'Sound DJ",
+          subject: "Un nouveau document est disponible — Propul'Sound DJ",
           html: buildEmailHtml(emailData),
           text: buildEmailText(emailData),
         });

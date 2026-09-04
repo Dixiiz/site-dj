@@ -65,9 +65,9 @@ export async function searchAddresses(query: string) {
       const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": key,
-          "X-Goog-FieldMask": "places.displayName,places.formattedAddress",
+ "Content-Type": "application/json",
+ "X-Goog-Api-Key": key,
+ "X-Goog-FieldMask": "places.displayName,places.formattedAddress",
         },
         body: JSON.stringify({
           textQuery: q,
@@ -96,8 +96,8 @@ export async function searchAddresses(query: string) {
     const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=fr&addressdetails=1&q=${encodeURIComponent(q)}`;
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "propulsounddj-site/1.0 (contact@propulsounddj.fr)",
-        "Accept-Language": "fr",
+ "User-Agent": "propulsounddj-site/1.0 (contact@propulsounddj.fr)",
+ "Accept-Language": "fr",
       },
       cache: "no-store",
     });
@@ -275,7 +275,7 @@ export async function submitQuoteAndBooking(formData: FormData) {
             : null;
           const emailData = {
             title: "Nous avons bien reçu votre devis !",
-            emoji: "🎧",
+            emoji: "",
             intro: `Bonjour ${customer_name},<br/><br/>Merci pour votre confiance ! Votre demande de devis a bien été enregistrée dans notre système. Vous recevrez très rapidement une réponse de notre part — généralement sous <strong>24 à 48 h</strong>.`,
             sections: [
               {
@@ -298,14 +298,14 @@ export async function submitQuoteAndBooking(formData: FormData) {
               href: `${SITE_URL}/connexion`,
             },
             footer:
-              "Ce devis est une estimation : il sera confirmé après notre échange et la signature des documents.",
+ "Ce devis est une estimation : il sera confirmé après notre échange et la signature des documents.",
           };
           const resend = new Resend(apiKey);
           await resend.emails.send({
             from: EMAIL_FROM,
             replyTo: NOTIF_EMAIL,
             to: customer_email,
-            subject: "🎧 Nous avons bien reçu votre devis — Propul'Sound DJ",
+            subject: "Nous avons bien reçu votre devis — Propul'Sound DJ",
             html: buildEmailHtml(emailData),
             text: buildEmailText(emailData),
           });
@@ -315,9 +315,9 @@ export async function submitQuoteAndBooking(formData: FormData) {
       console.error("[notif] Echec e-mail de confirmation client:", err);
     }
 
-    await sendQuoteNotification("🎧 Nouveau devis reçu — à traiter", {
+    await sendQuoteNotification("Nouveau devis reçu — à traiter", {
       title: "Nouveau devis reçu !",
-      emoji: "🎧",
+      emoji: "",
       intro: `Un nouveau devis vient d'être soumis sur le site par <strong>${esc(customer_name)}</strong>.`,
       sections: [
         {
@@ -434,7 +434,7 @@ export async function updateQuoteAdmin(formData: FormData) {
       formula_name:
         String(formData.get("formula_name_hidden") ?? "").trim() ||
         String(formData.get("formula_name") ?? "").trim() ||
-        "Pack",
+ "Pack",
       formula_price_cents: toCents(formData.get("formula_price")),
       travel_distance_km: Number.parseFloat(String(formData.get("travel_distance_km") ?? "")) || null,
       travel_fee_cents: toCents(formData.get("travel_fee")),
@@ -473,7 +473,7 @@ export async function estimateTravelAdmin(formData: FormData) {
 }
 
 export async function getUnavailableDates(): Promise<string[]> {
-  "use server";
+ "use server";
   const today = new Date().toISOString().slice(0, 10);
   const out = new Set<string>();
   try {
@@ -517,7 +517,7 @@ export async function toggleBlockedDate(formData: FormData) {
 }
 
 export async function logoutAdmin() {
-  "use server";
+ "use server";
   await clearAdminSession();
   redirect("/admin");
 }
@@ -552,16 +552,16 @@ export async function updateQuoteStatus(formData: FormData) {
             : null;
           const emailData = {
             title: "Votre devis est confirmé !",
-            emoji: "🎉",
+            emoji: "",
             intro: `Bonjour,<br/><br/>Excellente nouvelle : votre devis${dateFr ? ` pour le <strong>${dateFr}</strong>` : ""} est désormais <strong style="color:${"#219653"};">confirmé</strong> !<br/><br/>La date est bloquée pour vous. Vous pouvez dès maintenant préparer votre soirée.`,
             sections: [
               stepsSection("confirme"),
               {
                 title: "Prochaines étapes",
                 lines: [
-                  "🎵 Renseignez votre <strong>playlist</strong> (musiques des temps forts + piste de danse)",
-                  "📄 Retrouvez et téléchargez vos <strong>documents</strong>",
-                  "💬 Une question ? Écrivez-nous directement depuis votre espace",
+ "Renseignez votre <strong>playlist</strong> (musiques des temps forts + piste de danse)",
+ "Retrouvez et téléchargez vos <strong>documents</strong>",
+ "Une question ? Écrivez-nous directement depuis votre espace",
                 ],
               },
             ],
@@ -574,7 +574,7 @@ export async function updateQuoteStatus(formData: FormData) {
             from: EMAIL_FROM,
             replyTo: quote.customer_email,
             to: quote.customer_email,
-            subject: "🎉 Votre devis est confirmé ! — Propul'Sound DJ",
+            subject: "Votre devis est confirmé ! — Propul'Sound DJ",
             html: buildEmailHtml(emailData),
             text: buildEmailText(emailData),
           });

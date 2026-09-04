@@ -29,7 +29,7 @@ export function MainNav() {
               key={link.href}
               href={link.href}
               className={cn(
-                "transition-colors hover:text-accent",
+ "transition-colors hover:text-accent",
                 active && "font-medium text-accent"
               )}
             >
@@ -70,7 +70,7 @@ export function MainNav() {
                     href={link.href}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      "block rounded-lg px-3 py-2.5 text-base transition-colors hover:bg-accent/10 hover:text-accent",
+ "block rounded-lg px-3 py-2.5 text-base transition-colors hover:bg-accent/10 hover:text-accent",
                       active && "bg-accent/10 font-medium text-accent"
                     )}
                   >

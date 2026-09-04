@@ -5,7 +5,7 @@ import Link from "next/link";
 export const metadata = {
   title: "FAQ — Propul'Sound DJ",
   description:
-    "Questions fréquentes : déplacements, horaires, matériel, annulation. Tout ce qu'il faut savoir avant de réserver Propul'Sound DJ.",
+ "Questions fréquentes : déplacements, horaires, matériel, annulation. Tout ce qu'il faut savoir avant de réserver Propul'Sound DJ.",
 };
 
 const faqs = [

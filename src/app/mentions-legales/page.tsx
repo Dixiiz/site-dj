@@ -10,32 +10,32 @@ const sections = [
   {
     title: "Éditeur du site",
     content:
-      "Propul'Sound DJ — Entreprise individuelle de prestation DJ & show lumière. Siège : Huisseau-sur-Cosson (41350). Directeur de la publication : le gérant. Contact : via le formulaire de la page Contact.",
+ "Propul'Sound DJ — Entreprise individuelle de prestation DJ & show lumière. Siège : Huisseau-sur-Cosson (41350). Directeur de la publication : le gérant. Contact : via le formulaire de la page Contact.",
   },
   {
     title: "Hébergement",
     content:
-      "Ce site est hébergé par Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis — vercel.com.",
+ "Ce site est hébergé par Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis — vercel.com.",
   },
   {
     title: "Données personnelles (RGPD)",
     content:
-      "Les informations transmises via les formulaires (nom, e-mail, téléphone, lieu et date de l'événement) sont utilisées uniquement pour traiter votre demande de devis ou votre message. Elles ne sont ni vendues, ni transmises à des tiers. Vous pouvez demander leur suppression à tout moment via la page Contact.",
+ "Les informations transmises via les formulaires (nom, e-mail, téléphone, lieu et date de l'événement) sont utilisées uniquement pour traiter votre demande de devis ou votre message. Elles ne sont ni vendues, ni transmises à des tiers. Vous pouvez demander leur suppression à tout moment via la page Contact.",
   },
   {
     title: "Cookies",
     content:
-      "Ce site n'utilise pas de cookies publicitaires ni de traceurs nécessitant consentement. Les statistiques de fréquentation (Vercel Analytics) sont collectées de manière anonyme et sans cookie.",
+ "Ce site n'utilise pas de cookies publicitaires ni de traceurs nécessitant consentement. Les statistiques de fréquentation (Vercel Analytics) sont collectées de manière anonyme et sans cookie.",
   },
   {
     title: "Propriété intellectuelle",
     content:
-      "L'ensemble des contenus du site (textes, photos, vidéos, logo) est la propriété de Propul'Sound DJ. Toute reproduction sans autorisation est interdite.",
+ "L'ensemble des contenus du site (textes, photos, vidéos, logo) est la propriété de Propul'Sound DJ. Toute reproduction sans autorisation est interdite.",
   },
   {
     title: "Réservations & annulations",
     content:
-      "Une réservation est confirmée après accord sur les modalités (acompte et contrat). En cas d'annulation par le client à moins de 30 jours de l'événement, l'acompte reste acquis. En cas d'annulation par Propul'Sound DJ (force majeure), l'intégralité des sommes versées est remboursée.",
+ "Une réservation est confirmée après accord sur les modalités (acompte et contrat). En cas d'annulation par le client à moins de 30 jours de l'événement, l'acompte reste acquis. En cas d'annulation par Propul'Sound DJ (force majeure), l'intégralité des sommes versées est remboursée.",
   },
 ];
 

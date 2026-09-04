@@ -123,7 +123,7 @@ export async function buildFicheSoireePdf(data: FicheSoireeData): Promise<Uint8A
       t(`${lab} ${head}`, indent, y, size, r);
       y -= 13;
       text = space > 0 ? text.slice(space + 1) : text.slice(cut);
-      lab = "     ";
+      lab = " ";
     }
     t(`${lab} ${text}`, indent, y, size, r);
     y -= 13;

@@ -80,7 +80,7 @@ export async function fillDevisTemplate(
     if (optionsText) set("options", optionsText);
     if (Number(quote.travel_fee_cents) > 0)
       set(
-        "travel",
+ "travel",
         `Déplacement (${str(quote.travel_distance_km)} km A/R) : ${eur(quote.travel_fee_cents)}`
       );
     if (Number(quote.extra_fee_cents) > 0)

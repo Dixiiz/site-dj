@@ -102,10 +102,10 @@ export async function buildDevisPdf(
   t("Propul'Sound DJ", M, H - 30, 13, b, C.texte);
   let ey = H - 48;
   for (const l of [
-    "5 Clos de la Salamandre",
-    "41350 Huisseau-sur-Cosson",
-    "06 74 85 07 69  ·  propulsounddj@gmail.com",
-    "SIRET : 93222079100010",
+ "5 Clos de la Salamandre",
+ "41350 Huisseau-sur-Cosson",
+ "06 74 85 07 69  ·  propulsounddj@gmail.com",
+ "SIRET : 93222079100010",
   ]) {
     t(l, M, ey, 8.5, r, C.gris);
     ey -= 13;
@@ -128,7 +128,7 @@ export async function buildDevisPdf(
   const y0 = y;
   t("À l'attention de", M + 10, y, 8, b, C.gris);
   t(quote.customer_name ?? "-", M + 10, y - 16, 10.5, b, C.texte);
-  const contact = [quote.customer_email, quote.customer_phone].filter(Boolean).join("  ·  ");
+  const contact = [quote.customer_email, quote.customer_phone].filter(Boolean).join("  · ");
   t(contact || "-", M + 10, y - 32, 9, r, C.gris);
   const info = (label: string, val: string) => {
     const vx = right(val, W - M, 9, r);
@@ -187,8 +187,8 @@ export async function buildDevisPdf(
     const fee = quote.travel_fee_cents! / 100;
     rows.push([
       `Déplacement${km ? ` (${km} km aller-retour)` : ""}`,
-      "",
-      "0,80 € / km",
+ "",
+ "0,80 € / km",
       fmt(fee),
     ]);
   }
@@ -226,9 +226,9 @@ export async function buildDevisPdf(
   // que soit la longueur du tableau.
   const conditionsTxt =
     opts.conditions ??
-    "Afin de confirmer votre réservation, merci de retourner le devis daté et signé accompagné d'un acompte de 20 % " +
-      "par virement (libellé : nom de l'organisateur, numéro de contrat), chèque ou espèces. " +
-      "Possibilité de paiement total sans acompte par virement, chèque ou espèces.";
+ "Afin de confirmer votre réservation, merci de retourner le devis daté et signé accompagné d'un acompte de 20 % " +
+ "par virement (libellé : nom de l'organisateur, numéro de contrat), chèque ou espèces. " +
+ "Possibilité de paiement total sans acompte par virement, chèque ou espèces.";
   const wrapCount = (txt: string, size: number, font: PDFFont, maxW: number) => {
     const words = txt.split(" ");
     let n = 1, cur = "";

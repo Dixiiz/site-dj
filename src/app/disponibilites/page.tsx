@@ -9,12 +9,12 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Disponibilités — Propul'Sound DJ",
   description:
-    "Consultez les dates déjà réservées de Propul'Sound DJ et vérifiez la disponibilité pour votre événement.",
+ "Consultez les dates déjà réservées de Propul'Sound DJ et vérifiez la disponibilité pour votre événement.",
 };
 
 const MONTH_NAMES = [
-  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
+ "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+ "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
 ];
 const DAY_NAMES = ["L", "M", "M", "J", "V", "S", "D"];
 

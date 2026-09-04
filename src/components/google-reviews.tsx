@@ -28,8 +28,8 @@ async function fetchGoogleReviews(): Promise<{
       `https://places.googleapis.com/v1/places/${placeId}?languageCode=fr`,
       {
         headers: {
-          "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask": "rating,userRatingCount,reviews",
+ "X-Goog-Api-Key": apiKey,
+ "X-Goog-FieldMask": "rating,userRatingCount,reviews",
         },
         next: { revalidate: 3600 }, // cache 1 h
       }

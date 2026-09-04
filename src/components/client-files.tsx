@@ -24,9 +24,9 @@ function sizeLabel(bytes: number | null) {
 }
 
 function fileIcon(mime: string | null) {
-  if (mime?.startsWith("video")) return "🎬";
-  if (mime?.startsWith("audio")) return "🎵";
-  return "📄";
+  if (mime?.startsWith("video")) return "";
+  if (mime?.startsWith("audio")) return "";
+  return "";
 }
 
 // Upload + liste compacte, intégrés dans une catégorie (temps fort).
@@ -109,7 +109,7 @@ export function MomentFiles({
                 href={`/api/files/${file.id}`}
                 className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
               >
-                ⬇ Télécharger
+                ↓ Télécharger
               </a>
               <form
                 action={(formData) =>

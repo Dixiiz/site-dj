@@ -14,12 +14,12 @@ export function buildIcs(opts: {
   const esc = (s: string) =>
     s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
   return [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//PropulSound DJ//FR",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-    "BEGIN:VEVENT",
+ "BEGIN:VCALENDAR",
+ "VERSION:2.0",
+ "PRODID:-//PropulSound DJ//FR",
+ "CALSCALE:GREGORIAN",
+ "METHOD:PUBLISH",
+ "BEGIN:VEVENT",
     `UID:${opts.uid}@propulsounddj.fr`,
     `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`,
     `DTSTART:${stamp(opts.date, opts.startTime)}`,
@@ -27,13 +27,13 @@ export function buildIcs(opts: {
     `SUMMARY:${esc(opts.title)}`,
     `DESCRIPTION:${esc(opts.description)}`,
     opts.location ? `LOCATION:${esc(opts.location)}` : "",
-    "BEGIN:VALARM",
-    "TRIGGER:-P1D",
-    "ACTION:DISPLAY",
-    "DESCRIPTION:Rappel — demain !",
-    "END:VALARM",
-    "END:VEVENT",
-    "END:VCALENDAR",
+ "BEGIN:VALARM",
+ "TRIGGER:-P1D",
+ "ACTION:DISPLAY",
+ "DESCRIPTION:Rappel — demain !",
+ "END:VALARM",
+ "END:VEVENT",
+ "END:VCALENDAR",
   ]
     .filter(Boolean)
     .join("\r\n");

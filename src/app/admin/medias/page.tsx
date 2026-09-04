@@ -30,14 +30,14 @@ const FOLDERS: { key: MediaFolder; titre: string; hint: string; accept: string; 
   },
   {
     key: "videos/showcase",
-    titre: "🎬 Vidéos showcase",
+    titre: "Vidéos showcase",
     hint: "Vidéos verticales de la section « En action » (ordre = ordre d'affichage).",
     accept: "video/mp4,video/quicktime,video/webm",
     kind: "video",
   },
   {
     key: "videos",
-    titre: "⭐ Vidéo de fond (héro)",
+    titre: "Vidéo de fond (héro)",
     hint: "Vidéo de fond de l'accueil : celle nommée hero* est prioritaire, sinon la première de la liste.",
     accept: "video/mp4,video/quicktime,video/webm",
     kind: "video",
@@ -73,7 +73,7 @@ async function mergedItems(folder: MediaFolder): Promise<MediaItem[]> {
 
 function makeUploadAction(folder: MediaFolder) {
   return async (formData: FormData) => {
-    "use server";
+ "use server";
     if (!(await requireAdmin())) return;
     const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
     const { uploadMedia } = await import("@/lib/site-media");
@@ -85,7 +85,7 @@ function makeUploadAction(folder: MediaFolder) {
 
 function makeDeleteStorageAction(folder: MediaFolder) {
   return async (formData: FormData) => {
-    "use server";
+ "use server";
     if (!(await requireAdmin())) return;
     const name = String(formData.get("name") ?? "");
     if (name) await deleteMedia(folder, name);
@@ -96,7 +96,7 @@ function makeDeleteStorageAction(folder: MediaFolder) {
 
 function makeDeleteLocalAction(folder: MediaFolder) {
   return async (formData: FormData) => {
-    "use server";
+ "use server";
     if (!(await requireAdmin())) return;
     const name = String(formData.get("name") ?? "");
     if (name) deleteLocalMedia(folder, name);
@@ -107,7 +107,7 @@ function makeDeleteLocalAction(folder: MediaFolder) {
 
 function makeImportLocalAction(folder: MediaFolder) {
   return async (formData: FormData) => {
-    "use server";
+ "use server";
     if (!(await requireAdmin())) return;
     const name = String(formData.get("name") ?? "");
     if (name) await importLocalToStorage(folder, name);
@@ -117,7 +117,7 @@ function makeImportLocalAction(folder: MediaFolder) {
 }
 
 async function saveOrderAction(folder: string, names: string[]) {
-  "use server";
+ "use server";
   if (!(await requireAdmin())) return { ok: false as const, error: "Non autorisé." };
   const res = await saveOrder(folder as MediaFolder, names);
   if (res.ok) {

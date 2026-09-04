@@ -32,7 +32,7 @@ export async function GET(
   const dateFr = new Date(quote.event_date).toLocaleDateString("fr-FR");
   const ics = buildIcs({
     uid: `soiree-${id}`,
-    title: `🎵 Soirée Propul'Sound DJ — ${quote.formula_name ?? "prestation"}`,
+    title: `Soirée Propul'Sound DJ — ${quote.formula_name ?? "prestation"}`,
     description: `Prestation DJ avec Maxime (Propul'Sound DJ).\nUne urgence ? 06 74 85 07 69`,
     location: quote.event_location,
     date: quote.event_date,
@@ -42,9 +42,9 @@ export async function GET(
 
   return new NextResponse(ics, {
     headers: {
-      "Content-Type": "text/calendar; charset=utf-8",
-      "Content-Disposition": `attachment; filename="soiree-propulsound-${dateFr}.ics"`,
-      "Cache-Control": "no-store",
+ "Content-Type": "text/calendar; charset=utf-8",
+ "Content-Disposition": `attachment; filename="soiree-propulsound-${dateFr}.ics"`,
+ "Cache-Control": "no-store",
     },
   });
 }

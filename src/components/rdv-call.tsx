@@ -27,11 +27,11 @@ export function RdvCallSection({
 
   return (
     <div id="rdv" className="rounded-xl border border-border bg-muted/50 p-5">
-      <h2 className="font-medium">📞 Prévoir un point téléphonique</h2>
+      <h2 className="font-medium">Prévoir un point téléphonique</h2>
       {validated ? (
         <div className="mt-3 space-y-2 text-sm">
           <p className="font-medium text-green-400">
-            ✅ RDV confirmé : {fmt(validated.proposed_at)}
+            ✓ RDV confirmé : {fmt(validated.proposed_at)}
           </p>
           <p className="text-muted-foreground">
             Maxime t&apos;appelle à ce moment-là. Prépare tes questions !
@@ -40,7 +40,7 @@ export function RdvCallSection({
             href={`/api/calendar/rdv/${quoteId}`}
             className="inline-block rounded-lg border border-accent/50 bg-accent/10 px-4 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
           >
-            📅 Ajouter à mon calendrier
+            Ajouter à mon calendrier
           </a>
         </div>
       ) : (
@@ -51,7 +51,7 @@ export function RdvCallSection({
           </p>
           <form
             action={async (formData: FormData) => {
-              "use server";
+ "use server";
               await proposeRdvCall(formData);
             }}
             className="mt-3 space-y-2"
@@ -70,7 +70,7 @@ export function RdvCallSection({
               pendingLabel="Envoi…"
               className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
             >
-              📞 Proposer ces créneaux
+              Proposer ces créneaux
             </SubmitButton>
           </form>
           {pending.length > 0 ? (
@@ -103,7 +103,7 @@ export async function AdminRdvRequests({ quoteId }: { quoteId: string }) {
 
   return (
     <div className="rounded-xl border border-border p-4">
-      <h3 className="font-medium text-accent">📞 RDV téléphonique</h3>
+      <h3 className="font-medium text-accent">RDV téléphonique</h3>
       <ul className="mt-3 space-y-2">
         {rows.map((r) => (
           <li key={r.id} className="flex flex-wrap items-center gap-2 text-sm">

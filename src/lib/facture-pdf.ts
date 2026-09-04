@@ -57,10 +57,10 @@ export async function buildFacturePdf(
   t("Propul'Sound DJ", M, H - 30, 13, b, C.texte);
   let ey = H - 48;
   for (const l of [
-    "5 Clos de la Salamandre",
-    "41350 Huisseau-sur-Cosson",
-    "06 74 85 07 69  ·  propulsounddj@gmail.com",
-    "SIRET : 93222079100010",
+ "5 Clos de la Salamandre",
+ "41350 Huisseau-sur-Cosson",
+ "06 74 85 07 69  ·  propulsounddj@gmail.com",
+ "SIRET : 93222079100010",
   ]) {
     t(l, M, ey, 8.5, r, C.gris);
     ey -= 13;
@@ -83,7 +83,7 @@ export async function buildFacturePdf(
   const y0 = y;
   t("À l'attention de", M + 10, y, 8, b, C.gris);
   t(quote.customer_name ?? "-", M + 10, y - 16, 10.5, b, C.texte);
-  const contact = [quote.customer_email, quote.customer_phone].filter(Boolean).join("  ·  ");
+  const contact = [quote.customer_email, quote.customer_phone].filter(Boolean).join("  · ");
   t(contact || "-", M + 10, y - 32, 9, r, C.gris);
   const info = (label: string, val: string) => {
     const vx = right(val, W - M, 9, r);
@@ -150,14 +150,14 @@ export async function buildFacturePdf(
     const fee = quote.travel_fee_cents! / 100;
     rows.push([
       `Déplacement${km ? ` (${km} km × 0,80 €, 30 km offerts)` : ""}`,
-      "1", fmt(fee), fmt(fee),
+ "1", fmt(fee), fmt(fee),
     ]);
   }
   if ((quote.extra_fee_cents ?? 0) > 0) {
     const fee = quote.extra_fee_cents! / 100;
     rows.push([
       `Heures supplémentaires${quote.extra_hours ? ` (${quote.extra_hours} h)` : ""}`,
-      "1", fmt(fee), fmt(fee),
+ "1", fmt(fee), fmt(fee),
     ]);
   }
   for (const adj of opts.adjustments ?? []) {
@@ -211,9 +211,9 @@ export async function buildFacturePdf(
     return lines;
   };
   const conditionsTxt =
-    "Facture payable par virement (libellé : nom de l'organisateur, numéro de contrat), chèque ou espèces. " +
-    "L'acompte de réservation reste acquis en cas d'annulation par le client, sauf force majeure. " +
-    "Merci de votre confiance !";
+ "Facture payable par virement (libellé : nom de l'organisateur, numéro de contrat), chèque ou espèces. " +
+ "L'acompte de réservation reste acquis en cas d'annulation par le client, sauf force majeure. " +
+ "Merci de votre confiance !";
   for (const l of wrap(conditionsTxt, 9, r, CW - 20)) {
     t(l, M + 10, y, 9, r, C.texte);
     y -= 12;

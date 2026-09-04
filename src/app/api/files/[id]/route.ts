@@ -59,9 +59,9 @@ export async function GET(
 
   return new NextResponse(blob, {
     headers: {
-      "Content-Type": file.mime_type || "application/octet-stream",
-      "Content-Disposition": `attachment; filename="${asciiName}"; filename*=UTF-8''${utf8Name}`,
-      "Cache-Control": "no-store",
+ "Content-Type": file.mime_type || "application/octet-stream",
+ "Content-Disposition": `attachment; filename="${asciiName}"; filename*=UTF-8''${utf8Name}`,
+ "Cache-Control": "no-store",
     },
   });
 }

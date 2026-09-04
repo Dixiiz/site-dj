@@ -73,7 +73,7 @@ export function SignaturePad() {
         />
         {!hasInk ? (
           <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-gray-400">
-            Signez ici avec votre doigt ou la souris ✍️
+            Signez ici avec votre doigt ou la souris 
           </span>
         ) : null}
       </div>

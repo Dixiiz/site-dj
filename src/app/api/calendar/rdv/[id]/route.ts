@@ -43,7 +43,7 @@ export async function GET(
 
   const ics = buildIcs({
     uid: `rdv-${slot.id}`,
-    title: "📞 RDV téléphonique — Propul'Sound DJ",
+    title: "RDV téléphonique — Propul'Sound DJ",
     description: "Point téléphonique avec Maxime pour préparer ta soirée.\nUne question urgente ? 06 74 85 07 69",
     location: "Appel téléphonique",
     date: start.toLocaleDateString("fr-CA"),
@@ -53,9 +53,9 @@ export async function GET(
 
   return new NextResponse(ics, {
     headers: {
-      "Content-Type": "text/calendar; charset=utf-8",
-      "Content-Disposition": 'attachment; filename="rdv-propulsound.ics"',
-      "Cache-Control": "no-store",
+ "Content-Type": "text/calendar; charset=utf-8",
+ "Content-Disposition": 'attachment; filename="rdv-propulsound.ics"',
+ "Cache-Control": "no-store",
     },
   });
 }

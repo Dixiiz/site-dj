@@ -37,12 +37,12 @@ const CATEGORIES: Category[] = [
     label: "Anniversaires & Soirées privées",
     image: "/images/packs/1.jpg",
     intro:
-      "Une soirée clé en main chez vous ou en salle : installation, mix et lumière synchronisée pendant toute la durée de votre événement.",
+ "Une soirée clé en main chez vous ou en salle : installation, mix et lumière synchronisée pendant toute la durée de votre événement.",
     baseNote: "Base : minimum 6 h de mix + forfait installation 100 € (base fixe 580 €).",
     extraHourLabel: "Heure supplémentaire : 80 €/h",
     common: [
-      "Sono Audiophony Modjo2000 (jusqu'à 250 personnes)",
-      "Éclairage 100 % synchronisé en temps réel avec la musique",
+ "Sono Audiophony Modjo2000 (jusqu'à 250 personnes)",
+ "Éclairage 100 % synchronisé en temps réel avec la musique",
     ],
     packs: [
       {
@@ -54,9 +54,9 @@ const CATEGORIES: Category[] = [
         defaultStart: "20:00",
         defaultEnd: "02:00",
         equipment: [
-          "2 Lyres Beam (monotubes)",
-          "2 Bars LED",
-          "2 Machines à fumée effet Geyser",
+ "2 Lyres Beam (monotubes)",
+ "2 Bars LED",
+ "2 Machines à fumée effet Geyser",
         ],
       },
       {
@@ -69,10 +69,10 @@ const CATEGORIES: Category[] = [
         defaultStart: "20:00",
         defaultEnd: "02:00",
         equipment: [
-          "4 Lyres Beam",
-          "4 Bars LED",
-          "2 Machines à fumée effet Geyser",
-          "8 PAR LED (déco d'ambiance salle)",
+ "4 Lyres Beam",
+ "4 Bars LED",
+ "2 Machines à fumée effet Geyser",
+ "8 PAR LED (déco d'ambiance salle)",
         ],
       },
     ],
@@ -82,12 +82,12 @@ const CATEGORIES: Category[] = [
     label: "Mariages & Grandes Réceptions",
     image: "/images/packs/2.jpg",
     intro:
-      "De la première danse au bout de la nuit : un dispositif son & lumière à la hauteur de votre plus beau jour.",
+ "De la première danse au bout de la nuit : un dispositif son & lumière à la hauteur de votre plus beau jour.",
     baseNote: "Base : minimum 8 h de mix + forfait installation 100 € (base fixe 1 060 €).",
     extraHourLabel: "Heure sup. / Prolongation / Cérémonie laïque : 120 €/h",
     common: [
-      "Sono Audiophony Modjo2000",
-      "Éclairage 100 % synchronisé en temps réel avec la musique",
+ "Sono Audiophony Modjo2000",
+ "Éclairage 100 % synchronisé en temps réel avec la musique",
     ],
     packs: [
       {
@@ -99,9 +99,9 @@ const CATEGORIES: Category[] = [
         defaultStart: "20:00",
         defaultEnd: "04:00",
         equipment: [
-          "2 Lyres Beam (monotubes)",
-          "2 Bars LED",
-          "2 Machines à fumée effet Geyser",
+ "2 Lyres Beam (monotubes)",
+ "2 Bars LED",
+ "2 Machines à fumée effet Geyser",
         ],
       },
       {
@@ -114,10 +114,10 @@ const CATEGORIES: Category[] = [
         defaultStart: "20:00",
         defaultEnd: "04:00",
         equipment: [
-          "4 Lyres Beam",
-          "4 Bars LED",
-          "2 Machines à fumée effet Geyser",
-          "8 PAR LED (déco d'ambiance salle)",
+ "4 Lyres Beam",
+ "4 Bars LED",
+ "2 Machines à fumée effet Geyser",
+ "8 PAR LED (déco d'ambiance salle)",
         ],
       },
       {
@@ -130,11 +130,11 @@ const CATEGORIES: Category[] = [
         defaultStart: "20:00",
         defaultEnd: "04:00",
         equipment: [
-          "6 Lyres Beam",
-          "2 Lyres Spot",
-          "4 Bars LED",
-          "2 Machines à fumée effet Geyser",
-          "8 PAR LED (déco d'ambiance salle)",
+ "6 Lyres Beam",
+ "2 Lyres Spot",
+ "4 Bars LED",
+ "2 Machines à fumée effet Geyser",
+ "8 PAR LED (déco d'ambiance salle)",
         ],
       },
     ],
@@ -144,12 +144,12 @@ const CATEGORIES: Category[] = [
     label: "Bars, Clubs & Soirées Pro",
     image: "/images/packs/3.jpg",
     intro:
-      "Vous disposez déjà du son ou d'une scène ? De la simple prestation DJ à la formule clé en main complète, choisissez le niveau d'accompagnement.",
+ "Vous disposez déjà du son ou d'une scène ? De la simple prestation DJ à la formule clé en main complète, choisissez le niveau d'accompagnement.",
     baseNote: "Trois formats au choix selon votre lieu et vos équipements.",
     extraHourLabel: "Heure supplémentaire : dès 55 €/h selon formule",
     common: [
-      "Régie DJ professionnelle",
-      "Éclairage synchronisé (formules clé en main)",
+ "Régie DJ professionnelle",
+ "Éclairage synchronisé (formules clé en main)",
     ],
     packs: [
       {
@@ -161,9 +161,9 @@ const CATEGORIES: Category[] = [
         defaultStart: "20:00",
         defaultEnd: "22:00",
         equipment: [
-          "Minimum 2 h de mix (55 €/h)",
-          "Platines DJ + ordinateur portable",
-          "Heure supplémentaire : 55 €/h",
+ "Minimum 2 h de mix (55 €/h)",
+ "Platines DJ + ordinateur portable",
+ "Heure supplémentaire : 55 €/h",
         ],
       },
       {
@@ -175,10 +175,10 @@ const CATEGORIES: Category[] = [
         defaultStart: "20:00",
         defaultEnd: "23:00",
         equipment: [
-          "Minimum 3 h de mix (90 €/h) + installation 100 €",
-          "Régie DJ + Sono Audiophony Modjo2000",
-          "2 Lyres Beam + 2 Bars LED + 4 PAR LED",
-          "Heure supplémentaire : 90 €/h",
+ "Minimum 3 h de mix (90 €/h) + installation 100 €",
+ "Régie DJ + Sono Audiophony Modjo2000",
+ "2 Lyres Beam + 2 Bars LED + 4 PAR LED",
+ "Heure supplémentaire : 90 €/h",
         ],
       },
       {
@@ -191,11 +191,11 @@ const CATEGORIES: Category[] = [
         defaultStart: "20:00",
         defaultEnd: "23:00",
         equipment: [
-          "Minimum 3 h de mix (90 €/h) + installation 100 €",
-          "Régie DJ + Sono Audiophony Modjo2000",
-          "4 Lyres Beam + 2 Bars LED + 8 PAR LED",
-          "2 Machines à fumée",
-          "Heure supplémentaire : 90 €/h",
+ "Minimum 3 h de mix (90 €/h) + installation 100 €",
+ "Régie DJ + Sono Audiophony Modjo2000",
+ "4 Lyres Beam + 2 Bars LED + 8 PAR LED",
+ "2 Machines à fumée",
+ "Heure supplémentaire : 90 €/h",
         ],
       },
     ],
@@ -204,9 +204,9 @@ const CATEGORIES: Category[] = [
 
 // Correspondance entre les cartes Options FX et les noms des options du devis.
 const OPTION_TO_FORM: Record<string, string> = {
-  "Nuage de fumée lourde": "Machine à fumée lourde",
-  "Étincelles froides": "2 machines à étincelles froides",
-  "Pistolet à fumée effet CO2": "Pistolet à fumée effet CO2 (à l'unité)",
+ "Nuage de fumée lourde": "Machine à fumée lourde",
+ "Étincelles froides": "2 machines à étincelles froides",
+ "Pistolet à fumée effet CO2": "Pistolet à fumée effet CO2 (à l'unité)",
 };
 
 const FX_OPTIONS = [
@@ -526,7 +526,7 @@ export function PricingSection() {
             </p>
             <div className="mt-4 flex flex-col gap-3 rounded-xl border border-border bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <Badge className="w-fit bg-accent/15 text-accent hover:bg-accent/15">
-                ⚡ Éclairage 100 % synchronisé en temps réel
+                Éclairage 100 % synchronisé en temps réel
               </Badge>
               <p className="text-sm text-muted-foreground">
                 {active.baseNote}{" "}
@@ -581,7 +581,7 @@ export function PricingSection() {
               onMouseEnter={(event) => {
                 (
                   event.currentTarget.querySelector(
-                    "video[data-fx-video]"
+ "video[data-fx-video]"
                   ) as HTMLVideoElement | null
                 )
                   ?.play()
@@ -589,14 +589,14 @@ export function PricingSection() {
               }}
               onMouseLeave={(event) => {
                 const video = event.currentTarget.querySelector(
-                  "video[data-fx-video]"
+ "video[data-fx-video]"
                 ) as HTMLVideoElement | null;
                 if (video) video.pause();
               }}
               onTouchStart={(event) => {
                 (
                   event.currentTarget.querySelector(
-                    "video[data-fx-video]"
+ "video[data-fx-video]"
                   ) as HTMLVideoElement | null
                 )
                   ?.play()

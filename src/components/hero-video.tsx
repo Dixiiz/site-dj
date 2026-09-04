@@ -59,15 +59,15 @@ export function HeroVideo({ src = "/videos/hero.mp4" }: { src?: string }) {
   // laisser la vidéo bien visible au centre.
   const fadeX = {
     WebkitMaskImage:
-      "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
+ "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
     maskImage:
-      "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
+ "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
   };
   const fadeY = {
     WebkitMaskImage:
-      "linear-gradient(to bottom, transparent 0%, black 18%, black 75%, transparent 100%)",
+ "linear-gradient(to bottom, transparent 0%, black 18%, black 75%, transparent 100%)",
     maskImage:
-      "linear-gradient(to bottom, transparent 0%, black 18%, black 75%, transparent 100%)",
+ "linear-gradient(to bottom, transparent 0%, black 18%, black 75%, transparent 100%)",
   };
 
   return (

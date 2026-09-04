@@ -55,7 +55,7 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
       key={file.id}
       className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm sm:gap-3"
     >
-      <span className="shrink-0">📄</span>
+      <span className="shrink-0"></span>
       <div className="min-w-0 flex-1 basis-40">
         <p className="truncate font-medium">{file.name}</p>
         <p className="text-[11px] text-muted-foreground">{sizeLabel(file.size_bytes)}</p>
@@ -75,7 +75,7 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
         href={`/api/files/${file.id}`}
         className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
       >
-        ⬇
+        ↓
       </a>
       <form action={deleteAdminDocument}>
         <input type="hidden" name="quote_id" value={quoteId} />
@@ -96,11 +96,11 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
       {/* Documents à signer */}
       <div className="rounded-xl border border-orange-500/30 bg-orange-500/[0.04] p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-medium text-orange-400">✍️ Documents à signer</h3>
+          <h3 className="font-medium text-orange-400">Documents à signer</h3>
           <div className="flex flex-wrap items-start gap-2">
           <form
             action={async (formData: FormData) => {
-              "use server";
+ "use server";
               await generateDevisDocument(formData);
             }}
           >
@@ -165,23 +165,23 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
               pendingLabel="Génération du devis…"
               className="rounded-lg border border-accent/50 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/15"
             >
-              ⚡ Générer le devis PDF
+              Générer le devis PDF
             </SubmitButton>
             {/* Génère les DEUX documents d'un coup : un seul e-mail au client */}
             <SubmitButton
               pendingLabel="Génération du devis + contrat…"
               formAction={async (formData: FormData) => {
-                "use server";
+ "use server";
                 await generateDevisEtContratDocument(formData);
               }}
               className="rounded-lg border border-cyan-500/50 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:border-cyan-400 hover:bg-cyan-400/25 hover:text-cyan-100"
             >
-              ⚡📝 Générer devis + contrat
+              📝 Générer devis + contrat
             </SubmitButton>
           </form>
           <form
             action={async (formData: FormData) => {
-              "use server";
+ "use server";
               await generateContratDocument(formData);
             }}
           >
@@ -213,7 +213,7 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
         <h3 className="font-medium text-muted-foreground">📎 Documents simples</h3>
         <form
           action={async (formData: FormData) => {
-            "use server";
+ "use server";
             await generateFactureDocument(formData);
           }}
           className="mt-2"
@@ -223,7 +223,7 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
             pendingLabel="Génération de la facture…"
             className="rounded-lg border border-green-500/50 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-400 transition-colors hover:border-green-400 hover:bg-green-400/25 hover:text-green-200"
           >
-            🧾 Générer la facture PDF
+            Générer la facture PDF
           </SubmitButton>
         </form>
         <InvoiceAdjustments quoteId={quoteId} initial={adjustments} />
@@ -234,7 +234,7 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
         )}
         <form
           action={async (formData: FormData) => {
-            "use server";
+ "use server";
             await uploadAdminDocument(formData);
           }}
           className="mt-3 flex flex-wrap items-center gap-2"

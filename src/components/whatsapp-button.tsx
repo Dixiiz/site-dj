@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { SITE_NAME } from "@/lib/site-url";
 
 const WHATSAPP_URL =
-  "https://wa.me/33674850769?text=" +
+ "https://wa.me/33674850769?text=" +
   encodeURIComponent(
     `Bonjour ${SITE_NAME} ! Je souhaiterais des informations pour un événement.`,
   );

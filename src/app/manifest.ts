@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Propul'Sound DJ — DJ & animations événementielles",
     short_name: "Propul'Sound",
     description:
-      "DJ professionnel basé à Huisseau-sur-Cosson : mariages, anniversaires, soirées privées et événements d'entreprise en Loir-et-Cher et alentours.",
+ "DJ professionnel basé à Huisseau-sur-Cosson : mariages, anniversaires, soirées privées et événements d'entreprise en Loir-et-Cher et alentours.",
     start_url: "/",
     display: "standalone",
     background_color: "#f5f7fa",

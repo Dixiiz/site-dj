@@ -95,7 +95,7 @@ export async function saveOrder(folder: MediaFolder, names: string[]): Promise<{
 const LOCAL_DIRS: Record<MediaFolder, string> = {
   galerie: "public/galerie",
   packs: "public/images/packs",
-  "videos/showcase": "public/videos/showcase",
+ "videos/showcase": "public/videos/showcase",
   videos: "public/videos",
 };
 

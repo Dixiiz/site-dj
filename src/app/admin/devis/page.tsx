@@ -246,7 +246,7 @@ export default async function DevisPage({
                       title="Nouveautés client : message, musique ou modification"
                       className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-sm text-background shadow-[0_0_16px_-2px_var(--accent)]"
                     >
-                      🔔
+                      
                     </span>
                   ) : null}
                 </summary>
@@ -255,12 +255,12 @@ export default async function DevisPage({
                 {quote.acompte_declared_at && !quote.acompte_paid_at ? (
                   <div className="flex flex-wrap items-center gap-3 border-t border-border px-4 pt-3 text-sm">
                     <span className="text-orange-300">
-                      💳 Acompte déclaré envoyé par le client le{" "}
+                      Acompte déclaré envoyé par le client le{" "}
                       {new Date(quote.acompte_declared_at).toLocaleDateString("fr-FR")}.
                     </span>
                     <form
                       action={async (formData: FormData) => {
-                        "use server";
+ "use server";
                         await confirmAcompteReceived(formData);
                       }}
                     >
@@ -280,7 +280,7 @@ export default async function DevisPage({
                     <span className="text-yellow-400">
                       {quote.pending_options
                         ? "⏳ Le client a demandé une modification d'options."
-                        : "🔔 Nouveautés client (musique ou message)."}
+                        : "Nouveautés client (musique ou message)."}
                     </span>
                     {quote.has_unread_updates ? (
                       <form action={markQuoteSeen}>
@@ -316,7 +316,7 @@ export default async function DevisPage({
                     <div className="mt-3 flex flex-wrap gap-2">
                       <form
                         action={async (formData) => {
-                          "use server";
+ "use server";
                           await resolveQuoteOptions(formData);
                         }}
                       >
@@ -331,7 +331,7 @@ export default async function DevisPage({
                       </form>
                       <form
                         action={async (formData) => {
-                          "use server";
+ "use server";
                           await resolveQuoteOptions(formData);
                         }}
                       >
