@@ -69,7 +69,7 @@ export default async function AvisPage() {
           <p className="text-center text-xs text-muted-foreground">
             Google n&apos;expose que ses 5 avis « les plus pertinents » via son
             API — pour lire les{" "}
-            {data.count != null ? `${data.count} avis` : "tous les avis"},{" "}
+            {data?.count != null ? `${data.count} avis` : "tous les avis"},{" "}
             <a
               href={`https://www.google.com/maps/place/?q=place_id:${process.env.GOOGLE_PLACE_ID ?? ""}`}
               target="_blank"
