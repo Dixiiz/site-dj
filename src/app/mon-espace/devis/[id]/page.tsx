@@ -135,10 +135,10 @@ export default async function ClientQuotePage({
         orientation="vertical"
         className="flex-col gap-4 md:flex-row md:gap-8 md:items-start"
       >
-        <TabsList className="flex w-full flex-col md:sticky md:top-20 md:w-44 md:self-start">
-          <TabsTrigger value="soiree">Ma soirée</TabsTrigger>
-          <TabsTrigger value="playlist">Musiques</TabsTrigger>
-          <TabsTrigger value="messages">Messagerie</TabsTrigger>
+        <TabsList className="flex w-full flex-row overflow-x-auto md:sticky md:top-20 md:w-48 md:flex-col md:self-start">
+          <TabsTrigger value="soiree" className="md:flex-none">Ma soirée</TabsTrigger>
+          <TabsTrigger value="playlist" className="md:flex-none">Musiques</TabsTrigger>
+          <TabsTrigger value="messages" className="md:flex-none">Messagerie</TabsTrigger>
         </TabsList>
         <TabsContent value="soiree" className="min-w-0 flex-1 space-y-6">
       {/* Récapitulatif */}
