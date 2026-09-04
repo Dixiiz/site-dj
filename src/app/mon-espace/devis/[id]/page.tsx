@@ -59,6 +59,10 @@ export default async function ClientQuotePage({
   const pendingOptions = (quote.pending_options ?? null) as SelectedOption[] | null;
   const editable = optionsEditable(quote.status) && !pendingOptions;
   const confirmed = quote.status === "confirme";
+  // Le client voit son dossier : on efface le drapeau « contenu non lu ».
+  // (Indispensable pour que les notifications e-mail de messagerie
+  // fonctionnent à nouveau lors d'un prochain message.)
+  void supabase.from("quotes").update({ has_unread_updates: false }).eq("id", id);
   const packImage = PACK_IMAGES[quote.formula_name] ?? null;
 
   return (
@@ -412,7 +416,10 @@ export default async function ClientQuotePage({
       <DiversFiles quoteId={id} files={files} />
 
       {/* Messagerie */}
-      <ClientQuoteMessages quoteId={id} messages={messages} />
+      {/* Messagerie — ancre pour les liens « lire le message » des e-mails */}
+      <div id="messagerie">
+        <ClientQuoteMessages quoteId={id} messages={messages} />
+      </div>
     </main>
   );
 }

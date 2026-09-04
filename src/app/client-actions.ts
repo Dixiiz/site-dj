@@ -305,7 +305,7 @@ export async function sendAdminMessage(formData: FormData) {
   const supabase = createAdminClient();
   const { data: quote } = await supabase
     .from("quotes")
-    .select("customer_email")
+    .select("customer_email, formula_name, client_label, has_unread_updates")
     .eq("id", quoteId)
     .single();
 
@@ -325,6 +325,51 @@ export async function sendAdminMessage(formData: FormData) {
     sender: "admin",
     body,
   });
+
+  // Notification e-mail au client, SANS spam : uniquement s'il n'a pas déjà
+  // de contenu non lu (sinon il a déjà une raison de revenir voir, et le
+  // tchat ne doit pas générer 50 e-mails). Les messages suivants seront
+  // inclus dans la même visite, sans nouveau mail.
+  if (!quote.has_unread_updates) {
+    try {
+      const { Resend } = await import("resend");
+      const apiKey = process.env.RESEND_API_KEY;
+      if (apiKey) {
+        const excerpt = body.length > 160 ? `${body.slice(0, 160)}…` : body;
+        const emailData = {
+          title: "Vous avez reçu un message",
+          emoji: "💬",
+          intro: `Bonjour,<br/><br/>Maxime vous a envoyé un message concernant <strong>${quote.client_label || quote.formula_name || "votre événement"}</strong> :`,
+          sections: [
+            {
+              lines: [
+                `<em style="color:#555;">« ${excerpt.replace(/</g, "&lt;").replace(/\n/g, "<br/>")} »</em>`,
+              ],
+            },
+          ],
+          button: {
+            label: "Lire le message et répondre",
+            href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}#messagerie`)}`,
+          },
+        };
+        const resend = new Resend(apiKey);
+        await resend.emails.send({
+          from: EMAIL_FROM,
+          replyTo: process.env.NOTIF_EMAIL,
+          to: customerEmail,
+          subject: "💬 Un nouveau message vous attend — Propul'Sound DJ",
+          html: buildEmailHtml(emailData),
+          text: buildEmailText(emailData),
+        });
+      }
+    } catch (err) {
+      console.error("[messagerie] Echec e-mail client:", err);
+    }
+  }
+
+  // Marque le contenu comme non lu (le client verra le message à sa
+  // prochaine visite — c'est aussi ce qui évite les e-mails en rafale).
+  await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
 
   // Contacter le client fait passer le devis en « contacté ».
   await advanceQuoteStatus(supabase, quoteId, "contacte");
