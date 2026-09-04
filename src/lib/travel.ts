@@ -57,7 +57,11 @@ export function computeTravelFee(distanceKm: number): TravelEstimate {
 
 // Estimation du PÉAGE via TollGuru (API gratuite avec clé). Requiert
 // TOLLGURU_API_KEY dans .env.local ; renvoie null si indisponible.
-async function tollForRoute(geometryPolyline: string): Promise<number | null> {
+async function tollForRoute(
+  geometryPolyline: string,
+  originAddress: string,
+  destAddress: string
+): Promise<number | null> {
   const key = process.env.TOLLGURU_API_KEY;
   if (!key) return null;
   // Catégorie du véhicule : configurable via TOLLGURU_VEHICLE_TYPE.
@@ -65,13 +69,34 @@ async function tollForRoute(geometryPolyline: string): Promise<number | null> {
   // = « 2AxlesVan » chez TollGuru. Valeurs possibles : Car, 2AxlesVan,
   // 2AxlesTruck, 3AxlesTruck…
   const vehicleType = process.env.TOLLGURU_VEHICLE_TYPE || "2AxlesVan";
+  const headers = {
+    "x-api-key": key,
+    "Content-Type": "application/json",
+  };
+  const parseCost = (data: unknown): number | null => {
+    const d = data as {
+      routes?: {
+        summary?: {
+          cost?: {
+            tagOrCash?: { cost?: number };
+            cash?: { cost?: number };
+            minimum?: { cost?: number };
+            tag?: { cost?: number };
+          };
+        };
+      } | null;
+    };
+    const cost = d?.routes?.[0]?.summary?.cost;
+    const found =
+      cost?.tagOrCash?.cost ?? cost?.cash?.cost ?? cost?.minimum?.cost ?? cost?.tag?.cost;
+    return typeof found === "number" && found > 0 ? Math.round(found * 100) : null;
+  };
+
+  // Tentative 1 : format polyline (ancienne API, toujours opérationnelle).
   try {
     const res = await fetch("https://apis.tollguru.com/toll/v2/complete-route-data", {
       method: "POST",
-      headers: {
-        "x-api-key": key,
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({
         source: { polyline: geometryPolyline },
         destination: { polyline: geometryPolyline },
@@ -79,26 +104,35 @@ async function tollForRoute(geometryPolyline: string): Promise<number | null> {
       }),
       cache: "no-store",
     });
-    if (!res.ok) {
-      console.error("[toll] TollGuru HTTP", res.status);
-      return null;
+    if (res.ok) {
+      const cost = parseCost(await res.json());
+      if (cost != null) return cost;
     }
-    const data = await res.json();
-    // La réponse varie selon le plan : on tente plusieurs emplacements.
-    const route = data?.routes?.[0];
-    const cost =
-      route?.summary?.cost?.tagOrCash?.cost ??
-      route?.summary?.cost?.cash?.cost ??
-      route?.summary?.cost?.minimum?.cost ??
-      route?.summary?.cost?.tag?.cost;
-    if (typeof cost === "number" && cost > 0) {
-      return Math.round(cost * 100);
-    }
-    return null;
   } catch (err) {
-    console.error("[toll] TollGuru indisponible:", err);
-    return null;
+    console.error("[toll] TollGuru polyline indisponible:", err);
   }
+
+  // Tentative 2 : format adresses (API actuelle « v2/calc/route »).
+  try {
+    const res = await fetch("https://apis.tollguru.com/v2/calc/route", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        from: { address: originAddress },
+        to: { address: destAddress },
+        vehicle: { type: vehicleType },
+      }),
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const cost = parseCost(await res.json());
+      if (cost != null) return cost;
+    }
+  } catch (err) {
+    console.error("[toll] TollGuru v2 indisponible:", err);
+  }
+
+  return null;
 }
 
 // Comme estimateTravelFromAddress, mais récupère aussi l'itinéraire complet
@@ -136,7 +170,13 @@ export async function estimateTravelWithToll(
     return { ok: false, error: "Calcul d'itinéraire momentanément indisponible. Réessaie dans un instant." };
   }
   const estimate = computeTravelFee(km);
-  const tollCents = geometry ? await tollForRoute(geometry) : null;
+  const tollCents = geometry
+    ? await tollForRoute(
+        geometry,
+        "Huisseau-sur-Cosson, 41350, France",
+        `${address}, France`
+      )
+    : null;
   return { ok: true, estimate, tollCents };
 }
 
