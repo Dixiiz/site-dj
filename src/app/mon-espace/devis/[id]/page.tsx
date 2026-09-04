@@ -232,20 +232,7 @@ export default async function ClientQuotePage({
         />
       </section>
 
-      {/* Ajouter la soirée à mon calendrier (.ics universel) */}
-      {quote.event_date ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/30 bg-accent/5 p-4">
-          <p className="text-sm text-muted-foreground">
-            Garde la date sous la main — rappel automatique la veille.
-          </p>
-          <a
-            href={`/api/calendar/soiree/${id}`}
-            className="rounded-lg border border-accent/50 bg-accent/10 px-4 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
-          >
-            Ajouter la soirée à mon calendrier
-          </a>
-        </div>
-      ) : null}
+
 
       {/* RDV téléphonique : visible uniquement une fois le devis confirmé */}
       {confirmed ? (
@@ -440,6 +427,20 @@ export default async function ClientQuotePage({
 
       {/* Musiques + fichiers par catégorie : ouverts dès les documents signés */}
           <DiversFiles quoteId={id} files={files} />
+      {/* Ajouter la soirée à mon calendrier (.ics universel) */}
+      {quote.event_date ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/30 bg-accent/5 p-4">
+          <p className="text-sm text-muted-foreground">
+            Garde la date sous la main — rappel automatique la veille.
+          </p>
+          <a
+            href={`/api/calendar/soiree/${id}`}
+            className="rounded-lg border border-accent/50 bg-accent/10 px-4 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+          >
+            Ajouter la soirée à mon calendrier
+          </a>
+        </div>
+      ) : null}
         </TabsContent>
         <TabsContent value="playlist" className="min-w-0 flex-1 space-y-6">
       <div id="playlist">
