@@ -20,6 +20,7 @@ type Quote = {
   extra_fee_cents: number | null;
   extra_fee_label: string | null;
   total_cents: number | null;
+  timeline?: { time: string; label: string }[] | null;
   created_at: string;
   status: string;
 };
@@ -114,6 +115,22 @@ export function AdminQuoteDetails({
           <p className="whitespace-pre-wrap rounded-lg border border-border bg-muted/50 p-3 text-foreground/90">
             {parsed.message}
           </p>
+        </div>
+      ) : null}
+
+      {quote.timeline && quote.timeline.length > 0 ? (
+        <div className="space-y-1.5">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Timeline de la soirée (renseignée par le client)
+          </h3>
+          <ul className="space-y-1 rounded-lg border border-border bg-muted/50 p-3 text-sm">
+            {quote.timeline.map((row, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="w-14 shrink-0 font-medium text-accent">{row.time || "—"}</span>
+                <span className="text-foreground/90">{row.label}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
 

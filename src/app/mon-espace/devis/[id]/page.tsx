@@ -11,6 +11,7 @@ import {
 import { AutoRefresh } from "@/components/auto-refresh";
 import { HashHighlight } from "@/components/hash-highlight";
 import { RdvCallSection } from "@/components/rdv-call";
+import { TimelinePanel, type TimelineRow } from "@/components/timeline-panel";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { downloadQuoteFile } from "@/app/client-actions";
 import { eventMoments } from "@/components/admin-quote-playlist";
@@ -79,11 +80,14 @@ export default async function ClientQuotePage({
   // fonctionnent à nouveau lors d'un prochain message.)
   void supabase.from("quotes").update({ has_unread_updates: false }).eq("id", id);
   const packImage = PACK_IMAGES[quote.formula_name] ?? null;
+  // Timeline de la soirée (JSON dans quotes.timeline).
+  const timeline = (Array.isArray(quote.timeline) ? quote.timeline : []) as TimelineRow[];
 
   return (
     <main className="space-y-10">
       <AutoRefresh />
       <HashHighlight />
+      <TimelinePanel quoteId={id} initial={timeline} />
       <div className="flex flex-wrap items-center gap-4">
         {packImage ? (
           // eslint-disable-next-line @next/next/no-img-element

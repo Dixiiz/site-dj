@@ -44,6 +44,7 @@ export async function GET(
     travel_fee_cents: quote.travel_fee_cents,
     extra_fee_cents: quote.extra_fee_cents,
     notes: quote.notes,
+    timeline: (quote.timeline ?? []) as { time: string; label: string }[],
     options: (quote.selected_options ?? []) as {
       name: string; qty?: number | null; price_cents: number;
     }[],

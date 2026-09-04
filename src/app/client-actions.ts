@@ -1655,6 +1655,58 @@ export async function proposeRdvAvailability(formData: FormData) {
   return { ok: true as const, message: "Disponibilités envoyées ✓" };
 }
 
+// Le client sauvegarde la timeline de sa soirée (horaires cérémonie,
+// cocktail, repas, dessert, ouverture de bal…) — stockée en JSON dans quotes.
+export async function saveClientTimeline(formData: FormData) {
+  const { createAuthClient } = await import("@/lib/supabase/server");
+  const auth = await createAuthClient();
+  const { data: { user } } = await auth.auth.getUser();
+  if (!user?.email) return { ok: false as const, error: "Non autorisé." };
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const raw = String(formData.get("timeline") ?? "[]");
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  // Validation légère : tableau de {time, label} avec chaînes courtes.
+  let rows: { time: string; label: string }[] = [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) throw new Error("format");
+    rows = parsed
+      .slice(0, 12)
+      .map((r) => ({
+        time: String(r?.time ?? "").slice(0, 5),
+        label: String(r?.label ?? "").slice(0, 60),
+      }))
+      .filter((r) => r.label.trim().length > 0);
+  } catch {
+    return { ok: false as const, error: "Format invalide." };
+  }
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("customer_email")
+    .eq("id", quoteId)
+    .single();
+  if (!quote || quote.customer_email?.toLowerCase() !== user.email.toLowerCase()) {
+    return { ok: false as const, error: "Non autorisé." };
+  }
+
+  const { error } = await supabase
+    .from("quotes")
+    .update({ timeline: rows })
+    .eq("id", quoteId);
+  if (error) {
+    console.error("[timeline] Erreur:", error.message);
+    return { ok: false as const, error: "Échec de la sauvegarde. Vérifie que la colonne quotes.timeline existe (SQL)." };
+  }
+
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  revalidatePath("/admin/devis");
+  return { ok: true as const, message: "Timeline enregistrée ✓" };
+}
+
 export async function confirmAcompteReceived(formData: FormData) {
   const { isAdmin } = await import("@/lib/admin-auth");
   if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };

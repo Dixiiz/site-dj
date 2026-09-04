@@ -39,6 +39,7 @@ export type FicheSoireeData = {
   travel_fee_cents?: number | null;
   extra_fee_cents?: number | null;
   notes?: string | null;
+  timeline?: { time: string; label: string }[] | null;
   options?: FicheOption[] | null;
   tracks?: FicheTrack[] | null;
   messages?: FicheMessage[] | null;
@@ -190,6 +191,15 @@ export async function buildFicheSoireePdf(data: FicheSoireeData): Promise<Uint8A
     section("Options retenues");
     for (const opt of data.options) {
       bullet(`${opt.name}${opt.qty && opt.qty > 1 ? ` x${opt.qty}` : ""} (${fmtE(opt.price_cents)})`);
+    }
+  }
+
+  // ================= TIMELINE DE LA SOIRÉE =================
+  const timeline = (data.timeline ?? []).filter((r) => r.label.trim());
+  if (timeline.length > 0) {
+    section("Timeline de la soiree");
+    for (const row of timeline) {
+      bullet(`${row.time ? row.time : "--:--"} - ${row.label}`);
     }
   }
 
