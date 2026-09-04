@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createAuthClient } from "@/lib/supabase/server";
 import type { SelectedOption } from "@/lib/types";
 import { SITE_URL } from "@/lib/site-url";
-import { EMAIL_FROM } from "@/lib/emails";
+import { EMAIL_FROM, buildEmailHtml, buildEmailText } from "@/lib/emails";
 
 // ---------- Session ----------
 
