@@ -13,6 +13,27 @@ const DEFAULT_ROWS: TimelineRow[] = [
   { time: "", label: "Ouverture de bal" },
 ];
 
+// Créneaux de 15 min en 15 min, de 12:00 à 05:45 (le lendemain matin).
+const TIME_OPTIONS: string[] = (() => {
+  const out: string[] = [];
+  for (let m = 12 * 60; m <= 29 * 60 + 45; m += 15) {
+    const hh = String(Math.floor(m / 60) % 24).padStart(2, "0");
+    const mm = String(m % 60).padStart(2, "0");
+    out.push(`${hh}:${mm}`);
+  }
+  return out;
+})();
+
+// Tri chronologique : les lignes horodatées d'abord, les vides à la fin.
+function sortRows(rows: TimelineRow[]): TimelineRow[] {
+  const toMin = (t: string) => {
+    if (!t) return Infinity;
+    const [h, m] = t.split(":").map(Number);
+    return (h < 12 ? h + 24 : h) * 60 + m;
+  };
+  return [...rows].sort((a, b) => toMin(a.time) - toMin(b.time));
+}
+
 // Timeline de la soirée : panneau latéral droit coulissant. Le client y
 // renseigne les horaires (cérémonie, cocktail, repas…) — visibles par Maxime
 // et intégrés à la fiche de soirée PDF.
@@ -46,7 +67,10 @@ export function TimelinePanel({
   }, [mounted, open]);
 
   function update(i: number, field: keyof TimelineRow, value: string) {
-    setRows((current) => current.map((r, idx) => (idx === i ? { ...r, [field]: value } : r)));
+    setRows((current) => {
+      const next = current.map((r, idx) => (idx === i ? { ...r, [field]: value } : r));
+      return field === "time" ? sortRows(next) : next;
+    });
     setSaved(null);
   }
 
@@ -119,12 +143,16 @@ export function TimelinePanel({
                     className="absolute left-[9px] h-2.5 w-2.5 rounded-full border-2 border-accent bg-background"
                     aria-hidden
                   />
-                  <input
-                    type="time"
+                  <select
                     value={row.time}
                     onChange={(e) => update(i, "time", e.target.value)}
-                    className="w-24 rounded-md border border-border bg-background px-2 py-1.5 text-xs tabular-nums outline-none transition-colors focus:border-accent"
-                  />
+                    className="w-24 rounded-md border border-border bg-background px-2 py-1.5 text-xs outline-none transition-colors focus:border-accent"
+                  >
+                    <option value="">--:--</option>
+                    {TIME_OPTIONS.map((time) => (
+                      <option key={time} value={time}>{time}</option>
+                    ))}
+                  </select>
                   <input
                     type="text"
                     value={row.label}
