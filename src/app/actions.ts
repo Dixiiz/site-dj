@@ -22,21 +22,30 @@ import { Resend } from "resend";
 const NOTIF_EMAIL = process.env.NOTIF_EMAIL ?? "";
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
 
-async function sendQuoteNotification(lines: string[]) {
+async function sendQuoteNotification(
+  subject: string,
+  emailData: Parameters<typeof import("@/lib/emails").buildEmailHtml>[0]
+) {
   if (!NOTIF_EMAIL || !RESEND_API_KEY) return;
   try {
     const resend = new Resend(RESEND_API_KEY);
+    const { buildEmailHtml, buildEmailText } = await import("@/lib/emails");
     await resend.emails.send({
-      from: "Propul'Sound DJ <contact@propulsounddj.fr>",
+      from: EMAIL_FROM,
       replyTo: NOTIF_EMAIL,
       to: NOTIF_EMAIL,
-      subject: "🎧 Nouveau devis reçu",
-      text: lines.join("\n"),
+      subject,
+      html: buildEmailHtml(emailData),
+      text: buildEmailText(emailData),
     });
   } catch (err) {
     console.error("[notif] Echec envoi e-mail:", err);
   }
 }
+
+// Échappement HTML pour les contenus saisis par le client.
+const esc = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 export async function estimateTravelFee(formData: FormData) {
   const address = String(formData.get("event_location") ?? "").trim();
@@ -306,21 +315,32 @@ export async function submitQuoteAndBooking(formData: FormData) {
       console.error("[notif] Echec e-mail de confirmation client:", err);
     }
 
-    await sendQuoteNotification([
-      "Nouveau devis reçu sur le site :",
-      `Client : ${customer_name}`,
-      `E-mail : ${customer_email}`,
-      customer_phone ? `Téléphone : ${customer_phone}` : null,
-      `Pack : ${pack_name || formula.name} (${formatPrice(packPriceCents)})`,
-      `Date : ${event_date}`,
-      `Horaires : ${start_time} - ${end_time}`,
-      event_location ? `Lieu : ${event_location}` : null,
-      selected.length > 0
-        ? `Options : ${selected.map((o) => o.name).join(", ")}`
-        : "Options : aucune",
-      `Total : ${formatPrice(total_cents)}`,
-      notes ? `Message : ${notes}` : null,
-    ].filter(Boolean) as string[]);
+    await sendQuoteNotification("🎧 Nouveau devis reçu — à traiter", {
+      title: "Nouveau devis reçu !",
+      emoji: "🎧",
+      intro: `Un nouveau devis vient d'être soumis sur le site par <strong>${esc(customer_name)}</strong>.`,
+      sections: [
+        {
+          title: "Détails de la demande",
+          lines: [
+            `<strong>Client :</strong> ${esc(customer_name)}`,
+            `<strong>E-mail :</strong> ${esc(customer_email)}`,
+            customer_phone ? `<strong>Téléphone :</strong> ${esc(customer_phone)}` : "",
+            `<strong>Pack :</strong> ${esc(pack_name || formula.name)} (${formatPrice(packPriceCents)})`,
+            `<strong>Date :</strong> ${esc(event_date)}`,
+            `<strong>Horaires :</strong> ${esc(start_time)} - ${esc(end_time)}`,
+            event_location ? `<strong>Lieu :</strong> ${esc(event_location)}` : "",
+            selected.length > 0
+              ? `<strong>Options :</strong> ${selected.map((o) => esc(o.name)).join(", ")}`
+              : "<strong>Options :</strong> aucune",
+            `<strong>Total :</strong> ${formatPrice(total_cents)}`,
+            notes ? `<strong>Message :</strong><br/><em>${esc(notes)}</em>` : "",
+          ].filter(Boolean),
+        },
+      ],
+      button: { label: "Ouvrir l'admin — Devis", href: `${SITE_URL}/admin/devis` },
+      footer: "Pense à qualifier le devis (statut « Contacté ») pour que le suivi soit à jour.",
+    });
   });
 
   redirect(`/merci?nom=${encodeURIComponent(customer_name)}`);

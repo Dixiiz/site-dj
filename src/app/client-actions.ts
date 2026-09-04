@@ -261,12 +261,28 @@ export async function sendQuoteMessage(formData: FormData) {
     const to = process.env.NOTIF_EMAIL;
     if (apiKey && to) {
       const resend = new Resend(apiKey);
+      const excerpt = body.length > 400 ? `${body.slice(0, 400)}…` : body;
+      const emailData = {
+        title: "Nouveau message client",
+        emoji: "💬",
+        intro: `<strong>${quote.customer_name ?? user.email}</strong> t'a envoyé un message${quote.event_date ? ` (soirée du ${new Date(quote.event_date).toLocaleDateString("fr-FR")})` : ""} :`,
+        sections: [
+          {
+            lines: [
+              `<em style="color:#333;">« ${excerpt.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br/>")} »</em>`,
+            ],
+          },
+        ],
+        button: { label: "Répondre dans l'admin", href: `${SITE_URL}/admin/messages` },
+        footer: "Répondre directement à cet e-mail contactera aussi le client.",
+      };
       await resend.emails.send({
-        from: "Propul'Sound DJ <contact@propulsounddj.fr>",
+        from: EMAIL_FROM,
         replyTo: user.email ?? undefined,
         to,
         subject: `💬 Nouveau message client — ${quote.formula_name}`,
-        text: `Message de ${quote.customer_name} (${quote.event_date ?? "date à définir"}) :\n\n${body}\n\nRépondre : /admin/messages`,
+        html: buildEmailHtml(emailData),
+        text: buildEmailText(emailData),
       });
     }
   } catch (err) {
@@ -1235,12 +1251,28 @@ export async function declareAcompteSent(formData: FormData) {
     const to = process.env.NOTIF_EMAIL;
     if (apiKey && to) {
       const resend = new Resend(apiKey);
+      const emailData = {
+        title: "Acompte déclaré par le client",
+        emoji: "💳",
+        intro: `<strong>${quote.customer_email ?? user.email}</strong> déclare avoir envoyé l'acompte du devis.`,
+        sections: [
+          {
+            title: "À faire",
+            lines: [
+              "1. Vérifie la <strong>réception du virement</strong> sur ton compte bancaire",
+              "2. Passe le devis en <strong>« Confirmé »</strong> depuis l'admin → sa réservation sera entièrement validée",
+            ],
+          },
+        ],
+        button: { label: "Ouvrir l'admin — Devis", href: `${SITE_URL}/admin/devis` },
+      };
       await resend.emails.send({
         from: EMAIL_FROM,
         replyTo: user.email,
         to,
         subject: "💳 Acompte déclaré — à vérifier sur ton compte",
-        text: `Le client ${quote.customer_email ?? user.email} déclare avoir envoyé l'acompte du devis ${quoteId}.\n\nVérifie la réception du virement sur ton compte bancaire, puis passe le devis en « Confirmé » depuis l'admin pour valider sa réservation.\n\n— Site Propul'Sound DJ`,
+        html: buildEmailHtml(emailData),
+        text: buildEmailText(emailData),
       });
     }
   } catch (err) {
