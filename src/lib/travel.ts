@@ -75,7 +75,7 @@ async function tollForRoute(
   };
   const parseCost = (data: unknown): number | null => {
     const d = data as {
-      routes?: {
+      routes?: Array<{
         summary?: {
           cost?: {
             tagOrCash?: { cost?: number };
@@ -84,7 +84,7 @@ async function tollForRoute(
             tag?: { cost?: number };
           };
         };
-      } | null;
+      }> | null;
     };
     const cost = d?.routes?.[0]?.summary?.cost;
     const found =
