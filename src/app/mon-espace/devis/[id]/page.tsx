@@ -373,6 +373,7 @@ export default async function ClientQuotePage({
                   <div className="flex flex-wrap items-center gap-2">
                     <a
                       href={`/api/files/${file.id}`}
+                      download
                       className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
                     >
                       Télécharger
@@ -403,6 +404,7 @@ export default async function ClientQuotePage({
                     <span className="min-w-0 truncate font-medium">{file.name}</span>
                     <a
                       href={`/api/files/${file.id}`}
+                      download
                       className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
                     >
                       Télécharger
