@@ -42,9 +42,11 @@ function toMinutes(time: string) {
 }
 
 const END_TIMES = [
- "23:00", "23:30", "00:00", "00:30", "01:00", "01:30",
- "02:00", "02:30", "03:00", "03:30", "04:00", "04:30", "05:00",
- "05:30", "06:00",
+  "19:00", "19:30", "20:00", "20:30",
+  "21:00", "21:30", "22:00", "22:30",
+  "23:00", "23:30", "00:00", "00:30", "01:00", "01:30",
+  "02:00", "02:30", "03:00", "03:30", "04:00", "04:30", "05:00",
+  "05:30", "06:00",
 ];
 
 function isMariageFormula(name: string) {
@@ -247,6 +249,16 @@ export function QuoteBookingForm({
   // Le prix du pack couvre baseMinutes de prestation ; chaque demi-heure entamée
   // au-delà est facturée au tarif horaire du pack (0,5 h = demi tarif).
   const includedMinutes = pack?.baseMinutes ?? (isMariage ? 480 : 360);
+
+  // Heures de fin proposées : au moins la durée minimale du pack sélectionné
+  // (2 h Set DJ, 3 h clé en main, 6 h anniversaire, 8 h mariage). Les fins après
+  // minuit sont ramenées après 20 h pour comparer avec le début.
+  const allowedEndTimes = END_TIMES.filter((time) => {
+    const m = toMinutes(time);
+    const normalized = m < 12 * 60 ? m + 24 * 60 : m;
+    return normalized >= startMinutes + includedMinutes;
+  });
+
   const extraRateCents = pack?.extraRateCents ?? EXTRA_HOUR_RATE_CENTS;
   const extraHours = useMemo(() => {
     if (normalizedEndMinutes == null || invalidOrder) return 0;
@@ -454,17 +466,12 @@ export function QuoteBookingForm({
                   </Label>
                   <select
                     id="end_time_select"
-                    value={endTime}
+                    value={allowedEndTimes.includes(endTime) ? endTime : ""}
                     onChange={(event) => setEndTime(event.target.value)}
                     className="w-full rounded-lg border border-border bg-background px-3 py-3 text-lg font-medium"
                   >
                     <option value="">Choisir…</option>
-                    {END_TIMES.filter(
-                      (time) =>
-                        (toMinutes(time) < 12 * 60
-                          ? toMinutes(time) + 24 * 60
-                          : toMinutes(time)) > startMinutes
-                    ).map((time) => (
+                    {allowedEndTimes.map((time) => (
                       <option key={time} value={time}>
                         {time}
                       </option>
@@ -658,7 +665,7 @@ export function QuoteBookingForm({
               type="submit"
               className="w-full"
               size="lg"
-              disabled={pending || !formulaId || !selectedDate || !endTime || invalidOrder}
+              disabled={pending || !formulaId || !selectedDate || !endTime || invalidOrder || !allowedEndTimes.includes(endTime)}
             >
               {pending ? "Enregistrement…" : "Envoyer ma demande de devis"}
             </Button>
