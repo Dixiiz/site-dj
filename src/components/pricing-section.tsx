@@ -153,7 +153,7 @@ const CATEGORIES: Category[] = [
     ],
     packs: [
       {
-        name: "Set DJ (matériel & son sur place)",
+        name: "Set DJ seul (votre sono)",
         price: 11000,
         image: "/images/packs/setdj.jpg",
         baseMinutes: 120,
@@ -192,6 +192,7 @@ const CATEGORIES: Category[] = [
         defaultEnd: "23:00",
         equipment: [
  "Minimum 3 h de mix (90 €/h) + installation 100 €",
+ "Matériel renforcé : +100 € par rapport au Standard (lyres et PAR en plus, 2 machines à fumée)",
  "Régie DJ + Sono Audiophony Modjo2000",
  "4 Lyres Beam + 2 Bars LED + 8 PAR LED",
  "2 Machines à fumée",
