@@ -1289,7 +1289,7 @@ export async function declareAcompteSent(formData: FormData) {
   const supabase = createAdminClient();
   const { data: quote } = await supabase
     .from("quotes")
-    .select("customer_email, acompte_declared_at")
+    .select("customer_email, customer_name, acompte_declared_at")
     .eq("id", quoteId)
     .single();
   if (!quote || quote.customer_email?.toLowerCase() !== user.email.toLowerCase()) {
@@ -1313,7 +1313,7 @@ export async function declareAcompteSent(formData: FormData) {
       const emailData = {
         title: "Acompte déclaré par le client",
         emoji: "",
-        intro: `<strong>${quote.customer_email ?? user.email}</strong> déclare avoir envoyé l'acompte du devis.`,
+        intro: `<strong>${quote.customer_name ?? quote.customer_email ?? user.email}</strong>${quote.customer_email ? ` (${quote.customer_email})` : ""} déclare avoir envoyé l'acompte du devis.`,
         sections: [
           {
             title: "À faire",
@@ -1426,7 +1426,7 @@ export async function proposeRdvCall(formData: FormData) {
   const supabase = createAdminClient();
   const { data: quote } = await supabase
     .from("quotes")
-    .select("customer_email")
+    .select("customer_email, customer_name")
     .eq("id", quoteId)
     .single();
   if (!quote || quote.customer_email?.toLowerCase() !== user.email.toLowerCase()) {
@@ -1467,7 +1467,7 @@ export async function proposeRdvCall(formData: FormData) {
       const emailData = {
         title: "Demande de RDV téléphonique",
         emoji: "",
-        intro: `<strong>${quote.customer_email}</strong> souhaite un point téléphonique avec toi. Créneaux proposés :`,
+        intro: `<strong>${quote.customer_name ?? quote.customer_email}</strong> (${quote.customer_email}) souhaite un point téléphonique avec toi. Créneaux proposés :`,
         sections: [{ lines: slotsFr }],
         button: { label: "Valider un créneau (admin)", href: `${SITE_URL}/admin/devis` },
       };
@@ -1606,7 +1606,7 @@ export async function proposeRdvAvailability(formData: FormData) {
   const supabase = createAdminClient();
   const { data: quote } = await supabase
     .from("quotes")
-    .select("customer_email")
+    .select("customer_email, customer_name")
     .eq("id", quoteId)
     .single();
   if (!quote || quote.customer_email?.toLowerCase() !== user.email.toLowerCase()) {
@@ -1633,7 +1633,7 @@ export async function proposeRdvAvailability(formData: FormData) {
       const emailData = {
         title: "Demande de RDV téléphonique",
         emoji: "",
-        intro: `<strong>${quote.customer_email}</strong> souhaite un point téléphonique. Disponibilités :`,
+        intro: `<strong>${quote.customer_name ?? quote.customer_email}</strong> (${quote.customer_email}) souhaite un point téléphonique. Disponibilités :`,
         sections: [{ lines: [`<strong>${availability}</strong>`] }],
         button: { label: "Choisir un créneau (admin)", href: `${SITE_URL}/admin/devis` },
       };

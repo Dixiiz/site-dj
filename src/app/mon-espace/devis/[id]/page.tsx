@@ -321,21 +321,27 @@ export default async function ClientQuotePage({
                       <span className="font-mono text-xs">CMCIFR2A</span>
                     </p>
                   </div>
-                  <form
-                    action={async (formData: FormData) => {
+                  {quote.acompte_declared_at ? (
+                    <p className="mt-3 inline-flex items-center gap-2 rounded-lg border border-orange-500/50 bg-orange-500/10 px-3 py-2 text-xs font-medium text-orange-300">
+                      ⏳ Envoi déclaré — en attente de confirmation par le prestataire
+                    </p>
+                  ) : (
+                    <form
+                      action={async (formData: FormData) => {
  "use server";
-                      await declareAcompteSent(formData);
-                    }}
-                    className="mt-3"
-                  >
-                    <input type="hidden" name="quote_id" value={id} />
-                    <SubmitButton
-                      pendingLabel="Envoi de la confirmation…"
-                      className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                        await declareAcompteSent(formData);
+                      }}
+                      className="mt-3"
                     >
-                      ✓ J&apos;ai envoyé l&apos;acompte
-                    </SubmitButton>
-                  </form>
+                      <input type="hidden" name="quote_id" value={id} />
+                      <SubmitButton
+                        pendingLabel="Envoi de la confirmation…"
+                        className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                      >
+                        ✓ J&apos;ai envoyé l&apos;acompte
+                      </SubmitButton>
+                    </form>
+                  )}
                 </>
               )}
             </section>
