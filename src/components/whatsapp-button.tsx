@@ -1,9 +1,11 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import { SITE_NAME } from "@/lib/site-url";
+
+const emptySubscribe = () => () => {};
 
 const WHATSAPP_URL =
  "https://wa.me/33674850769?text=" +
@@ -13,8 +15,8 @@ const WHATSAPP_URL =
 
 export function WhatsAppButton() {
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // true après l'hydratation, false pendant le rendu serveur.
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   if (!mounted || pathname?.startsWith("/admin")) return null;
 

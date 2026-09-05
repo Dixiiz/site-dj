@@ -594,8 +594,6 @@ export async function updateQuoteOptions(formData: FormData) {
     .select("*")
     .eq("is_active", true);
 
-  const oldOptions = (quote.selected_options ?? []) as SelectedOption[];
-
   // Quantité de pistolets CO2 choisie par le client (1 ou 2).
   const co2Qty = Math.min(2, Math.max(1, Number(formData.get("co2_qty") ?? 1) || 1));
 
@@ -957,21 +955,14 @@ export async function generateDevisDocument(formData: FormData) {
     .single();
   if (!quote) return { ok: false as const, error: "Devis introuvable." };
 
-  const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
-
   // Personnalisation : valeurs du formulaire admin, sinon modèle par défaut.
   const { DEVIS_TEMPLATE } = await import("@/lib/devis-template");
-  const title = String(formData.get("devis_title") ?? "") || DEVIS_TEMPLATE.title;
-  const subtitle =
-    String(formData.get("devis_subtitle") ?? "") || DEVIS_TEMPLATE.subtitle;
   const conditions =
     String(formData.get("devis_conditions") ?? "") || DEVIS_TEMPLATE.conditions;
   const validityDays =
     Number(formData.get("devis_validity_days") ?? "") || DEVIS_TEMPLATE.validityDays;
-  const customNotes = String(formData.get("devis_notes") ?? "").trim();
 
   // Génération du PDF avec le modèle validé (charte anthracite / bleu / cyan).
-  let bytes: Uint8Array;
   const { buildDevisPdf } = await import("@/lib/devis-pdf");
   // N° de contrat : date d'émission (AAAAMMJJ) + compteur du jour (-01, -02…)
   const todayIso = new Date().toLocaleDateString("fr-CA"); // AAAA-MM-JJ
@@ -983,7 +974,7 @@ export async function generateDevisDocument(formData: FormData) {
   const contractNumber = `${todayIso.replace(/-/g, "")}-${String(
     (todayCount ?? 0) + 1
   ).padStart(2, "0")}`;
-  bytes = await buildDevisPdf(quote as never, {
+  const bytes = await buildDevisPdf(quote as never, {
     contractNumber,
     validityDays,
     conditions: conditions.includes("valable")

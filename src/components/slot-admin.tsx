@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createSlot, deleteSlot, toggleSlot } from "@/app/actions";
-import { buttonVariants, Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

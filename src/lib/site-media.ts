@@ -2,6 +2,8 @@
 // Supabase Storage — bucket public « site-media ». Repli automatique sur le
 // dossier public/ local si le bucket n'est pas encore disponible.
 import { createAdminClient } from "@/lib/supabase/admin";
+import { readdirSync, readFileSync, unlinkSync } from "node:fs";
+import { join } from "node:path";
 
 export const MEDIA_BUCKET = "site-media";
 
@@ -61,8 +63,6 @@ export async function deleteMedia(folder: MediaFolder, name: string): Promise<{ 
 
 // ---------- Ordre d'affichage (stocké dans le bucket, _ordre.json) ----------
 
-type MediaOrder = Record<string, string[]>; // clé : nom de fichier → position implicite par index
-
 export async function getOrder(folder: MediaFolder): Promise<string[]> {
   const supabase = createAdminClient();
   const { data } = await supabase.storage.from(MEDIA_BUCKET).download(`${folder}/_ordre.json`);
@@ -107,8 +107,6 @@ export type MediaItem = {
 
 export function listLocalMedia(folder: MediaFolder): MediaItem[] {
   try {
-    const { readdirSync } = require("node:fs") as typeof import("node:fs");
-    const { join } = require("node:path") as typeof import("node:path");
     const dir = join(process.cwd(), LOCAL_DIRS[folder]);
     return readdirSync(dir)
       .filter((f) => !f.startsWith(".") && /\.(jpe?g|png|webp|avif|mp4|mov|webm)$/i.test(f))
@@ -125,8 +123,6 @@ export function listLocalMedia(folder: MediaFolder): MediaItem[] {
 
 export function deleteLocalMedia(folder: MediaFolder, name: string): { ok: boolean; error?: string } {
   try {
-    const { unlinkSync } = require("node:fs") as typeof import("node:fs");
-    const { join } = require("node:path") as typeof import("node:path");
     unlinkSync(join(process.cwd(), LOCAL_DIRS[folder], name));
     return { ok: true };
   } catch (e) {
@@ -139,8 +135,6 @@ export async function importLocalToStorage(
   name: string
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    const { readFileSync } = require("node:fs") as typeof import("node:fs");
-    const { join } = require("node:path") as typeof import("node:path");
     const bytes = readFileSync(join(process.cwd(), LOCAL_DIRS[folder], name));
     await ensureMediaBucket();
     const supabase = createAdminClient();

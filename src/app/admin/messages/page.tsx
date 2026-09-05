@@ -7,17 +7,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-// Compte uniquement (la liste complète est rendue par AdminQuotePlaylist).
-type Track = {
-  id: string;
-  quote_id: string;
-  moment: string;
-  title: string;
-  artist: string | null;
-  kind: string;
-  preview_url: string | null;
-  artwork_url: string | null;
-};
 
 function timeLabel(iso: string) {
   return new Date(iso).toLocaleString("fr-FR", {

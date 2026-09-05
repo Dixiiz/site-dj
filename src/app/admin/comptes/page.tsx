@@ -18,7 +18,7 @@ type Compte = {
 export default async function AdminComptesPage() {
   const supabase = createAdminClient();
 
-  const [{ data: usersData, error }, { data: quotes }] = await Promise.all([
+  const [{ data: usersData }, { data: quotes }] = await Promise.all([
     supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
     supabase.from("quotes").select("id, customer_email, status"),
   ]);
@@ -55,7 +55,7 @@ export default async function AdminComptesPage() {
     <main className="mx-auto w-full max-w-5xl px-4 py-8">
       <h1 className="text-2xl font-semibold">Comptes clients ({comptes.length})</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Tous les comptes créés sur l'espace client, avec leurs devis.
+        Tous les comptes créés sur l’espace client, avec leurs devis.
       </p>
 
       <div className="mt-6 overflow-x-auto rounded-xl border border-border">

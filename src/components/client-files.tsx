@@ -40,7 +40,7 @@ export function MomentFiles({
   files: ClientFile[];
 }) {
   const [pending, startTransition] = useTransition();
-  const [pendingRemove, startRemove] = useTransition();
+  const [, startRemove] = useTransition();
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -136,7 +136,7 @@ export function MomentFiles({
 }
 
 // Fichiers sans catégorie (anciens envois) — liste lecture seule.
-export function DiversFiles({ quoteId, files }: { quoteId: string; files: ClientFile[] }) {
+export function DiversFiles({ files }: { quoteId: string; files: ClientFile[] }) {
   const misc = files.filter((f) => !f.moment && !f.from_admin);
   if (misc.length === 0) return null;
   return (

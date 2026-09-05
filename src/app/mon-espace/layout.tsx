@@ -1,11 +1,10 @@
 import type { ReactNode } from "react";
-import { AutoRefresh } from "@/components/auto-refresh";
 import { ClientBack } from "@/components/client-back";
 import { SiteHeader } from "@/components/site-header";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getClientUser, logoutClient } from "@/app/client-actions";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { SubmitButton } from "@/components/submit-button";
 
 export default async function MonEspaceLayout({ children }: { children: ReactNode }) {

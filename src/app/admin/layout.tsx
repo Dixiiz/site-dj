@@ -3,7 +3,7 @@ import Link from "next/link";
 import { logoutAdmin } from "@/app/actions";
 import { AdminLoginForm } from "@/components/admin-login-form";
 import { SubmitButton } from "@/components/submit-button";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { isAdmin } from "@/lib/admin-auth";
 
 export default async function AdminLayout({

@@ -27,7 +27,7 @@ export function AdminQuoteConversation({
   initialMessages: Message[];
 }) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
 
   // Synchronisation avec les props après revalidation serveur (pattern React).

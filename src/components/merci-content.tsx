@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 
 export function MerciContent({ nom }: { nom?: string }) {

@@ -1,5 +1,3 @@
-import { downloadQuoteFile } from "@/app/client-actions";
-import { Button } from "@/components/ui/button";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type Track = {
@@ -21,14 +19,6 @@ type FileRow = {
 };
 
 const DANCE = "Soirée / Piste de danse";
-// Temps forts par défaut (mariage) ; la liste réelle est passée en prop.
-const DEFAULT_MOMENTS = [
- "Cérémonie laïque",
- "Entrée des mariés",
- "Cocktail / Vin d'honneur",
- "Repas",
- "Ouverture de bal",
-];
 
 function sizeLabel(bytes: number | null) {
   if (!bytes) return "";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useSyncExternalStore, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { format } from "date-fns";
@@ -9,7 +9,6 @@ import { fr } from "react-day-picker/locale";
 import { toast } from "sonner";
 import { estimateTravelFee, getUnavailableDates, searchAddresses, submitQuoteAndBooking } from "@/app/actions";
 import { FadeIn } from "@/components/fade-in";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -19,10 +18,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+
+const emptySubscribe = () => () => {};
 import { formatEuros } from "@/lib/money";
 import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
 import type { Formula, QuoteOption } from "@/lib/types";
@@ -100,8 +100,8 @@ export function QuoteBookingForm({
 
   // Le mini récap est rendu dans un portail : il ne doit apparaître qu'après
   // le montage (document.body n'existe pas côté serveur).
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // true après l'hydratation, false pendant le rendu serveur.
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   // Mini récap flottant : visible dès qu'une sélection est faite,
   // tant que le grand récapitulatif n'est pas à l'écran.
@@ -124,7 +124,9 @@ export function QuoteBookingForm({
     const iso = new URLSearchParams(window.location.search).get("date");
     if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
     const d = new Date(`${iso}T12:00:00`);
-    if (!Number.isNaN(d.getTime())) setSelectedDate(d);
+    if (Number.isNaN(d.getTime())) return;
+    const raf = requestAnimationFrame(() => setSelectedDate(d));
+    return () => cancelAnimationFrame(raf);
   }, []);
 
   // Pré-sélection depuis la section "Nos Formules & Tarifs" (bouton d'un pack).
@@ -225,8 +227,6 @@ export function QuoteBookingForm({
   const isBarClub = pack
     ? /set dj|clé en main|bar|club|pro/i.test(pack.name)
     : false;
-  const cutoffLabel = isMariage ? "04:00" : "03:00";
-  const cutoffMinutes = toMinutes(cutoffLabel) + 24 * 60;
   // Départ dès 14 h pour les mariages, 17 h pour le reste (20 h dernier départ).
   const startTimes = useMemo(() => {
     const first = isMariage ? 14 : 18;
@@ -273,12 +273,6 @@ export function QuoteBookingForm({
     extraFeeCents +
     (travel?.feeCents ?? 0);
 
-  function toggleOption(id: string, checked: boolean) {
-    setOptionIds((current) =>
-      checked ? [...current, id] : current.filter((item) => item !== id)
-    );
-  }
-
   function onDateChange(date?: Date) {
     setSelectedDate(date);
   }
@@ -291,8 +285,8 @@ export function QuoteBookingForm({
       return;
     }
     if (eventLocation.trim().length < 2) {
-      setSuggestions([]);
-      return;
+      const clear = setTimeout(() => setSuggestions([]), 0);
+      return () => clearTimeout(clear);
     }
     const timer = setTimeout(async () => {
       const result = await searchAddresses(eventLocation);

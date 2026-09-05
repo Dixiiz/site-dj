@@ -64,6 +64,13 @@ export function VideoShowcase({ videos, orientation = "landscape" }: VideoShowca
     });
   };
 
+  const stopPreview = (src: string) => {
+    const v = refs.current?.[src];
+    if (!v) return;
+    v.pause();
+    v.currentTime = 0;
+  };
+
   const videoClass = portrait
     ? "aspect-[9/16] w-full rounded-xl border border-border object-cover"
     : "aspect-video w-full object-cover";
@@ -111,13 +118,7 @@ export function VideoShowcase({ videos, orientation = "landscape" }: VideoShowca
                     const v = refs.current?.[src];
                     v?.play().catch(() => {});
                   }}
-                  onMouseLeave={() => {
-                    const v = refs.current?.[src];
-                    if (v) {
-                      v.pause();
-                      v.currentTime = 0;
-                    }
-                  }}
+                  onMouseLeave={() => stopPreview(src)}
                 />
                 {/* Sur mobile, un tap sur la vidéo la lance ou la met en pause. */}
                 <button

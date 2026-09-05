@@ -58,7 +58,7 @@ export function ClientPlaylistEditor({
   ];
   const [customMoments, setCustomMoments] = useState<string[]>(allCustom);
   const [newMoment, setNewMoment] = useState("");
-  const [pendingRemove, startRemove] = useTransition();
+  const [, startRemove] = useTransition();
 
   function removeTrack(trackId: string) {
     const formData = new FormData();

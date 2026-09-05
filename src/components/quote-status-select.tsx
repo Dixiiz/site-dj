@@ -34,7 +34,7 @@ export function QuoteStatusSelect({
         <SelectItem value="nouveau">Nouveau</SelectItem>
         <SelectItem value="contacte">Contacté</SelectItem>
         <SelectItem value="attente_signature">En attente de signature</SelectItem>
-        <SelectItem value="attente_acompte">En attente de l'acompte</SelectItem>
+        <SelectItem value="attente_acompte">En attente de l’acompte</SelectItem>
         <SelectItem value="confirme">Confirmé</SelectItem>
         <SelectItem value="refuse">Refusé</SelectItem>
       </SelectContent>

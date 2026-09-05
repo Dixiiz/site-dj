@@ -1,13 +1,12 @@
 import {
   deleteAdminDocument,
-  downloadQuoteFile,
   generateContratDocument,
   generateDevisDocument,
   generateDevisEtContratDocument,
   generateFactureDocument,
   uploadAdminDocument,
 } from "@/app/client-actions";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { InvoiceAdjustments } from "@/components/admin-invoice-adjustments";

@@ -1,14 +1,4 @@
-import { downloadQuoteFile } from "@/app/client-actions";
-import { Button } from "@/components/ui/button";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-type FileRow = {
-  id: string;
-  name: string;
-  mime_type: string | null;
-  size_bytes: number | null;
-  moment: string | null;
-};
 
 function sizeLabel(bytes: number | null) {
   if (!bytes) return "";

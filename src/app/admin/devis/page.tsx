@@ -12,7 +12,6 @@ import { AdminQuotePlaylist, eventMoments } from "@/components/admin-quote-playl
 import { AdminRdvRequests } from "@/components/rdv-call";
 import { updateQuoteStatus } from "@/app/actions";
 
-import { QuoteStatusSelect } from "@/components/quote-status-select";
 import { Badge } from "@/components/ui/badge";
 import { formatEuros } from "@/lib/money";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -56,16 +55,6 @@ function eventKind(formulaName: string): string {
   if (n.includes("set dj") || n.includes("clé en main") || n.includes("club") || n.includes("afterwork"))
     return "Bar / Club";
   return "Anniversaire / Privé";
-}
-
-function detailRow(label: string, value: string | null | undefined) {
-  if (!value) return null;
-  return (
-    <div className="flex gap-2">
-      <span className="w-40 shrink-0 text-muted-foreground">{label}</span>
-      <span className="text-foreground/90">{value}</span>
-    </div>
-  );
 }
 
 export default async function DevisPage({

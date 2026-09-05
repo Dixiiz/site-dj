@@ -25,7 +25,7 @@ async function getBookedDates(): Promise<BookedDate[]> {
   const out: BookedDate[] = [];
   try {
     const supabase = createAdminClient();
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("quotes")
       .select("event_date")
       .in("status", ["attente_acompte", "confirme"])

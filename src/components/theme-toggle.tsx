@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
+
+const emptySubscribe = () => () => {};
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // true après l'hydratation, false pendant le rendu serveur : évite tout
+  // décalage serveur/client (erreur React #418) selon le thème sauvegardé.
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
-  const isDark = theme !== "light";
+  const isDark = mounted ? theme !== "light" : true;
 
   return (
     <button

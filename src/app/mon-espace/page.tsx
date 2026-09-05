@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { deleteClientQuote, getMyQuotes } from "@/app/client-actions";
 import { SubmitButton } from "@/components/submit-button";
-import { ClientBack } from "@/components/client-back";
 import { RenameInline } from "@/components/rename-inline";
 import { formatEuros } from "@/lib/money";
 
