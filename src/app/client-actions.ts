@@ -451,7 +451,7 @@ export async function searchTrackSuggestions(
       if (seen.has(dedupeKey)) continue;
       seen.add(dedupeKey);
       results.push(track);
-      if (results.length >= 6) return results;
+      if (results.length >= 8) return results;
     }
     if (results.length > 0) break; // assez de résultats, inutile de retenter
   }
@@ -461,7 +461,7 @@ export async function searchTrackSuggestions(
 async function searchItunes(query: string): Promise<TrackSuggestion[]> {
   try {
     const res = await fetch(
-      `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=6`,
+      `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=10&country=FR`,
       { cache: "no-store" }
     );
     if (!res.ok) return [];

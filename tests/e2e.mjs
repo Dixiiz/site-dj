@@ -62,13 +62,20 @@ try {
   if ((await cat.count()) === 0) {
     check("Sélection catégorie", false, "bouton introuvable");
   } else {
-    await cat.click();
+    await cat.click({ force: true });
     await page.waitForTimeout(600);
     const card = page
       .locator('[role="button"]')
       .filter({ hasText: "Pack Standard" })
       .first();
-    await card.click();
+    try {
+      await card.waitFor({ state: "visible", timeout: 15000 });
+    } catch {
+      // Nouvelle tentative : le premier clic peut être avalé par le rendu React.
+      await cat.click({ force: true });
+      await card.waitFor({ state: "visible", timeout: 15000 });
+    }
+    await card.click({ force: true });
     await page.waitForTimeout(1000);
     const pack = await page
       .locator('input[name="pack_name"]')

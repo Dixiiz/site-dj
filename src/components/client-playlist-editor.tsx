@@ -344,6 +344,27 @@ function SectionSearch({
           {searching ? (
             <li className="px-3 py-2.5 text-sm text-muted-foreground">Recherche…</li>
           ) : null}
+          {!searching && query.trim().length >= 2 ? (
+            <li className="border-b border-white/5 px-3 py-2.5">
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() =>
+                  add({
+                    key: `manual-${query}`,
+                    title: query.trim(),
+                    artist: "Artiste à préciser",
+                    previewUrl: null,
+                    artworkUrl: null,
+                  })
+                }
+                disabled={pendingAdd}
+                className="w-full rounded-md py-0.5 text-left text-sm text-accent transition-opacity hover:opacity-80"
+              >
+                + Ajouter « {query.trim()} » manuellement
+              </button>
+            </li>
+          ) : null}
           {suggestions.map((suggestion) => (
             <li
               key={suggestion.key}
