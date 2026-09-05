@@ -1726,6 +1726,110 @@ export async function confirmAcompteReceived(formData: FormData) {
   return { ok: true as const, message: "Acompte confirmé ✓" };
 }
 
+// Ouvre une session Stripe Checkout pour régler l'acompte par carte.
+// Le client est redirigé vers la page de paiement hébergée par Stripe.
+export async function startAcompteCheckout(formData: FormData) {
+  const { getStripe, acompteCents } = await import("@/lib/stripe");
+  const { createAuthClient: createAuth } = await import("@/lib/supabase/server");
+
+  const auth = await createAuth();
+  const {
+    data: { user },
+  } = await auth.auth.getUser();
+  const email = user?.email ?? null;
+  if (!email) redirect("/connexion");
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) redirect("/mon-espace");
+
+  const stripe = getStripe();
+  if (!stripe) redirect(`/mon-espace/devis/${quoteId}?paiement=indisponible`);
+
+  const supabase = createAdminClient();
+  const { data: quoteRow } = await supabase
+    .from("quotes")
+    .select("customer_email, total_cents, status, acompte_paid_at, event_date, customer_name")
+    .eq("id", quoteId)
+    .single();
+  const quote = quoteRow ?? null;
+
+  if (
+    !quote ||
+    quote.customer_email?.toLowerCase() !== email.toLowerCase() ||
+    quote.acompte_paid_at ||
+    (quote.status !== "attente_acompte" && quote.status !== "confirme")
+  ) {
+    redirect(`/mon-espace/devis/${quoteId}?paiement=indisponible`);
+  }
+
+  const amount = acompteCents(quote.total_cents ?? 0);
+  if (amount <= 0) redirect(`/mon-espace/devis/${quoteId}?paiement=indisponible`);
+
+  const h = await headers();
+  const origin =
+    process.env.NEXT_PUBLIC_SITE_URL ?? h.get("origin") ?? "http://localhost:3000";
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    customer_email: email,
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: "eur",
+          unit_amount: amount,
+          product_data: {
+            name: `Acompte de réservation — DJ`,
+            description: `${quote.customer_name ?? ""} — événement du ${quote.event_date ?? "date à définir"}`,
+          },
+        },
+      },
+    ],
+    metadata: { quote_id: quoteId },
+    success_url: `${origin}/mon-espace/devis/${quoteId}?paiement=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/mon-espace/devis/${quoteId}#acompte`,
+  });
+
+  if (session.url) redirect(session.url);
+  redirect(`/mon-espace/devis/${quoteId}?paiement=erreur`);
+}
+
+// Au retour de Stripe : vérifie la session côté serveur et marque l'acompte
+// payé si le paiement est confirmé (pas besoin de webhook pour démarrer).
+export async function verifyStripeAcompte(quoteId: string, sessionId: string): Promise<boolean> {
+  const { getStripe } = await import("@/lib/stripe");
+  const stripe = getStripe();
+  if (!stripe || !quoteId || !sessionId) return false;
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (
+      session.payment_status !== "paid" ||
+      session.metadata?.quote_id !== quoteId ||
+      !session.amount_total
+    ) {
+      return false;
+    }
+    const supabase = createAdminClient();
+    const { data: quote } = await supabase
+      .from("quotes")
+      .select("acompte_paid_at, status")
+      .eq("id", quoteId)
+      .single();
+    if (!quote || quote.acompte_paid_at) return quote?.acompte_paid_at != null;
+
+    // L'acompte est réglé : réservation entièrement confirmée.
+    await supabase
+      .from("quotes")
+      .update({ acompte_paid_at: new Date().toISOString(), status: "confirme" })
+      .eq("id", quoteId);
+
+    revalidatePath(`/mon-espace/devis/${quoteId}`);
+    revalidatePath("/admin/devis");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Sauvegarde les ajustements de facture (lignes ajoutées/retirées par l'admin).
 export async function saveInvoiceAdjustments(adjustments: { label: string; amount: string }[], quoteId: string) {
   const { isAdmin } = await import("@/lib/admin-auth");

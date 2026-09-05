@@ -21,6 +21,7 @@ import { ClientQuoteMessages } from "@/components/client-quote-messages";
 import { PACK_IMAGES } from "@/components/pricing-section";
 import { SignaturePad } from "@/components/signature-pad";
 import { SubmitButton } from "@/components/submit-button";
+import { startAcompteCheckout, verifyStripeAcompte } from "@/app/client-actions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEuros } from "@/lib/money";
 import type { SelectedOption } from "@/lib/types";
@@ -31,10 +32,21 @@ function optionsEditable(status: string | null) {
 
 export default async function ClientQuotePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ paiement?: string; session_id?: string }>;
 }) {
   const { id } = await params;
+  const query = await searchParams;
+
+  // Retour de Stripe Checkout : on vérifie la session côté serveur et on
+  // marque l'acompte comme réglé si le paiement est confirmé.
+  let paiementOk = false;
+  if (query.paiement === "success" && query.session_id) {
+    paiementOk = await verifyStripeAcompte(id, query.session_id);
+  }
+
   const quote = await getMyQuote(id);
   if (!quote) notFound();
 
@@ -251,25 +263,46 @@ export default async function ClientQuotePage({
           return (
             <section id="acompte" className="rounded-xl border border-border bg-muted/50 p-5">
               <h2 className="font-medium">Acompte de réservation</h2>
-              {quote.acompte_paid_at ? (
+              {paiementOk || quote.acompte_paid_at ? (
                 <p className="mt-2 text-sm font-medium text-green-400">
                   ✓ Acompte reçu, merci ! Votre réservation est entièrement validée.
                 </p>
-              ) : quote.acompte_declared_at ? (
+              ) : query.paiement === "success" ? (
                 <p className="mt-2 text-sm text-orange-300">
-                  ⏳ Acompte déclaré envoyé le{" "}
-                  {new Date(quote.acompte_declared_at).toLocaleDateString("fr-FR")} — en
-                  attente de réception par le prestataire.
+                  ⏳ Paiement en cours de validation — actualisez la page dans un instant.
                 </p>
               ) : (
                 <>
-                  <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-                    Afin de confirmer définitivement votre réservation, merci de
-                    régler l&apos;acompte de{" "}
-                    <span className="font-semibold text-accent">
-                      {formatEuros(Math.round(acompte * 100))}
-                    </span>{" "}
-                    par virement avec le libellé&nbsp;:{" "}
+                  {quote.acompte_declared_at ? (
+                    <p className="mb-3 text-sm text-orange-300">
+                      ⏳ Virement déclaré le{" "}
+                      {new Date(quote.acompte_declared_at).toLocaleDateString("fr-FR")} — en
+                      attente de réception. Vous pouvez aussi régler par carte ci-dessous
+                      pour une confirmation immédiate.
+                    </p>
+                  ) : null}
+                  {/* Paiement par carte via Stripe (recommandé) */}
+                  <div className="mt-3 rounded-lg border border-accent/40 bg-accent/5 p-3">
+                    <p className="text-sm">
+                      Réglez votre acompte de{" "}
+                      <span className="font-semibold text-accent">
+                        {formatEuros(Math.round(acompte * 100))}
+                      </span>{" "}
+                      par carte bancaire — confirmation immédiate.
+                    </p>
+                    <form action={startAcompteCheckout} className="mt-2">
+                      <input type="hidden" name="quote_id" value={id} />
+                      <SubmitButton
+                        pendingLabel="Redirection vers le paiement…"
+                        className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
+                      >
+                        💳 Payer l&apos;acompte par carte
+                      </SubmitButton>
+                    </form>
+                  </div>
+                  <p className="mt-4 text-sm text-muted-foreground">
+                    Vous préférez le virement ? Réglez le même montant avec le
+                    libellé&nbsp;:{" "}
                     <span className="font-mono text-xs text-foreground">{libelle}</span>
                   </p>
                   <div className="mt-3 space-y-0.5 rounded-lg border border-border bg-white/5 p-3 text-sm">
