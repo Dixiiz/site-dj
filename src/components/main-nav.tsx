@@ -11,6 +11,7 @@ const links = [
   { href: "/disponibilites", label: "Disponibilités" },
   { href: "/sur-mesure", label: "Sur-mesure" },
   { href: "/contact", label: "Contact" },
+  { href: "/comment-ca-se-passe", label: "Comment ça se passe" },
   { href: "/faq", label: "FAQ" },
 ];
 

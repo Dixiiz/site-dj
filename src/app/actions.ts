@@ -116,7 +116,10 @@ export async function searchAddresses(query: string) {
 }
 
 export async function submitQuoteAndBooking(formData: FormData) {
-  const customer_name = String(formData.get("customer_name") ?? "").trim();
+  const customer_first_name = String(formData.get("customer_first_name") ?? "").trim();
+  const customer_last_name = String(formData.get("customer_last_name") ?? "").trim();
+  const customer_name = `${customer_first_name} ${customer_last_name}`.trim();
+  const spouses = String(formData.get("spouses") ?? "").trim();
   const customer_email = String(formData.get("customer_email") ?? "").trim();
   const customer_phone = String(formData.get("customer_phone") ?? "").trim();
   const event_type = String(formData.get("event_type") ?? "").trim();
@@ -219,6 +222,7 @@ export async function submitQuoteAndBooking(formData: FormData) {
     extra_fee_cents;
 
   const scheduleNotes = [
+    spouses ? `Marié(e)s : ${spouses}` : null,
     `Pack : ${pack_name || formula.name} (${formatPrice(packPriceCents)})`,
     `Date : ${event_date}`,
     `Début : ${start_time}`,
@@ -326,6 +330,7 @@ export async function submitQuoteAndBooking(formData: FormData) {
             `<strong>Client :</strong> ${esc(customer_name)}`,
             `<strong>E-mail :</strong> ${esc(customer_email)}`,
             customer_phone ? `<strong>Téléphone :</strong> ${esc(customer_phone)}` : "",
+            spouses ? `<strong>Marié(e)s :</strong> ${esc(spouses)}` : "",
             `<strong>Pack :</strong> ${esc(pack_name || formula.name)} (${formatPrice(packPriceCents)})`,
             `<strong>Date :</strong> ${esc(event_date)}`,
             `<strong>Horaires :</strong> ${esc(start_time)} - ${esc(end_time)}`,
@@ -343,7 +348,7 @@ export async function submitQuoteAndBooking(formData: FormData) {
     });
   });
 
-  redirect(`/merci?nom=${encodeURIComponent(customer_name)}`);
+  redirect(`/merci?nom=${encodeURIComponent(customer_first_name || customer_name)}`);
 }
 
 export async function submitCustomRequest(formData: FormData) {

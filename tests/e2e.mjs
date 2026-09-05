@@ -103,8 +103,9 @@ try {
   };
   check(
     "Champs client",
-    (await fill('input[name="customer_name"]', "Test E2E")) &&
-      (await fill('input[name="customer_email"]', "e2e@example.fr"))
+    (await fill('input[name="customer_first_name"]', "Test")) &&
+    (await fill('input[name="customer_last_name"]', "E2E")) &&
+    (await fill('input[name="customer_email"]', "e2e@example.fr"))
   );
 
   // 7. Thème : le toggle bascule

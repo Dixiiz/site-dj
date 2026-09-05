@@ -588,8 +588,12 @@ export function QuoteBookingForm({
         <FadeIn delay={0.15} className="grid gap-3 sm:grid-cols-2">
           <h2 className="sm:col-span-2 text-xl font-medium">Mes coordonnées</h2>
           <div className="space-y-1.5">
-            <Label htmlFor="customer_name">Nom</Label>
-            <Input id="customer_name" name="customer_name" required />
+            <Label htmlFor="customer_first_name">Prénom</Label>
+            <Input id="customer_first_name" name="customer_first_name" required autoComplete="given-name" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="customer_last_name">Nom</Label>
+            <Input id="customer_last_name" name="customer_last_name" required autoComplete="family-name" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="customer_email">E-mail</Label>
@@ -598,6 +602,20 @@ export function QuoteBookingForm({
           <div className="space-y-1.5">
             <Label htmlFor="customer_phone">Téléphone</Label>
             <Input id="customer_phone" name="customer_phone" />
+          </div>
+          <div className="sm:col-span-2 space-y-1.5">
+            <Label htmlFor="spouses">
+              Prénom(s) et nom(s) des marié(e)s{" "}
+              <span className="text-xs font-normal text-muted-foreground">
+                (facultatif — pour un mariage)
+              </span>
+            </Label>
+            <Input
+              id="spouses"
+              name="spouses"
+              placeholder="Ex. Marie Dubois & Pierre Martin"
+              autoComplete="off"
+            />
           </div>
           <div className="sm:col-span-2 space-y-1.5">
             <Label htmlFor="notes">Message</Label>
