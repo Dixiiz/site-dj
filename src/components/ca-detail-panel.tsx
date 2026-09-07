@@ -63,7 +63,7 @@ export function CaDetailPanel({
       document.removeEventListener("pointerdown", onDown);
       document.removeEventListener("keydown", onKey);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   // Ferme la section : revient au tableau de bord sans ?vue=…
