@@ -113,9 +113,9 @@ export default function ArticleDjMariageBlois() {
               </li>
             </ul>
             <p>
-              Et une question qu&apos;on oublie toujours : que se passe-t-il en
-              cas de panne ? Un professionnel a toujours un plan B (matériel
-              de secours).
+              Et une question à poser avant de signer : « que se passe-t-il en
+              cas de panne le soir même ? ». Un bon professionnel a une
+              réponse claire et concrète.
             </p>
 
             <h2 className="text-2xl font-medium tracking-tight">
@@ -151,7 +151,7 @@ export default function ArticleDjMariageBlois() {
             <ul className="list-disc space-y-2 pl-6">
               <li>☐ Devis détaillé avec le prix final (options et déplacement inclus)</li>
               <li>☐ Espace client pour la playlist et la timeline</li>
-              <li>☐ Matériel adapté à votre jauge + plan B en cas de panne</li>
+              <li>☐ Matériel adapté à votre jauge et à votre salle</li>
               <li>☐ Contrat signé en ligne + acompte sécurisé</li>
               <li>☐ Des avis clients récents et vérifiables</li>
               <li>☐ Un échange téléphonique avant la soirée (le feeling !)</li>

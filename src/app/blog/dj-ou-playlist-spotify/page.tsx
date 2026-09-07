@@ -92,8 +92,8 @@ export default function ArticleDjOuSpotify() {
                 transforment une salle des fêtes en club ;
               </li>
               <li>
-                du <strong>matériel de secours</strong> en cas de panne —
-                parce qu&apos;un mariage ne se rejoue pas ;
+                une <strong>installation soignée</strong>, réglée et testée
+                bien avant l&apos;arrivée des invités ;
               </li>
               <li>
                 une <strong>installation et un démontage</strong> gérés, 2 h

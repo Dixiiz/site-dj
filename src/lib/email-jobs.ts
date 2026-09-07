@@ -16,6 +16,12 @@ const MARK_AVIS = "[[demande-avis:";
 const MARK_ACOMPTE = "[[relance-acompte:";
 const MARK_PLAYLIST_30 = "[[rappel-playlist-30:";
 
+// Un devis importé (soirée d'avant le site) ne doit jamais recevoir
+// d'e-mail automatique : le client n'a pas de compte sur le site.
+function isImport(notes: string | null | undefined) {
+  return (notes ?? "").includes("[[import-avant-site]]");
+}
+
 async function sendEmail(to: string, subject: string, emailData: Parameters<typeof buildEmailHtml>[0]) {
   const { Resend } = await import("resend");
   const apiKey = process.env.RESEND_API_KEY;
@@ -61,6 +67,7 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
 
   for (const q of toRemind ?? []) {
     if ((q.notes ?? "").includes(MARK_RELANCE)) continue;
+    if (isImport(q.notes)) continue;
     if (!q.customer_email) continue;
     if (q.event_date && new Date(q.event_date).getTime() < now) continue;
 
@@ -109,6 +116,7 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
 
   for (const q of awaitingDeposit ?? []) {
     if ((q.notes ?? "").includes(MARK_ACOMPTE)) continue;
+    if (isImport(q.notes)) continue;
     if (!q.customer_email) continue;
 
     // Date de référence : la dernière signature de document (devis/contrat)
@@ -170,6 +178,7 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
 
   for (const q of toReview ?? []) {
     if ((q.notes ?? "").includes(MARK_AVIS)) continue;
+    if (isImport(q.notes)) continue;
     if (!q.customer_email) continue;
 
     const eventFr = q.event_date
@@ -214,6 +223,7 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
 
   for (const q of j30 ?? []) {
     if ((q.notes ?? "").includes(MARK_PLAYLIST_30)) continue;
+    if (isImport(q.notes)) continue;
     if (!q.customer_email) continue;
 
     // Le rappel ne part que si le client n'a mis AUCUN titre.
@@ -273,6 +283,7 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
 
   for (const q of upcoming ?? []) {
     if ((q.notes ?? "").includes("[[rappel-j7:")) continue;
+    if (isImport(q.notes)) continue;
     if (!q.customer_email) continue;
 
     // Playlist vide ? Le rappel devient plus pressant.
