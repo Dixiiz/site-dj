@@ -955,3 +955,50 @@ export async function sendFreeInvoiceEmail(formData: FormData) {
     return { ok: false as const, error: "Échec de l'envoi de l'e-mail." };
   }
 }
+
+// Ajout manuel d'une soirée datant d'avant le site (devis papier signé).
+// Crée un devis confirmé pour alimenter le CA et le planning.
+export async function importPastQuote(formData: FormData) {
+  if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
+
+  const str = (key: string) => String(formData.get(key) ?? "").trim();
+  const customer_name = str("customer_name");
+  const event_date = str("event_date");
+  const formula_name = str("formula_name");
+  const totalRaw = str("total");
+
+  if (!customer_name || !event_date || !formula_name || !totalRaw) {
+    return { ok: false as const, error: "Nom, date, formule et montant sont obligatoires." };
+  }
+  const totalEuros = parseFloat(totalRaw.replace(",", "."));
+  if (!Number.isFinite(totalEuros) || totalEuros <= 0) {
+    return { ok: false as const, error: "Montant invalide." };
+  }
+  const total_cents = Math.round(totalEuros * 100);
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("quotes").insert({
+    customer_name,
+    customer_email: str("customer_email") || "non.renseigne@import.local",
+    customer_phone: str("customer_phone") || null,
+    event_type: str("event_type") || null,
+    event_location: str("event_location") || null,
+    event_date,
+    formula_name,
+    formula_price_cents: total_cents,
+    total_cents,
+    status: "confirme",
+    notes: "[[import-avant-site]] Devis papier signé, importé manuellement.",
+    // created_at aligné sur la date de l'événement : les imports ne
+    // polluent pas les stats « nouveaux devis ce mois-ci ».
+    created_at: `${event_date}T12:00:00Z`,
+  });
+  if (error) {
+    console.error("Import soirée impossible", error);
+    return { ok: false as const, error: "Enregistrement impossible." };
+  }
+
+  revalidatePath("/admin/import");
+  revalidatePath("/admin");
+  return { ok: true as const, message: `Soirée « ${formula_name} » du ${event_date} ajoutée ✓` };
+}

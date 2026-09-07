@@ -215,6 +215,7 @@ export default async function AdminDashboard() {
       <div className="grid gap-4 sm:grid-cols-3">
         {[
           { href: "/admin/factures", emoji: "🧾", label: "Factures libres", extra: `${nbFactures} générée(s)` },
+          { href: "/admin/import", emoji: "📚", label: "Soirées d'avant le site" },
           { href: "/admin/messages", emoji: "💬", label: "Messagerie clients" },
           { href: "/admin/comptes", emoji: "👥", label: "Comptes clients" },
         ].map((shortcut) => (
