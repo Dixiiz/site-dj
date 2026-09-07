@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEuros } from "@/lib/money";
 import Link from "next/link";
-import { ValidateSoldeButton } from "@/components/validate-solde-button";
+import { CaDetailPanel } from "@/components/ca-detail-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -113,6 +113,38 @@ export default async function AdminDashboard({
   });
   /* SUITE-RENDU */
 
+  // Vue de détail sélectionnée via une carte cliquable.
+  const detailConfig: Record<
+    string,
+    { titre: string; rows: typeof upcoming; solde?: boolean }
+  > = {
+    "ca-annee": {
+      titre: `CA signé ${year} — détail des événements`,
+      rows: allConfirmed.filter((q) => (q.event_date ?? "").startsWith(String(year))),
+    },
+    urssaf: {
+      titre: `CA ${monthPrefix} (URSSAF) — soirées encaissées et validées`,
+      rows: encaisse,
+    },
+    solde: {
+      titre: "Soldes à valider — soirées terminées, solde non confirmé",
+      rows: aValiderToutes,
+      solde: true,
+    },
+    "ca-avenir": { titre: "CA à venir — soirées restantes", rows: upcoming },
+  };
+  const detailVue = vue ? detailConfig[vue] : undefined;
+  const mapDetailRow = (q: (typeof upcoming)[number]) => ({
+    id: q.id,
+    customerName: q.customer_name,
+    formulaName: q.formula_name,
+    eventLocation: q.event_location ?? "",
+    eventDate: q.event_date ?? "",
+    totalCents: montant(q),
+    notes: String(q.notes ?? ""),
+    status: q.status ?? "",
+  });
+
   return (
     <main className="mx-auto w-full max-w-5xl space-y-8 px-4 py-8">
       {/* En-tête */}
@@ -186,95 +218,14 @@ export default async function AdminDashboard({
         })}
       </div>
 
-      {/* DÉTAIL : soirées composant le chiffre cliqué */}
-      {(() => {
-        const vues: Record<
-          string,
-          { titre: string; rows: typeof upcoming; solde?: boolean; urssaf?: boolean }
-        > = {
-          "ca-annee": {
-            titre: `CA signé ${year} — détail des événements`,
-            rows: allConfirmed.filter((q) => (q.event_date ?? "").startsWith(String(year))),
-          },
-          urssaf: {
-            titre: `CA ${monthPrefix} (URSSAF) — soirées encaissées et validées`,
-            rows: encaisse,
-          },
-          solde: {
-            titre: "Soldes à valider — soirées terminées, solde non confirmé",
-            rows: aValiderToutes,
-            solde: true,
-          },
-          "ca-avenir": { titre: "CA à venir — soirées restantes", rows: upcoming },
-        };
-        const detail = vue ? vues[vue] : undefined;
-        if (!detail) return null;
-        const totalDetail = detail.rows.reduce((sum, q) => {
-          const m = montant(q);
-          return sum + (detail.solde ? soldeDe(q) : m);
-        }, 0);
-        return (
-          <section className="rounded-xl border border-accent/40 bg-accent/5 p-5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-medium">{detail.titre}</h2>
-              <Link href="/admin" className="text-xs text-muted-foreground hover:text-accent">
-                ✕ Fermer
-              </Link>
-            </div>
-            {detail.rows.length === 0 ? (
-              <p className="mt-3 text-sm text-muted-foreground">Aucune soirée dans cette catégorie.</p>
-            ) : (
-              <ul className="mt-3 divide-y divide-border">
-                {detail.rows.map((quote) => {
-                  const m = montant(quote);
-                  const affiche = detail.solde ? soldeDe(quote) : m;
-                  const valide = soldeValide(quote);
-                  return (
-                    <li key={quote.id} className="flex items-center justify-between gap-3 py-2.5">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">
-                          {quote.customer_name}{" "}
-                          {detail.solde && valide ? (
-                            <span className="text-xs font-normal text-green-400">✓ validé</span>
-                          ) : null}
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {quote.formula_name}
-                          {quote.event_location ? ` · ${quote.event_location}` : ""}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-3">
-                        <div className="text-right">
-                          <p className="text-sm font-medium">
-                            {quote.event_date
-                              ? new Date(`${quote.event_date}T12:00:00`).toLocaleDateString("fr-FR", {
-                                  day: "numeric",
-                                  month: "short",
-                                  year: "numeric",
-                                })
-                              : "—"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{eur(affiche)}</p>
-                        </div>
-                        {detail.solde ? (
-                          <ValidateSoldeButton
-                            id={quote.id}
-                            customerName={quote.customer_name}
-                            validated={valide}
-                          />
-                        ) : null}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            <p className="mt-3 text-right text-sm font-medium">
-              Total : <span className="text-accent">{eur(totalDetail)}</span>
-            </p>
-          </section>
-        );
-      })()}
+      {/* DÉTAIL : soirées composant le chiffre cliqué (animé, fermable) */}
+      {vue && detailVue ? (
+        <CaDetailPanel
+          titre={detailVue.titre}
+          rows={detailVue.rows.map(mapDetailRow)}
+          solde={detailVue.solde}
+        />
+      ) : null}
       {/* SUITE-LISTES */}
 
       <div className="grid gap-6 lg:grid-cols-2">
