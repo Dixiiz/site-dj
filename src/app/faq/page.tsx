@@ -1,6 +1,7 @@
 import { FadeIn } from "@/components/fade-in";
 import { SiteHeader } from "@/components/site-header";
 import Link from "next/link";
+import { SITE_URL } from "@/lib/site-url";
 
 export const metadata = {
   title: "FAQ — Propul'Sound DJ",
@@ -55,10 +56,27 @@ const faqs = [
   },
 ];
 
+// Balisage FAQPage : permet à Google d'afficher les questions/réponses
+// directement dans les résultats de recherche (rich snippets).
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  url: `${SITE_URL}/faq`,
+  mainEntity: faqs.map((item) => ({
+    "@type": "Question",
+    name: item.q,
+    acceptedAnswer: { "@type": "Answer", text: item.a },
+  })),
+};
+
 export default function FaqPage() {
   return (
     <>
       <SiteHeader />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <main className="relative mx-auto w-full max-w-3xl px-4 py-10">
         <FadeIn>
           <h1 className="text-3xl font-medium tracking-tight">

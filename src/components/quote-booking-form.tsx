@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { fr as frLocale } from "date-fns/locale";
 import { fr } from "react-day-picker/locale";
 import { toast } from "sonner";
-import { estimateTravelFee, getUnavailableDates, searchAddresses, submitQuoteAndBooking } from "@/app/actions";
+import { estimateTravelFee, getUnavailableDates, getPlaceAddress, enrichSuggestions, searchAddresses, submitQuoteAndBooking } from "@/app/actions";
 import { FadeIn } from "@/components/fade-in";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -88,16 +88,24 @@ export function QuoteBookingForm({
   }, []);
 
   const [startTime, setStartTime] = useState(
-    formulas[0] && isMariageFormula(formulas[0].name) ? "15:00" : "18:00"
+    formulas[0] && isMariageFormula(formulas[0].name) ? "15:00" : "20:00"
   );
   const [endTime, setEndTime] = useState("");
   const [eventLocation, setEventLocation] = useState("");
-  const [suggestions, setSuggestions] = useState<{ label: string }[]>([]);
+  const [suggestions, setSuggestions] = useState<
+    { label: string; subtitle: string; detail: string; placeId: string }[]
+  >([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  // Adresse complète associée à la suggestion choisie (ex : "Place du Château,
+  // Blois"), utilisée en coulisse pour le calcul des frais de déplacement.
+  const [fullLocation, setFullLocation] = useState("");
   const [travel, setTravel] = useState<TravelState>(null);
   const [wantCeremony, setWantCeremony] = useState(false);
   const [wantCocktail, setWantCocktail] = useState(false);
   const [travelPending, startTravelTransition] = useTransition();
+  // L'utilisateur a-t-il modifié manuellement les horaires ? Sinon, un
+  // changement de pack réapplique les horaires par défaut du pack.
+  const userTouchedTimesRef = useRef(false);
   const [pending, startTransition] = useTransition();
 
   // Le mini récap est rendu dans un portail : il ne doit apparaître qu'après
@@ -163,11 +171,19 @@ export function QuoteBookingForm({
         defaultStart: detail?.defaultStart ?? "20:00",
         defaultEnd: detail?.defaultEnd ?? (isMariageFormula(packName) ? "04:00" : "02:00"),
       });
-      // On ne touche ni aux horaires déjà choisis, ni aux options, ni à la date :
-      // le client ne repart pas de zéro quand il change de pack. Les horaires par
-      // défaut ne s'appliquent que si aucun choix n'a encore été fait.
-      setStartTime((current) => current || detail?.defaultStart || "20:00");
-      setEndTime((current) => current || detail?.defaultEnd || (isMariageFormula(packName) ? "04:00" : "02:00"));
+      // Horaires : si l'utilisateur n'a rien choisi manuellement, on applique
+      // les horaires par défaut du pack (20:00 en général). S'il a choisi,
+      // on ne touche à rien : le client ne repart pas de zéro.
+      setStartTime((current) =>
+        userTouchedTimesRef.current
+          ? current
+          : detail?.defaultStart || (isMariageFormula(packName) ? "15:00" : "20:00")
+      );
+      setEndTime((current) =>
+        userTouchedTimesRef.current
+          ? current
+          : detail?.defaultEnd || (isMariageFormula(packName) ? "04:00" : "02:00")
+      );
     }
     window.addEventListener("propul:select-pack", onSelectPack);
     function onToggleOption(event: Event) {
@@ -217,6 +233,19 @@ export function QuoteBookingForm({
   );
 
   const formula = formulas.find((item) => item.id === formulaId);
+  // La catégorie "mariage" affiche un champ dédié aux marié(e)s.
+  // 1) La formule choisie contient "mariage", OU
+  // 2) le pack sélectionné appartient à la catégorie mariage
+  //    (mots-clés "mariage|essential|deluxe|ultime", cf. mapping des packs,
+  //    ou durée >= 480 min = journée mariage).
+  const isMariageCategory = (() => {
+    if (formula?.name.toLowerCase().includes("mariage")) return true;
+    if (pack) {
+      const name = pack.name.toLowerCase();
+      return /mariage|essential|deluxe|ultime/.test(name) || pack.baseMinutes >= 480;
+    }
+    return false;
+  })();
   const selectedOptions = visibleOptions.filter((option) =>
     optionIds.includes(option.id)
   );
@@ -290,35 +319,103 @@ export function QuoteBookingForm({
   }
 
   // Suggestions d'adresses via action serveur (Nominatim), avec debouncing.
+  // Un cache mémoire évite de refaire une requête serveur pour une recherche
+  // déjà effectuée, et le flag "stale" ignore les réponses arrivées après
+  // une frappe plus récente (sinon les anciens résultats écrasent les neufs).
   const skipFetchRef = useRef(false);
+  const suggestionsCacheRef = useRef<
+    Map<string, { label: string; subtitle: string; detail: string; placeId: string }[]>
+  >(new Map());
+  const latestQueryRef = useRef<string>("");
+  // Incrémenté au clic dans le champ : permet de rouvrir les suggestions
+  // (utile si on a cliqué sur la mauvaise suggestion).
+  const [reopenNonce, setReopenNonce] = useState(0);
+  // Savoir si le champ a le focus : évite de rouvrir la liste quand
+  // l'enrichissement (CP) se termine après que l'utilisateur est parti.
+  const fieldFocusedRef = useRef(false);
   useEffect(() => {
     if (skipFetchRef.current) {
       skipFetchRef.current = false;
       return;
     }
-    if (eventLocation.trim().length < 2) {
+    // Après une sélection, le champ affiche "Nom (CP Ville)" : on retire la
+    // partie entre parenthèses pour retrouver une requête pertinente.
+    const query = eventLocation.replace(/\s*\([^)]*\)\s*$/, "").trim();
+    if (query.length < 2) {
       const clear = setTimeout(() => setSuggestions([]), 0);
       return () => clearTimeout(clear);
     }
+    latestQueryRef.current = query;
     const timer = setTimeout(async () => {
-      const result = await searchAddresses(eventLocation);
-      if (result.ok) {
-        setSuggestions(result.results.map((label) => ({ label })));
-        setShowSuggestions(result.results.length > 0);
+      const cached = suggestionsCacheRef.current.get(query);
+      if (cached) {
+        setSuggestions(cached);
+        setShowSuggestions(cached.length > 0);
+        return;
       }
-    }, 350);
+      const result = await searchAddresses(query);
+      // Ignore la réponse si l'utilisateur a tapé quelque chose de plus
+      // récent entre-temps (la requête est devenue périmée).
+      if (latestQueryRef.current !== query) return;
+      if (result.ok) {
+        const results = result.results.map((label, index) => ({
+          label,
+          subtitle: result.subtitles?.[index] ?? "",
+          detail: result.details?.[index] ?? label,
+          placeId: result.placeIds?.[index] ?? "",
+        }));
+        suggestionsCacheRef.current.set(query, results);
+        setSuggestions(results);
+        setShowSuggestions(results.length > 0);
+        // Enrichissement en arrière-plan : ajoute "CP Ville" dans les
+        // suggestions (Google ne le fournit pas dans l'autocomplétion).
+        const ids = results.map((r) => r.placeId).filter(Boolean);
+        if (ids.length > 0) {
+          const enriched = await enrichSuggestions(ids);
+          if (latestQueryRef.current !== query || !fieldFocusedRef.current) return;
+          setSuggestions((prev) => {
+            const updated = prev.map((s) => {
+              const extra = enriched.items.find((i) => i.placeId === s.placeId);
+              if (extra && (extra.postalCode || extra.city)) {
+                return { ...s, subtitle: [extra.postalCode, extra.city].filter(Boolean).join(" ") };
+              }
+              return s;
+            });
+            suggestionsCacheRef.current.set(query, updated);
+            return updated;
+          });
+        }
+      }
+    }, 150);
     return () => clearTimeout(timer);
-  }, [eventLocation]);
+  }, [eventLocation, reopenNonce]);
 
-  function chooseSuggestion(label: string) {
+  async function chooseSuggestion(label: string, detail: string, placeId: string) {
+    // Récupère d'abord l'adresse complète + CP, PUIS met à jour le champ une
+    // seule fois (deux mises à jour successives relançaient la recherche et
+    // rouvraient la liste : effet de doublon).
+    let full = detail;
+    let postalCode = "";
+    let city = "";
+    if (placeId || detail) {
+      const details = await getPlaceAddress(placeId, detail);
+      if (details.ok) {
+        full = details.address;
+        postalCode = details.postalCode;
+        city = details.city;
+      }
+    }
+    const cpLabel = [postalCode, city].filter(Boolean).join(" ");
     skipFetchRef.current = true;
-    setEventLocation(label);
+    fieldFocusedRef.current = false;
+    setEventLocation(cpLabel ? `${label} (${cpLabel})` : label);
+    setFullLocation(full);
     setShowSuggestions(false);
     setSuggestions([]);
     // Estimation automatique des frais de déplacement, sans clic.
     startTravelTransition(async () => {
       const fd = new FormData();
-      fd.set("event_location", label);
+      fd.set("event_location_full", full);
       const result = await estimateTravelFee(fd);
       if (result && result.ok) {
         setTravel({ distanceKm: result.estimate.distanceKm, feeCents: result.estimate.feeCents });
@@ -330,7 +427,7 @@ export function QuoteBookingForm({
   }
 
   function onEstimateTravel() {
-    const address = eventLocation.trim();
+    const address = (fullLocation || eventLocation).trim();
     if (!address) {
       toast.error("Indique d'abord le lieu de l'événement.");
       return;
@@ -375,13 +472,16 @@ export function QuoteBookingForm({
       <input type="hidden" name="co2_qty" value={co2Qty} />
       <input type="hidden" name="travel_distance_km" value={travel?.distanceKm ?? ""} />
       <input type="hidden" name="travel_fee_cents" value={travel?.feeCents ?? ""} />
+      <input type="hidden" name="event_location_full" value={fullLocation} />
 
       <div className="space-y-6">
         <FadeIn delay={0.1}>
           <h2 className="mb-3 text-xl font-medium">Lieu de réception</h2>
-          <Card>
-            <CardContent className="space-y-2 pt-1">
-              <div className="space-y-1.5 relative">
+          {/* overflow-visible : sans ça, la liste des suggestions (en absolu)
+              est coupée par l'overflow-hidden du Card et seule la 1re apparaît. */}
+          <Card className="overflow-visible">
+            <CardContent className="space-y-2 pt-1 overflow-visible">
+              <div className="space-y-1.5 relative z-30">
                 <Label htmlFor="event_location">Lieu de réception</Label>
                 <div className="flex gap-2">
                   <Input
@@ -390,8 +490,25 @@ export function QuoteBookingForm({
                     placeholder="Adresse, ville ou nom du domaine"
                     autoComplete="off"
                     value={eventLocation}
-                    onChange={(event) => setEventLocation(event.target.value)}
-                    onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                    onChange={(event) => {
+                      setEventLocation(event.target.value);
+                      // Saisie manuelle : l'adresse complète de la suggestion
+                      // n'est plus fiable, on la réinitialise.
+                      setFullLocation("");
+                    }}
+                    onFocus={() => {
+                      fieldFocusedRef.current = true;
+                      // Réouvre les suggestions au clic : soit elles sont déjà
+                      // en mémoire, soit on relance la recherche (via le nonce).
+                      if (eventLocation.trim().length >= 2) setReopenNonce((n) => n + 1);
+                    }}
+                    onBlur={() => {
+                      fieldFocusedRef.current = false;
+                      // Ferme les suggestions quand on clique ailleurs.
+                      // (Le clic sur une suggestion est protégé via
+                      // onMouseDown ci-dessus, donc sans risque de course.)
+                      setTimeout(() => setShowSuggestions(false), 150);
+                    }}
                     required
                   />
                   <Button
@@ -404,15 +521,29 @@ export function QuoteBookingForm({
                   </Button>
                 </div>
                 {showSuggestions && suggestions.length > 0 ? (
-                  <ul className="absolute z-20 w-full overflow-hidden rounded-lg border border-border bg-card shadow-xl">
+                  <ul className="absolute z-30 w-full overflow-hidden rounded-lg border border-border bg-card shadow-xl">
                     {suggestions.map((suggestion) => (
-                      <li key={suggestion.label}>
+                      <li key={`${suggestion.label}-${suggestion.placeId || suggestion.detail}`}>
                         <button
                           type="button"
                           className="w-full px-3 py-2 text-left text-sm hover:bg-accent/10"
-                          onClick={() => chooseSuggestion(suggestion.label)}
+                          // Empêche le blur du champ au clic sur la suggestion :
+                          // la sélection se fait via onClick, sans délai.
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() =>
+                            chooseSuggestion(
+                              suggestion.label,
+                              suggestion.detail,
+                              suggestion.placeId
+                            )
+                          }
                         >
-                          📍 {suggestion.label}
+                          <span>📍 {suggestion.label}</span>
+                          {suggestion.subtitle ? (
+                            <span className="block text-xs text-muted-foreground">
+                              {suggestion.subtitle}
+                            </span>
+                          ) : null}
                         </button>
                       </li>
                     ))}
@@ -450,7 +581,10 @@ export function QuoteBookingForm({
                   <select
                     id="start_time_select"
                     value={startTime}
-                    onChange={(event) => setStartTime(event.target.value)}
+                    onChange={(event) => {
+                      userTouchedTimesRef.current = true;
+                      setStartTime(event.target.value);
+                    }}
                     className="w-full rounded-lg border border-border bg-background px-3 py-3 text-lg font-medium"
                   >
                     {startTimes.map((time) => (
@@ -467,7 +601,10 @@ export function QuoteBookingForm({
                   <select
                     id="end_time_select"
                     value={allowedEndTimes.includes(endTime) ? endTime : ""}
-                    onChange={(event) => setEndTime(event.target.value)}
+                    onChange={(event) => {
+                      userTouchedTimesRef.current = true;
+                      setEndTime(event.target.value);
+                    }}
                     className="w-full rounded-lg border border-border bg-background px-3 py-3 text-lg font-medium"
                   >
                     <option value="">Choisir…</option>
@@ -603,20 +740,22 @@ export function QuoteBookingForm({
             <Label htmlFor="customer_phone">Téléphone</Label>
             <Input id="customer_phone" name="customer_phone" />
           </div>
-          <div className="sm:col-span-2 space-y-1.5">
-            <Label htmlFor="spouses">
-              Prénom(s) et nom(s) des marié(e)s{" "}
-              <span className="text-xs font-normal text-muted-foreground">
-                (facultatif — pour un mariage)
-              </span>
-            </Label>
-            <Input
-              id="spouses"
-              name="spouses"
-              placeholder="Ex. Marie Dubois & Pierre Martin"
-              autoComplete="off"
-            />
-          </div>
+          {isMariageCategory ? (
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label htmlFor="spouses">
+                Prénom(s) et nom(s) des marié(e)s{" "}
+                <span className="text-xs font-normal text-muted-foreground">
+                  (facultatif)
+                </span>
+              </Label>
+              <Input
+                id="spouses"
+                name="spouses"
+                placeholder="Ex. Marie Dubois & Pierre Martin"
+                autoComplete="off"
+              />
+            </div>
+          ) : null}
           <div className="sm:col-span-2 space-y-1.5">
             <Label htmlFor="notes">Message</Label>
             <Textarea

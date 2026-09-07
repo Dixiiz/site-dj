@@ -29,7 +29,13 @@ export type InvoiceAdjustment = { label: string; amount_cents: number };
 
 export async function buildFacturePdf(
   quote: FactureQuoteData,
-  opts: { invoiceNumber: string; adjustments?: InvoiceAdjustment[] }
+  opts: {
+    invoiceNumber: string;
+    adjustments?: InvoiceAdjustment[];
+    hideAcompte?: boolean;
+    /** Lignes simples sans préfixe "Option :" (factures libres). */
+    plainLines?: boolean;
+  }
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.setTitle(`Facture Propul'Sound DJ — ${opts.invoiceNumber}`);
@@ -138,12 +144,20 @@ export async function buildFacturePdf(
   t("MONTANT", right("MONTANT", cMont, 9, b), y - 9, 9, b, C.blanc);
   y -= 15 + rowH;
   const rows: [string, string, string, string][] = [];
-  const fPrice = (quote.formula_price_cents ?? 0) / 100;
-  rows.push([quote.formula_name ?? "Prestation", "1", fmt(fPrice), fmt(fPrice)]);
+  // Ligne de formule uniquement si un prix est fourni (les factures libres
+  // n'utilisent que des lignes qté × taux).
+  if (quote.formula_price_cents != null) {
+    const fPrice = (quote.formula_price_cents ?? 0) / 100;
+    rows.push([quote.formula_name ?? "Prestation", "1", fmt(fPrice), fmt(fPrice)]);
+  }
   for (const o of quote.selected_options ?? []) {
     const unit = o.price_cents / 100;
     const qty = o.qty && o.qty > 0 ? o.qty : 1;
-    rows.push([`Option : ${o.name}`, String(qty), fmt(unit), fmt(unit * qty)]);
+    // Montant arrondi au centime (quantités décimales possibles, ex 3,25 h)
+    // — même calcul que le serveur pour garantir TAUX × QTÉ = MONTANT.
+    const montant = Math.round(unit * qty * 100) / 100;
+    const prefix = opts.plainLines ? "" : "Option : ";
+    rows.push([`${prefix}${o.name}`, String(qty).replace(".", ","), fmt(unit), fmt(montant)]);
   }
   if ((quote.travel_fee_cents ?? 0) > 0) {
     const km = quote.travel_distance_km;
@@ -178,23 +192,28 @@ export async function buildFacturePdf(
   t(tvaTxt, right(tvaTxt, M + CW - 10, 8, r), y, 8, r, C.gris);
   y -= 26;
 
-  // TOTAL + décompte acompte / solde (mêmes montants que le devis, ajustés)
+  // TOTAL + décompte acompte / solde (mêmes montants que le devis, ajustés).
+  // Pour les factures libres, pas d'acompte : le total est directement à régler.
   const adjSum = (opts.adjustments ?? []).reduce((s, a) => s + (a.amount_cents || 0), 0);
   const total = (quote.total_cents ?? 0) / 100 + adjSum / 100;
-  const soldeVal = Math.floor((total * 0.8) / 10) * 10;
-  const acompteVal = total - soldeVal;
   const bx = M + CW - 250;
   page.drawRectangle({ x: bx, y: y - 9, width: 250, height: 30, color: C.anthracite });
   t("TOTAL TTC", bx + 12, y, 11.5, b, C.cyan);
   t(fmt(total), right(fmt(total), bx + 250 - 12, 11.5, b), y, 11.5, b, C.cyan);
   y -= 34;
 
-  page.drawRectangle({ x: M, y: y - 28, width: CW, height: 32, color: C.bleuPale });
-  t("Acompte de réservation versé", M + 12, y - 10, 9.5, b, C.bleu);
-  t(fmt(acompteVal), right(fmt(acompteVal), M + CW / 2 - 12, 9.5, b), y - 10, 9.5, b, C.bleu);
-  t("Solde à régler", M + CW / 2 + 12, y - 10, 9.5, b, C.bleu);
-  t(fmt(soldeVal), right(fmt(soldeVal), M + CW - 12, 9.5, b), y - 10, 9.5, b, C.bleu);
-  y -= 44;
+  if (!opts.hideAcompte) {
+    const soldeVal = Math.floor((total * 0.8) / 10) * 10;
+    const acompteVal = total - soldeVal;
+    page.drawRectangle({ x: M, y: y - 28, width: CW, height: 32, color: C.bleuPale });
+    t("Acompte de réservation versé", M + 12, y - 10, 9.5, b, C.bleu);
+    t(fmt(acompteVal), right(fmt(acompteVal), M + CW / 2 - 12, 9.5, b), y - 10, 9.5, b, C.bleu);
+    t("Solde à régler", M + CW / 2 + 12, y - 10, 9.5, b, C.bleu);
+    t(fmt(soldeVal), right(fmt(soldeVal), M + CW - 12, 9.5, b), y - 10, 9.5, b, C.bleu);
+    y -= 44;
+  } else {
+    y -= 10;
+  }
   t("SACEM à déclarer par l'organisateur (sauf soirées privées).", M + 12, y, 7.5, r, C.gris);
   y -= 16;
 

@@ -167,6 +167,21 @@ body {
   scroll-behavior: smooth;
 }
 
+/* Accessibilité : les utilisateurs sensibles au mouvement obtiennent une
+   expérience statique (désactive les animations CSS + le scroll fluide). */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Mise en évidence d'une section arrivée depuis un lien d'e-mail
    (ex : /mon-espace/devis/xxx#acompte) : halo + léger grossissement */
 @keyframes anchor-flash {

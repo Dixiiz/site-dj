@@ -25,10 +25,20 @@ export default async function AdminLayout({
     <div className="min-h-full">
       <header className="border-b border-border">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <p className="font-medium">Tableau de bord</p>
+          <p className="font-medium">
+            <Link href="/admin" className="transition-colors hover:text-accent">
+              Tableau de bord
+            </Link>
+          </p>
           <nav className="flex items-center gap-3 text-sm">
+            <Link href="/admin" className="font-medium text-foreground">
+              🏠 Accueil
+            </Link>
             <Link href="/admin/devis" className="text-muted-foreground hover:text-foreground">
               Devis
+            </Link>
+            <Link href="/admin/factures" className="text-muted-foreground hover:text-foreground">
+              Factures
             </Link>
             <Link href="/admin/planning" className="text-muted-foreground hover:text-foreground">
               Planning

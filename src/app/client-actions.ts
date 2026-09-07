@@ -2104,3 +2104,38 @@ export async function deleteQuoteFile(formData: FormData) {
   revalidatePath(`/mon-espace/devis/${quoteId}`);
 }
 
+// Extrait de 30 s d'un titre (API iTunes, gratuite et légale) — utilisé par
+// les boutons d'écoute du blog "Playlist de mariage". Action publique.
+export async function getMusicPreviewUrl(title: string, artist: string) {
+  const t = title.trim();
+  const a = artist.trim();
+  if (!t) return { ok: false as const, error: "Titre manquant." };
+  try {
+    const res = await fetch(
+      `https://itunes.apple.com/search?term=${encodeURIComponent(`${a} ${t}`)}&media=music&entity=song&limit=5&country=FR`,
+      { cache: "no-store" }
+    );
+    if (!res.ok) return { ok: false as const, error: "Recherche impossible." };
+    const json = (await res.json()) as {
+      results?: { trackName?: string; artistName?: string; previewUrl?: string }[];
+    };
+    const tLower = t.toLowerCase();
+    const aLower = a.toLowerCase();
+    // Meilleure correspondance : titre ET artiste contenus dans le résultat.
+    const match =
+      (json.results ?? []).find(
+        (r) =>
+          r.previewUrl &&
+          r.trackName?.toLowerCase().includes(tLower) &&
+          (!a || r.artistName?.toLowerCase().includes(aLower))
+      ) ??
+      (json.results ?? []).find((r) => r.previewUrl);
+    if (!match?.previewUrl) {
+      return { ok: false as const, error: "Extrait introuvable pour ce titre." };
+    }
+    return { ok: true as const, previewUrl: match.previewUrl };
+  } catch {
+    return { ok: false as const, error: "Recherche impossible." };
+  }
+}
+

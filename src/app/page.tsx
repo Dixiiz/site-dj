@@ -284,12 +284,20 @@ export default async function Home() {
               Configurez votre devis en ligne en quelques minutes : formule, options, lieu,
               date et horaires. Réponse rapide garantie.
             </p>
-            <Link
-              href="/formules"
-              className="mt-6 inline-block rounded-lg bg-primary px-8 py-3 font-medium text-primary-foreground shadow-lg transition hover:brightness-110"
-            >
-              Configurer mon devis
-            </Link>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
+              <Link
+                href="/formules"
+                className="rounded-lg bg-primary px-8 py-3 font-medium text-primary-foreground shadow-lg transition hover:brightness-110"
+              >
+                Configurer mon devis
+              </Link>
+              <Link
+                href="/comment-ca-se-passe"
+                className="text-sm text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-accent"
+              >
+                Voir comment ça se passe
+              </Link>
+            </div>
           </FadeIn>
         </section>
 

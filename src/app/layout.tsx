@@ -54,6 +54,12 @@ export const metadata: Metadata = {
     description:
  "Animation DJ pour mariages, anniversaires et soirées privées. Devis gratuit en ligne, matériel pro, options FX (fumée, étincelles, CO2).",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} — DJ mariage & soirées à Blois et alentours`,
+    description:
+ "Animation DJ pour mariages, anniversaires et soirées privées. Devis gratuit en ligne.",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

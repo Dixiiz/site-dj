@@ -48,47 +48,131 @@ const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 export async function estimateTravelFee(formData: FormData) {
-  const address = String(formData.get("event_location") ?? "").trim();
+  // L'adresse complète (champ caché rempli via les suggestions) prime sur le
+  // nom seul affiché dans le champ, pour un géocodage précis.
+  const address = String(
+    formData.get("event_location_full") ?? formData.get("event_location") ?? ""
+  ).trim();
   return estimateTravelFromAddress(address);
 }
 
-// Suggestions d'adresses pour le formulaire : Google Places (New) en priorité,
-// avec repli sur OpenStreetMap Nominatim si Google indisponible.
+// Suggestions d'adresses pour le formulaire : Google Places Autocomplete (New)
+// en priorité (optimisé pour la frappe, plus rapide et moins cher), avec repli
+// sur Google Text Search puis OpenStreetMap Nominatim si indisponible.
 export async function searchAddresses(query: string) {
   const q = query.trim();
-  if (q.length < 2) return { ok: true as const, results: [] as string[] };
+  if (q.length < 2)
+    return { ok: true as const, results: [] as string[], subtitles: [] as string[], details: [] as string[], placeIds: [] as string[] };
 
-  // 1) Google Places (New) — Text Search, trouve aussi les domaines/lieux (pas que les adresses).
-  const key = process.env.GOOGLE_PLACES_API_KEY;
+  // 1) Google Places (New) — Autocomplete : conçu pour la saisie en cours,
+  // réponses bien plus rapides que la Text Search.
+  const key = process.env.GOOGLE_PLACES_API_KEY ?? "";
   if (key) {
     try {
-      const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      const res = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
         method: "POST",
         headers: {
- "Content-Type": "application/json",
- "X-Goog-Api-Key": key,
- "X-Goog-FieldMask": "places.displayName,places.formattedAddress",
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": key,
+          "X-Goog-FieldMask": "suggestions.placePrediction.text.text,suggestions.placePrediction.structuredFormat",
         },
         body: JSON.stringify({
-          textQuery: q,
+          input: q,
           languageCode: "fr",
           regionCode: "FR",
+          includedPrimaryTypes: ["geocode"],
+          // Restriction stricte à la France métropolitaine (regionCode seul
+          // ne fait qu'influencer, des lieux étrangers pouvaient apparaître).
+          locationRestriction: {
+            rectangle: {
+              low: { latitude: 41.0, longitude: -5.5 },
+              high: { latitude: 51.5, longitude: 9.8 },
+            },
+          },
         }),
         cache: "no-store",
       });
       if (res.ok) {
         const data = (await res.json()) as {
-          places?: { displayName?: { text?: string }; formattedAddress?: string }[];
+          suggestions?: {
+            placePrediction?: {
+              placeId?: string;
+              text?: { text?: string };
+              structuredFormat?: {
+                mainText?: { text?: string };
+                secondaryText?: { text?: string };
+              };
+            };
+          }[];
         };
-        const results = (data.places ?? [])
-          .map((p) => p.formattedAddress ?? p.displayName?.text ?? "")
-          .filter((label) => label.length > 0)
+        const entries = (data.suggestions ?? [])
+          .map((s) => {
+            const prediction = s.placePrediction;
+            return {
+              // Nom seul dans la suggestion (ex : "Place du Château").
+              label: prediction?.structuredFormat?.mainText?.text || prediction?.text?.text || "",
+              // Ville / contexte (ex : "Blois") affiché en petit dessous.
+              subtitle: prediction?.structuredFormat?.secondaryText?.text ?? "",
+              // Texte complet (ex : "Place du Château, Blois") pour le calcul.
+              detail: prediction?.text?.text ?? "",
+              placeId: prediction?.placeId ?? "",
+            };
+          })
+          .filter((entry) => entry.label.length > 0)
+          // Le rectangle géographique seul laisse passer des lieux proches
+          // mais étrangers (ouest de l'Allemagne, Belgique...) : filtre par nom
+          // de pays présent dans le texte des suggestions étrangères.
+          .filter((entry) => {
+            const text = `${entry.subtitle} ${entry.detail}`;
+            return !/\b(Allemagne|Espagne|Belgique|Suisse|Italie|Luxembourg|Pays-Bas|Autriche|Royaume-Uni|Portugal|Angleterre|Écosse|Grande-Bretagne)\b/.test(
+              text
+            );
+          })
           .slice(0, 5);
-        if (results.length > 0) return { ok: true as const, results };
+        if (entries.length > 0)
+          return {
+            ok: true as const,
+            results: entries.map((e) => e.label),
+            subtitles: entries.map((e) => e.subtitle),
+            details: entries.map((e) => e.detail),
+            placeIds: entries.map((e) => e.placeId),
+          };
       }
     } catch {
       // Repli ci-dessous.
     }
+  }
+
+  // 2) Repli : Google Places (New) — Text Search (ancien comportement),
+  // trouve aussi les domaines/lieux (pas que les adresses).
+  try {
+    const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": key,
+        "X-Goog-FieldMask": "places.displayName,places.formattedAddress",
+      },
+      body: JSON.stringify({
+        textQuery: q,
+        languageCode: "fr",
+        regionCode: "FR",
+      }),
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = (await res.json()) as {
+        places?: { displayName?: { text?: string }; formattedAddress?: string }[];
+      };
+      const results = (data.places ?? [])
+        .map((p) => p.formattedAddress ?? p.displayName?.text ?? "")
+        .filter((label) => label.length > 0)
+        .slice(0, 5);
+      if (results.length > 0)
+        return { ok: true as const, results, subtitles: [] as string[], details: results, placeIds: [] };
+    }
+  } catch {
+    // Repli ci-dessous.
   }
 
   // 2) Repli : OpenStreetMap Nominatim.
@@ -101,17 +185,154 @@ export async function searchAddresses(query: string) {
       },
       cache: "no-store",
     });
-    if (!res.ok) return { ok: true as const, results: [] as string[] };
+    if (!res.ok)
+      return { ok: true as const, results: [], subtitles: [], details: [], placeIds: [] };
     const data = (await res.json()) as { display_name?: string }[];
+    const fallbackResults = data
+      .map((item) => item.display_name ?? "")
+      .filter((label) => label.length > 0)
+      .slice(0, 5);
     return {
       ok: true as const,
-      results: data
-        .map((item) => item.display_name ?? "")
-        .filter((label) => label.length > 0)
-        .slice(0, 5),
+      results: fallbackResults,
+      subtitles: [] as string[],
+      details: fallbackResults,
+      placeIds: [],
     };
   } catch {
-    return { ok: true as const, results: [] as string[] };
+    return { ok: true as const, results: [], subtitles: [], details: [], placeIds: [] };
+  }
+}
+
+// Récupère l'adresse postale complète (avec code postal) d'un lieu Google
+// à partir de son placeId — appelé une seule fois, à la sélection.
+// Repli : Nominatim (gratuit) si Google est indisponible.
+export async function getPlaceAddress(placeId: string, fallbackQuery?: string) {
+  const key = process.env.GOOGLE_PLACES_API_KEY ?? "";
+  if (key && placeId) {
+    try {
+      const res = await fetch(
+        `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+        {
+          headers: {
+            "X-Goog-Api-Key": key,
+            // addressComponents : pour extraire proprement CP et ville.
+            "X-Goog-FieldMask": "formattedAddress,addressComponents",
+          },
+          cache: "no-store",
+        }
+      );
+      if (res.ok) {
+        const data = (await res.json()) as {
+          formattedAddress?: string;
+          addressComponents?: { longText?: string; types?: string[] }[];
+        };
+        let postalCode = "";
+        let city = "";
+        for (const component of data.addressComponents ?? []) {
+          const types = component.types ?? [];
+          if (!postalCode && types.includes("postal_code")) {
+            postalCode = component.longText ?? "";
+          }
+          if (!city && types.includes("locality")) {
+            city = component.longText ?? "";
+          }
+        }
+        const address = data.formattedAddress ?? "";
+        if (address) {
+          return { ok: true as const, address, postalCode, city };
+        }
+      }
+    } catch {
+      // Repli ci-dessous.
+    }
+  }
+  // Repli Nominatim : récupère CP et ville depuis les détails d'adresse.
+  if (fallbackQuery) {
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=fr&addressdetails=1&q=${encodeURIComponent(
+        fallbackQuery
+      )}`;
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "propulsounddj-site/1.0 (contact@propulsounddj.fr)",
+          "Accept-Language": "fr",
+        },
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          display_name?: string;
+          address?: {
+            postcode?: string;
+            city?: string;
+            town?: string;
+            village?: string;
+          };
+        }[];
+        const item = data[0];
+        if (item?.display_name) {
+          const a = item.address ?? {};
+          return {
+            ok: true as const,
+            address: item.display_name,
+            postalCode: a.postcode ?? "",
+            city: a.city ?? a.town ?? a.village ?? "",
+          };
+        }
+      }
+    } catch {
+      // Échec total : l'appelant retombera sur le texte de suggestion.
+    }
+  }
+  return { ok: false as const };
+}
+
+// Enrichit des suggestions avec code postal + ville (Place Details, champ
+// léger). Appelé une fois par recherche, en arrière-plan, pour afficher le
+// CP directement dans la liste déroulante.
+export async function enrichSuggestions(placeIds: string[]) {
+  const key = process.env.GOOGLE_PLACES_API_KEY ?? "";
+  if (!key || placeIds.length === 0)
+    return { ok: true as const, items: [] as { placeId: string; postalCode: string; city: string }[] };
+  try {
+    const items = await Promise.all(
+      placeIds.map(async (placeId) => {
+        try {
+          const res = await fetch(
+            `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+            {
+              headers: {
+                "X-Goog-Api-Key": key,
+                "X-Goog-FieldMask": "addressComponents",
+              },
+              cache: "no-store",
+            }
+          );
+          if (!res.ok) return { placeId, postalCode: "", city: "" };
+          const data = (await res.json()) as {
+            addressComponents?: { longText?: string; types?: string[] }[];
+          };
+          let postalCode = "";
+          let city = "";
+          for (const component of data.addressComponents ?? []) {
+            const types = component.types ?? [];
+            if (!postalCode && types.includes("postal_code")) {
+              postalCode = component.longText ?? "";
+            }
+            if (!city && types.includes("locality")) {
+              city = component.longText ?? "";
+            }
+          }
+          return { placeId, postalCode, city };
+        } catch {
+          return { placeId, postalCode: "", city: "" };
+        }
+      })
+    );
+    return { ok: true as const, items };
+  } catch {
+    return { ok: true as const, items: [] as { placeId: string; postalCode: string; city: string }[] };
   }
 }
 
@@ -185,7 +406,10 @@ export async function submitQuoteAndBooking(formData: FormData) {
       };
     });
 
-  const travelResult = await estimateTravelFromAddress(event_location);
+  // L'adresse complète (via suggestions) prime pour le calcul, le champ
+  // affiché peut ne contenir que le nom du lieu.
+  const eventLocationFull = String(formData.get("event_location_full") ?? "").trim();
+  const travelResult = await estimateTravelFromAddress(eventLocationFull || event_location);
   const confirmedTravelFeeCents = travelResult.ok ? travelResult.estimate.feeCents : travel_fee_cents || 0;
   const confirmedTravelDistanceKm = travelResult.ok
     ? travelResult.estimate.distanceKm
@@ -659,4 +883,75 @@ export async function deleteSlot(formData: FormData) {
   }
   revalidatePath("/admin/creneaux");
   return { ok: true as const };
+}
+
+// Supprime une facture libre (PDF dans le storage, dossier factures-libres).
+export async function deleteFreeInvoice(formData: FormData) {
+  if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
+  const fileName = String(formData.get("file_name") ?? "").trim();
+  // Sécurité : on n'accepte qu'un nom de fichier simple, sans chemin.
+  if (!fileName || fileName.includes("/") || fileName.includes("\\") || fileName.includes("..")) {
+    return { ok: false as const, error: "Nom de fichier invalide." };
+  }
+  const supabase = createAdminClient();
+  const { error } = await supabase.storage
+    .from("client-files")
+    .remove([`admin/factures-libres/${fileName}`]);
+  if (error) {
+    console.error("Suppression facture libre impossible", error);
+    return { ok: false as const, error: "Suppression impossible." };
+  }
+  revalidatePath("/admin/factures");
+  return { ok: true as const };
+}
+
+// Envoie une facture libre par e-mail avec un lien de téléchargement signé.
+export async function sendFreeInvoiceEmail(formData: FormData) {
+  if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
+  const fileName = String(formData.get("file_name") ?? "").trim();
+  if (!fileName || fileName.includes("/") || fileName.includes("\\") || fileName.includes("..")) {
+    return { ok: false as const, error: "Nom de fichier invalide." };
+  }
+  const to = String(formData.get("email") ?? "").trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) {
+    return { ok: false as const, error: "Adresse e-mail invalide." };
+  }
+  if (!RESEND_API_KEY) return { ok: false as const, error: "Envoi d'e-mail non configuré." };
+
+  const supabase = createAdminClient();
+  // Lien signé valable 7 jours : le destinataire télécharge le PDF sans compte.
+  const { data } = await supabase.storage
+    .from("client-files")
+    .createSignedUrl(`admin/factures-libres/${fileName}`, 60 * 60 * 24 * 7);
+  if (!data?.signedUrl) {
+    return { ok: false as const, error: "Création du lien de téléchargement impossible." };
+  }
+
+  const invoiceNumber = fileName.match(/F-\d{4}-\d{3}/)?.[0] ?? "";
+  const clientName = fileName
+    .replace(/\.pdf$/, "")
+    .replace(/^F-\d{4}-\d{3}_/, "")
+    .replace(/_/g, " ");
+  try {
+    const resend = new Resend(RESEND_API_KEY);
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to,
+      subject: `Facture Propul'Sound DJ ${invoiceNumber}`.trim(),
+      html: `<div style="font-family:Arial,sans-serif;color:#1a1a1f;max-width:560px;margin:0 auto;padding:24px;">
+        <p>Bonjour,</p>
+        <p>Veuillez trouver ci-dessous votre facture <strong>${invoiceNumber}</strong>${clientName ? ` (${clientName})` : ""}.</p>
+        <p style="margin:28px 0;">
+          <a href="${data.signedUrl}" style="background:#21619A;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Télécharger la facture PDF</a>
+        </p>
+        <p style="color:#737373;font-size:13px;">Ce lien est valable 7 jours. Si besoin, demandez-nous un nouveau lien.</p>
+        <p style="color:#737373;font-size:13px;">À très bientôt,<br/>Maxime — Propul'Sound DJ</p>
+      </div>`,
+      text: `Bonjour,\n\nVotre facture ${invoiceNumber} est disponible ici (lien valable 7 jours) :\n${data.signedUrl}\n\nÀ très bientôt,\nMaxime — Propul'Sound DJ`,
+    });
+    return { ok: true as const, message: `Facture envoyée à ${to} ✓` };
+  } catch (err) {
+    console.error("Envoi facture libre impossible", err);
+    return { ok: false as const, error: "Échec de l'envoi de l'e-mail." };
+  }
 }
