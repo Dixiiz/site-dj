@@ -65,7 +65,6 @@ export default async function AdminDashboard({
   const encaisse = ceMoisJouees.filter((q) => soldeValide(q));
   const caMois = encaisse.reduce((sum, q) => sum + montant(q), 0);
   const attenteValidation = ceMoisJouees.filter((q) => !soldeValide(q));
-  const soldeAValider = attenteValidation.reduce((sum, q) => sum + soldeDe(q), 0);
 
   // CA à venir : confirmé, pas encore joué.
   const caAVenir = upcoming.reduce((sum, q) => sum + montant(q), 0);
