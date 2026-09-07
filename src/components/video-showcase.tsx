@@ -84,7 +84,15 @@ export function VideoShowcase({ videos, orientation = "landscape" }: VideoShowca
       <div className="overflow-hidden">
         <div
           className="flex gap-4 transition-transform duration-1000 ease-in-out"
-          style={{ transform: `translateX(-${index * (100 / visible)}%)` }}
+          style={{
+            // Mobile (1 vidéo visible) : la largeur 100 % + l'espace de
+            // 1 rem entre les items font avancer chaque item de plus que
+            // 100 % → sans corriger, la vidéo se décale au fil du carrousel.
+            transform:
+              visible === 1
+                ? `translateX(calc(${index} * (-100% - 1rem)))`
+                : `translateX(-${index * (100 / visible)}%)`,
+          }}
         >
           {videos.map((src) => (
             <div
