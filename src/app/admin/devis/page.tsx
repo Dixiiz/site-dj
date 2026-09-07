@@ -87,6 +87,15 @@ export default async function DevisPage({
   }
 
   const filtered = (quotes ?? []).filter((quote) => {
+    // Les soirées passées n'apparaissent plus par défaut : elles sont
+    // visibles uniquement via le tri « Passées (archives) ».
+    if (tri !== "passes") {
+      if (quote.event_date && quote.event_date < new Date().toLocaleDateString("fr-CA")) {
+        return false;
+      }
+    } else if (!quote.event_date || quote.event_date >= new Date().toLocaleDateString("fr-CA")) {
+      return false;
+    }
     if (!query) return true;
     const haystack = [
       quote.customer_name,
@@ -115,7 +124,7 @@ export default async function DevisPage({
     cher: (a, b) => (b.total_cents ?? 0) - (a.total_cents ?? 0),
     moins_cher: (a, b) => (a.total_cents ?? 0) - (b.total_cents ?? 0),
   };
-  filtered.sort(sorters[tri ?? "recent"] ?? sorters.recent);
+  filtered.sort(sorters[tri ?? "date_proche"] ?? sorters.date_proche);
 
   return (
     <div className="space-y-6">
@@ -137,15 +146,16 @@ export default async function DevisPage({
         />
         <select
           name="tri"
-          defaultValue={tri ?? "recent"}
+          defaultValue={tri ?? "date_proche"}
           className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
         >
-          <option value="recent">Devis : plus récent d&apos;abord</option>
-          <option value="ancien">Devis : plus ancien d&apos;abord</option>
           <option value="date_proche">Événement : date la plus proche</option>
           <option value="date_loin">Événement : date la plus lointaine</option>
+          <option value="recent">Devis : plus récent d&apos;abord</option>
+          <option value="ancien">Devis : plus ancien d&apos;abord</option>
           <option value="cher">Prix : du plus cher au moins cher</option>
           <option value="moins_cher">Prix : du moins cher au plus cher</option>
+          <option value="passes">🕰 Soirées passées (archives)</option>
         </select>
         <button
           type="submit"

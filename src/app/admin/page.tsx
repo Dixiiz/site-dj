@@ -16,7 +16,12 @@ const STATUT_LABEL: Record<string, string> = {
   attente_acompte: "Acompte attendu",
 };
 
-export default async function AdminDashboard() {
+export default async function AdminDashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ vue?: string }>;
+}) {
+  const { vue } = await searchParams;
   const supabase = createAdminClient();
   const now = new Date();
   const year = now.getFullYear();
@@ -101,18 +106,24 @@ export default async function AdminDashboard() {
           </Link>
         </div>
 
-      {/* BLOC 1 : les 2 chiffres qui comptent */}
+      {/* BLOC 1 : les 2 chiffres qui comptent (cliquables → détail) */}
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-accent/40 bg-gradient-to-br from-accent/15 to-accent/5 p-6">
+        <Link
+          href="/admin?vue=ca-annee"
+          className="rounded-2xl border border-accent/40 bg-gradient-to-br from-accent/15 to-accent/5 p-6 transition-colors hover:border-accent"
+        >
           <p className="text-xs font-medium tracking-[0.15em] text-accent uppercase">
-            💰 CA signé {year}
+            💰 CA signé {year} — cliquer pour le détail
           </p>
           <p className="mt-2 text-4xl font-semibold">{eur(caAnnee)}</p>
           <p className="mt-2 text-sm text-muted-foreground">
             {allConfirmed.length} événement(s) confirmé(s) cette année
           </p>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-6">
+        </Link>
+        <Link
+          href="/admin?vue=ca-mois"
+          className="rounded-2xl border border-border bg-card p-6 transition-colors hover:border-accent/50"
+        >
           <p className="text-xs font-medium tracking-[0.15em] text-muted-foreground uppercase">
             🧾 CA de ce mois — à déclarer (URSSAF)
           </p>
@@ -120,23 +131,102 @@ export default async function AdminDashboard() {
           <p className="mt-2 text-sm text-muted-foreground">
             {ceMois.length} soirée(s) jouée(s) en {monthPrefix}
           </p>
-        </div>
+        </Link>
       </div>
 
-      {/* BLOC 2 : détails */}
+      {/* BLOC 2 : détails (cliquables → détail) */}
       <div className="grid gap-4 sm:grid-cols-3">
         {[
-          { label: "CA à venir", value: eur(caAVenir), hint: `${upcoming.length} soirée(s) confirmée(s) restante(s)` },
-          { label: "Solde à encaisser", value: eur(solde), hint: "réglé le jour de la prestation" },
-          { label: "Devis en attente", value: String(devisAttente ?? 0), hint: "à relancer ou traiter" },
-        ].map((card) => (
-          <div key={card.label} className="rounded-xl border border-border bg-card p-5">
-            <p className="text-sm font-medium text-muted-foreground">{card.label}</p>
-            <p className="mt-1.5 text-xl font-semibold">{card.value}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{card.hint}</p>
-          </div>
-        ))}
+          { vue: "ca-avenir", label: "CA à venir", value: eur(caAVenir), hint: `${upcoming.length} soirée(s) confirmée(s) restante(s)` },
+          { vue: "solde", label: "Solde à encaisser", value: eur(solde), hint: "réglé le jour de la prestation" },
+          { vue: null, label: "Devis en attente", value: String(devisAttente ?? 0), hint: "à relancer ou traiter", href: "/admin/devis" },
+        ].map((card) => {
+          const inner = (
+            <>
+              <p className="text-sm font-medium text-muted-foreground">{card.label}</p>
+              <p className="mt-1.5 text-xl font-semibold">{card.value}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{card.hint}</p>
+            </>
+          );
+          return card.href ? (
+            <Link key={card.label} href={card.href} className="rounded-xl border border-border bg-card p-5 transition-colors hover:border-accent/50">
+              {inner}
+            </Link>
+          ) : (
+            <Link key={card.label} href={`/admin?vue=${card.vue}`} className="rounded-xl border border-border bg-card p-5 transition-colors hover:border-accent/50">
+              {inner}
+            </Link>
+          );
+        })}
       </div>
+
+      {/* DÉTAIL : soirées composant le chiffre cliqué */}
+      {(() => {
+        const vues: Record<string, { titre: string; rows: typeof upcoming; solde?: boolean }> = {
+          "ca-annee": {
+            titre: `CA signé ${year} — détail des événements`,
+            rows: allConfirmed.filter((q) => (q.event_date ?? "").startsWith(String(year))),
+          },
+          "ca-mois": {
+            titre: `CA ${monthPrefix} (URSSAF) — détail des soirées`,
+            rows: ceMois,
+          },
+          "ca-avenir": { titre: "CA à venir — soirées restantes", rows: upcoming },
+          solde: { titre: "Solde à encaisser — par soirée", rows: upcoming, solde: true },
+        };
+        const detail = vue ? vues[vue] : undefined;
+        if (!detail) return null;
+        const totalDetail = detail.rows.reduce((sum, q) => {
+          const m = montant(q);
+          return sum + (detail.solde ? Math.floor((m * 0.8) / 10) * 10 : m);
+        }, 0);
+        return (
+          <section className="rounded-xl border border-accent/40 bg-accent/5 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-medium">{detail.titre}</h2>
+              <Link href="/admin" className="text-xs text-muted-foreground hover:text-accent">
+                ✕ Fermer
+              </Link>
+            </div>
+            {detail.rows.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">Aucune soirée dans cette catégorie.</p>
+            ) : (
+              <ul className="mt-3 divide-y divide-border">
+                {detail.rows.map((quote) => {
+                  const m = montant(quote);
+                  const affiche = detail.solde ? Math.floor((m * 0.8) / 10) * 10 : m;
+                  return (
+                    <li key={quote.id} className="flex items-center justify-between gap-3 py-2.5">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{quote.customer_name}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {quote.formula_name}
+                          {quote.event_location ? ` · ${quote.event_location}` : ""}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-sm font-medium">
+                          {quote.event_date
+                            ? new Date(`${quote.event_date}T12:00:00`).toLocaleDateString("fr-FR", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })
+                            : "—"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{eur(affiche)}</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <p className="mt-3 text-right text-sm font-medium">
+              Total : <span className="text-accent">{eur(totalDetail)}</span>
+            </p>
+          </section>
+        );
+      })()}
       {/* SUITE-LISTES */}
 
       <div className="grid gap-6 lg:grid-cols-2">
