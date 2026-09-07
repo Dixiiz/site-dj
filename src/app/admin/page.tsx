@@ -45,8 +45,13 @@ export default async function AdminDashboard({
   const upcoming = allConfirmed.filter((q) => (q.event_date ?? "") >= todayIso);
 
   // ---- Chiffres clés ----
-  const soldeDe = (q: { total_cents: unknown }) =>
-    Math.floor((montant(q) * 0.8) / 10) * 10;
+  const soldeDe = (q: { total_cents: unknown; notes?: unknown }) => {
+    const m = montant(q);
+    // Facture libre : pas d'acompte, le total est à régler intégralement.
+    if (String(q.notes ?? "").includes("[[facture-libre]]")) return m;
+    // Devis classique : solde = ~80 % arrondi à la dizaine inférieure.
+    return Math.floor((m * 0.8) / 10) * 10;
+  };
   // Solde validé = le DJ a confirmé avoir reçu le solde après la soirée
   // (marqueur [[solde-valide:date]] posé via le bouton "Valider le solde").
   const soldeValide = (q: { notes: unknown }) =>
