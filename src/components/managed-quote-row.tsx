@@ -16,6 +16,7 @@ export function ManagedQuoteRow({
   eventDate,
   eventLocation,
   totalCents,
+  acompteCents,
 }: {
   id: string;
   customerName: string;
@@ -23,6 +24,7 @@ export function ManagedQuoteRow({
   eventDate: string;
   eventLocation: string;
   totalCents: number;
+  acompteCents: number;
 }) {
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -81,6 +83,9 @@ export function ManagedQuoteRow({
             </p>
             <p className="text-xs text-muted-foreground">
               {(totalCents / 100).toFixed(2).replace(".", ",")} €
+              {acompteCents > 0
+                ? ` · solde ${((totalCents - acompteCents) / 100).toFixed(2).replace(".", ",")} €`
+                : ""}
             </p>
           </div>
           <button
@@ -127,6 +132,16 @@ export function ManagedQuoteRow({
               inputMode="decimal"
               required
               defaultValue={(totalCents / 100).toFixed(2).replace(".", ",")}
+              className={inputClass}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Acompte réglé (€)</label>
+            <input
+              name="acompte"
+              inputMode="decimal"
+              defaultValue={acompteCents > 0 ? (acompteCents / 100).toFixed(2).replace(".", ",") : ""}
+              placeholder="Ex. 310 ou vide si rien"
               className={inputClass}
             />
           </div>

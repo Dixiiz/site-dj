@@ -17,7 +17,7 @@ export default async function AdminImportPage() {
   // Soirées "gérées" : imports papier + soirées créées par facture libre.
   const { data: imported } = await supabase
     .from("quotes")
-    .select("id, customer_name, formula_name, total_cents, event_date, event_location")
+    .select("id, customer_name, formula_name, total_cents, event_date, event_location, notes")
     .or("notes.like.%[[import-avant-site]]%,notes.like.%[[facture-libre]]%")
     .order("event_date", { ascending: false });
 
@@ -60,17 +60,21 @@ export default async function AdminImportPage() {
           </p>
         ) : (
           <ul className="divide-y divide-border rounded-xl border border-border">
-            {imported!.map((quote) => (
-              <ManagedQuoteRow
-                key={quote.id}
-                id={quote.id}
-                customerName={quote.customer_name}
-                formulaName={quote.formula_name}
-                eventDate={quote.event_date ?? ""}
-                eventLocation={quote.event_location ?? ""}
-                totalCents={Number(quote.total_cents) || 0}
-              />
-            ))}
+            {imported!.map((quote) => {
+              const acompteMarker = /\[\[acompte:(\d+)\]\]/.exec(quote.notes ?? "");
+              return (
+                <ManagedQuoteRow
+                  key={quote.id}
+                  id={quote.id}
+                  customerName={quote.customer_name}
+                  formulaName={quote.formula_name}
+                  eventDate={quote.event_date ?? ""}
+                  eventLocation={quote.event_location ?? ""}
+                  totalCents={Number(quote.total_cents) || 0}
+                  acompteCents={acompteMarker ? Number(acompteMarker[1]) : 0}
+                />
+              );
+            })}
           </ul>
         )}
       </section>

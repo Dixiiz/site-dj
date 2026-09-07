@@ -1008,6 +1008,16 @@ export async function updateManagedQuote(formData: FormData) {
   }
   const total_cents = Math.round(totalEuros * 100);
 
+  // Acompte réglé (optionnel) : stocké en notes via [[acompte:centimes]].
+  const acompteEuros = parseFloat(str("acompte").replace(",", "."));
+  const acompte_cents = Number.isFinite(acompteEuros) && acompteEuros > 0
+    ? Math.round(acompteEuros * 100)
+    : 0;
+  let notes = (quote.notes ?? "").replace(/\[\[acompte:\d+\]\]\s*/g, "");
+  if (acompte_cents > 0) {
+    notes = `[[acompte:${acompte_cents}]] ${notes}`;
+  }
+
   const { error } = await supabase
     .from("quotes")
     .update({
@@ -1016,6 +1026,7 @@ export async function updateManagedQuote(formData: FormData) {
       event_location: str("event_location") || null,
       formula_price_cents: total_cents,
       total_cents,
+      notes,
     })
     .eq("id", id);
   if (error) {

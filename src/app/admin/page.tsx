@@ -46,11 +46,17 @@ export default async function AdminDashboard({
 
   // ---- Chiffres clés ----
   const soldeDe = (q: { total_cents: unknown; notes?: unknown }) => {
-    const m = montant(q);
-    // Facture libre : pas d'acompte, le total est à régler intégralement.
-    if (String(q.notes ?? "").includes("[[facture-libre]]")) return m;
-    // Devis classique : solde = ~80 % arrondi à la dizaine inférieure.
-    return Math.floor((m * 0.8) / 10) * 10;
+    const notes = String(q.notes ?? "");
+    const total = montant(q);
+    // L'acompte RÉELLEMENT réglé, stocké via [[acompte:centimes]]
+    // (renseignable dans l'édition de la soirée sur /admin/import).
+    const marker = /\[\[acompte:(\d+)\]\]/.exec(notes);
+    if (marker) return Math.max(0, total - Number(marker[1]));
+    // Sans acompte renseigné : facture libre → total dû. Devis du site →
+    // règle standard du devis PDF (solde arrondi à la dizaine inférieure).
+    if (notes.includes("[[facture-libre]]")) return total;
+    if (notes.includes("[[import-avant-site]]")) return total;
+    return Math.max(0, total - Math.floor((total * 0.8) / 10) * 10);
   };
   // Solde validé = le DJ a confirmé avoir reçu le solde après la soirée
   // (marqueur [[solde-valide:date]] posé via le bouton "Valider le solde").
