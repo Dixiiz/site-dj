@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEuros } from "@/lib/money";
 import Link from "next/link";
+import { ValidateSoldeButton } from "@/components/validate-solde-button";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export default async function AdminDashboard({
   // Tous les devis confirmés, triés par date d'événement.
   const { data: confirmed } = await supabase
     .from("quotes")
-    .select("id, customer_name, formula_name, total_cents, event_date, event_location, status, created_at")
+    .select("id, customer_name, formula_name, total_cents, event_date, event_location, status, created_at, notes")
     .eq("status", "confirme")
     .order("event_date", { ascending: true });
 
@@ -44,24 +45,36 @@ export default async function AdminDashboard({
   const upcoming = allConfirmed.filter((q) => (q.event_date ?? "") >= todayIso);
 
   // ---- Chiffres clés ----
-  // CA de l'année : événements confirmés qui se déroulent cette année.
+  const soldeDe = (q: { total_cents: unknown }) =>
+    Math.floor((montant(q) * 0.8) / 10) * 10;
+  // Solde validé = le DJ a confirmé avoir reçu le solde après la soirée
+  // (marqueur [[solde-valide:date]] posé via le bouton "Valider le solde").
+  const soldeValide = (q: { notes: unknown }) =>
+    (String(q.notes ?? "")).includes("[[solde-valide:");
+
+  // CA de l'année : tous les événements confirmés qui se déroulent cette année.
   const caAnnee = allConfirmed
     .filter((q) => (q.event_date ?? "").startsWith(String(year)))
     .reduce((sum, q) => sum + montant(q), 0);
 
-  // CA du mois : événements confirmés de ce mois → à déclarer à l'URSSAF.
-  const ceMois = allConfirmed.filter((q) => (q.event_date ?? "").startsWith(monthPrefix));
-  const caMois = ceMois.reduce((sum, q) => sum + montant(q), 0);
+  // CA URSSAF du mois : soirées du mois TERMINÉES dont le solde a été
+  // validé. Au 1er du mois, la carte repart de 0 €.
+  const ceMoisJouees = allConfirmed.filter(
+    (q) => (q.event_date ?? "").startsWith(monthPrefix) && (q.event_date ?? "") <= todayIso
+  );
+  const encaisse = ceMoisJouees.filter((q) => soldeValide(q));
+  const caMois = encaisse.reduce((sum, q) => sum + montant(q), 0);
+  const attenteValidation = ceMoisJouees.filter((q) => !soldeValide(q));
+  const soldeAValider = attenteValidation.reduce((sum, q) => sum + soldeDe(q), 0);
 
   // CA à venir : confirmé, pas encore joué.
   const caAVenir = upcoming.reduce((sum, q) => sum + montant(q), 0);
 
-  // Solde à encaisser : ~80 % du CA à venir, arrondi à la dizaine inférieure
-  // (même règle que sur les devis/factures : l'acompte complète à 10 € près).
-  const solde = upcoming.reduce(
-    (sum, q) => sum + Math.floor((montant(q) * 0.8) / 10) * 10,
-    0
-  );
+  // Soirées terminées (toutes périodes) dont le solde reste à valider :
+  // visible dans le détail de la carte, pour ne rien oublier.
+  const aValiderToutes = allConfirmed
+    .filter((q) => (q.event_date ?? "") <= todayIso && !soldeValide(q));
+  const soldeAValiderToutes = aValiderToutes.reduce((sum, q) => sum + soldeDe(q), 0);
 
   // ---- Devis ----
   const { count: devisAttente } = await supabase
@@ -106,7 +119,7 @@ export default async function AdminDashboard({
           </Link>
         </div>
 
-      {/* BLOC 1 : les 2 chiffres qui comptent (cliquables → détail) */}
+      {/* BLOC 1 : les 2 chiffres qui comptent */}
       <div className="grid gap-4 md:grid-cols-2">
         <Link
           href="/admin?vue=ca-annee"
@@ -121,15 +134,18 @@ export default async function AdminDashboard({
           </p>
         </Link>
         <Link
-          href="/admin?vue=ca-mois"
+          href="/admin?vue=urssaf"
           className="rounded-2xl border border-border bg-card p-6 transition-colors hover:border-accent/50"
         >
           <p className="text-xs font-medium tracking-[0.15em] text-muted-foreground uppercase">
-            🧾 CA de ce mois — à déclarer (URSSAF)
+            🧾 CA encaissé ce mois — à déclarer (URSSAF)
           </p>
           <p className="mt-2 text-4xl font-semibold">{eur(caMois)}</p>
           <p className="mt-2 text-sm text-muted-foreground">
-            {ceMois.length} soirée(s) jouée(s) en {monthPrefix}
+            {encaisse.length} soirée(s) validée(s) ·{" "}
+            {attenteValidation.length > 0
+              ? `${attenteValidation.length} solde(s) en attente de validation`
+              : "tout est validé ✓"}
           </p>
         </Link>
       </div>
@@ -137,8 +153,8 @@ export default async function AdminDashboard({
       {/* BLOC 2 : détails (cliquables → détail) */}
       <div className="grid gap-4 sm:grid-cols-3">
         {[
-          { vue: "ca-avenir", label: "CA à venir", value: eur(caAVenir), hint: `${upcoming.length} soirée(s) confirmée(s) restante(s)` },
-          { vue: "solde", label: "Solde à encaisser", value: eur(solde), hint: "réglé le jour de la prestation" },
+          { vue: "solde", label: "Soldes à valider", value: eur(soldeAValiderToutes), hint: `${aValiderToutes.length} soirée(s) terminée(s) — valider pour compter dans l'URSSAF` },
+          { vue: "ca-avenir", label: "CA à venir (déjà signé)", value: eur(caAVenir), hint: `${upcoming.length} soirée(s) confirmée(s) restante(s)` },
           { vue: null, label: "Devis en attente", value: String(devisAttente ?? 0), hint: "à relancer ou traiter", href: "/admin/devis" },
         ].map((card) => {
           const inner = (
@@ -162,23 +178,30 @@ export default async function AdminDashboard({
 
       {/* DÉTAIL : soirées composant le chiffre cliqué */}
       {(() => {
-        const vues: Record<string, { titre: string; rows: typeof upcoming; solde?: boolean }> = {
+        const vues: Record<
+          string,
+          { titre: string; rows: typeof upcoming; solde?: boolean; urssaf?: boolean }
+        > = {
           "ca-annee": {
             titre: `CA signé ${year} — détail des événements`,
             rows: allConfirmed.filter((q) => (q.event_date ?? "").startsWith(String(year))),
           },
-          "ca-mois": {
-            titre: `CA ${monthPrefix} (URSSAF) — détail des soirées`,
-            rows: ceMois,
+          urssaf: {
+            titre: `CA ${monthPrefix} (URSSAF) — soirées encaissées et validées`,
+            rows: encaisse,
+          },
+          solde: {
+            titre: "Soldes à valider — soirées terminées, solde non confirmé",
+            rows: aValiderToutes,
+            solde: true,
           },
           "ca-avenir": { titre: "CA à venir — soirées restantes", rows: upcoming },
-          solde: { titre: "Solde à encaisser — par soirée", rows: upcoming, solde: true },
         };
         const detail = vue ? vues[vue] : undefined;
         if (!detail) return null;
         const totalDetail = detail.rows.reduce((sum, q) => {
           const m = montant(q);
-          return sum + (detail.solde ? Math.floor((m * 0.8) / 10) * 10 : m);
+          return sum + (detail.solde ? soldeDe(q) : m);
         }, 0);
         return (
           <section className="rounded-xl border border-accent/40 bg-accent/5 p-5">
@@ -194,27 +217,42 @@ export default async function AdminDashboard({
               <ul className="mt-3 divide-y divide-border">
                 {detail.rows.map((quote) => {
                   const m = montant(quote);
-                  const affiche = detail.solde ? Math.floor((m * 0.8) / 10) * 10 : m;
+                  const affiche = detail.solde ? soldeDe(quote) : m;
+                  const valide = soldeValide(quote);
                   return (
                     <li key={quote.id} className="flex items-center justify-between gap-3 py-2.5">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{quote.customer_name}</p>
+                        <p className="truncate text-sm font-medium">
+                          {quote.customer_name}{" "}
+                          {detail.solde && valide ? (
+                            <span className="text-xs font-normal text-green-400">✓ validé</span>
+                          ) : null}
+                        </p>
                         <p className="truncate text-xs text-muted-foreground">
                           {quote.formula_name}
                           {quote.event_location ? ` · ${quote.event_location}` : ""}
                         </p>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-sm font-medium">
-                          {quote.event_date
-                            ? new Date(`${quote.event_date}T12:00:00`).toLocaleDateString("fr-FR", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              })
-                            : "—"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{eur(affiche)}</p>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <div className="text-right">
+                          <p className="text-sm font-medium">
+                            {quote.event_date
+                              ? new Date(`${quote.event_date}T12:00:00`).toLocaleDateString("fr-FR", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })
+                              : "—"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{eur(affiche)}</p>
+                        </div>
+                        {detail.solde ? (
+                          <ValidateSoldeButton
+                            id={quote.id}
+                            customerName={quote.customer_name}
+                            validated={valide}
+                          />
+                        ) : null}
                       </div>
                     </li>
                   );

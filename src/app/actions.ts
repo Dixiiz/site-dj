@@ -1055,6 +1055,46 @@ export async function deleteManagedQuote(formData: FormData) {
   return { ok: true as const, message: `Soirée « ${quote.customer_name} » supprimée ✓` };
 }
 
+// Valide ou annule le solde d'une soirée confirmée (marqueur
+// [[solde-valide:date]] dans les notes). Alimente le CA URSSAF du mois.
+export async function validerSoldeQuote(formData: FormData) {
+  if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
+  const id = String(formData.get("id") ?? "").trim();
+  const annuler = String(formData.get("annuler") ?? "") === "1";
+  if (!id) return { ok: false as const, error: "Soirée introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("id, notes, customer_name")
+    .eq("id", id)
+    .maybeSingle();
+  if (!quote) return { ok: false as const, error: "Soirée introuvable." };
+
+  let notes = quote.notes ?? "";
+  if (annuler) {
+    notes = notes.replace(/\[\[solde-valide:[^\]]*\]\]\s*/g, "");
+  } else if (!notes.includes("[[solde-valide:")) {
+    notes = `[[solde-valide:${new Date().toLocaleDateString("fr-CA")}]]\n${notes}`;
+  } else {
+    return { ok: true as const, message: "Solde déjà validé." };
+  }
+
+  const { error } = await supabase.from("quotes").update({ notes }).eq("id", id);
+  if (error) {
+    console.error("Validation solde impossible", error);
+    return { ok: false as const, error: "Opération impossible." };
+  }
+
+  revalidatePath("/admin");
+  return {
+    ok: true as const,
+    message: annuler
+      ? `Solde retiré pour « ${quote.customer_name} » ✓`
+      : `Solde validé pour « ${quote.customer_name} » ✓`,
+  };
+}
+
 // Ajout manuel d'une soirée datant d'avant le site (devis papier signé).
 // Crée un devis confirmé pour alimenter le CA et le planning.
 export async function importPastQuote(formData: FormData) {
