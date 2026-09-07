@@ -22,6 +22,12 @@ function isImport(notes: string | null | undefined) {
   return (notes ?? "").includes("[[import-avant-site]]");
 }
 
+// Une facture libre n'a ni compte client ni playlist : pas de rappels
+// playlist/espace client (la demande d'avis post-soirée reste active).
+function isFactureLibre(notes: string | null | undefined) {
+  return (notes ?? "").includes("[[facture-libre]]");
+}
+
 async function sendEmail(to: string, subject: string, emailData: Parameters<typeof buildEmailHtml>[0]) {
   const { Resend } = await import("resend");
   const apiKey = process.env.RESEND_API_KEY;
@@ -222,7 +228,7 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
 
   for (const q of j30 ?? []) {
     if ((q.notes ?? "").includes(MARK_PLAYLIST_30)) continue;
-    if (isImport(q.notes)) continue;
+    if (isImport(q.notes) || isFactureLibre(q.notes)) continue;
     if (!q.customer_email) continue;
 
     // Le rappel ne part que si le client n'a mis AUCUN titre.
@@ -282,7 +288,7 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
 
   for (const q of upcoming ?? []) {
     if ((q.notes ?? "").includes("[[rappel-j7:")) continue;
-    if (isImport(q.notes)) continue;
+    if (isImport(q.notes) || isFactureLibre(q.notes)) continue;
     if (!q.customer_email) continue;
 
     // Playlist vide ? Le rappel devient plus pressant.

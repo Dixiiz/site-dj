@@ -104,7 +104,29 @@ export async function POST(request: Request) {
       console.error("Upload facture libre impossible", uploadError);
     }
 
+    // La facture devient aussi une soirée confirmée : elle alimente le CA,
+    // le planning et les stats du tableau de bord.
+    const { error: quoteError } = await supabase.from("quotes").insert({
+      customer_name,
+      customer_email: str("customer_email") || "non.renseigne@facture.local",
+      customer_phone: str("customer_phone") || null,
+      event_type: str("event_type") || null,
+      event_date: str("event_date") || new Date().toISOString().slice(0, 10),
+      event_location: str("event_location") || null,
+      start_time: str("start_time") || null,
+      end_time: str("end_time") || null,
+      formula_name: str("event_type") || "Facture libre",
+      formula_price_cents: total_cents,
+      total_cents,
+      status: "confirme",
+      notes: `[[facture-libre]] Facture ${invoiceNumber} générée depuis l'admin.`,
+    });
+    if (quoteError) {
+      console.error("Création soirée facture libre impossible", quoteError);
+    }
+
     revalidatePath("/admin/factures");
+    revalidatePath("/admin");
 
     // Le PDF est renvoyé directement en téléchargement.
     const fileName = `Facture ${invoiceNumber}.pdf`;

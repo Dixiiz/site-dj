@@ -109,6 +109,8 @@ export default async function AdminFacturesPage() {
               id="event_date"
               name="event_date"
               type="date"
+              required
+              defaultValue={new Date().toLocaleDateString("fr-CA")}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
             />
           </div>
