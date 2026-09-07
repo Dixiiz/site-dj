@@ -885,7 +885,8 @@ export async function deleteSlot(formData: FormData) {
   return { ok: true as const };
 }
 
-// Supprime une facture libre (PDF dans le storage, dossier factures-libres).
+// Supprime une facture libre (PDF dans le storage, dossier factures-libres)
+// ainsi que la soirée associée créée lors de la génération.
 export async function deleteFreeInvoice(formData: FormData) {
   if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
   const fileName = String(formData.get("file_name") ?? "").trim();
@@ -893,6 +894,8 @@ export async function deleteFreeInvoice(formData: FormData) {
   if (!fileName || fileName.includes("/") || fileName.includes("\\") || fileName.includes("..")) {
     return { ok: false as const, error: "Nom de fichier invalide." };
   }
+  const invoiceNumber = fileName.match(/F-\d{4}-\d{3}/)?.[0] ?? "";
+
   const supabase = createAdminClient();
   const { error } = await supabase.storage
     .from("client-files")
@@ -901,7 +904,21 @@ export async function deleteFreeInvoice(formData: FormData) {
     console.error("Suppression facture libre impossible", error);
     return { ok: false as const, error: "Suppression impossible." };
   }
+
+  // Supprime aussi la soirée liée (créée automatiquement à la génération).
+  if (invoiceNumber) {
+    const { data: linked } = await supabase
+      .from("quotes")
+      .select("id")
+      .like("notes", `%[[facture-libre]]%`)
+      .like("notes", `%Facture ${invoiceNumber} générée%`);
+    for (const quote of linked ?? []) {
+      await supabase.from("quotes").delete().eq("id", quote.id);
+    }
+  }
+
   revalidatePath("/admin/factures");
+  revalidatePath("/admin");
   return { ok: true as const };
 }
 
@@ -954,6 +971,88 @@ export async function sendFreeInvoiceEmail(formData: FormData) {
     console.error("Envoi facture libre impossible", err);
     return { ok: false as const, error: "Échec de l'envoi de l'e-mail." };
   }
+}
+
+// Soirées "gérées" = créées via l'admin (import papier ou facture libre).
+// Seules celles-là peuvent être modifiées ou supprimées depuis l'admin.
+function isManagedQuote(notes: string | null | undefined) {
+  const n = notes ?? "";
+  return n.includes("[[import-avant-site]]") || n.includes("[[facture-libre]]");
+}
+
+// Modification d'une soirée gérée (date, formule, lieu, montant).
+export async function updateManagedQuote(formData: FormData) {
+  if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
+  const str = (key: string) => String(formData.get(key) ?? "").trim();
+  const id = str("id");
+  if (!id) return { ok: false as const, error: "Soirée introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("id, notes")
+    .eq("id", id)
+    .maybeSingle();
+  if (!quote || !isManagedQuote(quote.notes)) {
+    return { ok: false as const, error: "Cette soirée n'est pas modifiable (devis client du site)." };
+  }
+
+  const event_date = str("event_date");
+  const formula_name = str("formula_name");
+  if (!event_date || !formula_name) {
+    return { ok: false as const, error: "Date et formule sont obligatoires." };
+  }
+  const totalEuros = parseFloat(str("total").replace(",", "."));
+  if (!Number.isFinite(totalEuros) || totalEuros <= 0) {
+    return { ok: false as const, error: "Montant invalide." };
+  }
+  const total_cents = Math.round(totalEuros * 100);
+
+  const { error } = await supabase
+    .from("quotes")
+    .update({
+      event_date,
+      formula_name,
+      event_location: str("event_location") || null,
+      formula_price_cents: total_cents,
+      total_cents,
+    })
+    .eq("id", id);
+  if (error) {
+    console.error("Modification soirée impossible", error);
+    return { ok: false as const, error: "Modification impossible." };
+  }
+
+  revalidatePath("/admin/import");
+  revalidatePath("/admin");
+  return { ok: true as const, message: "Soirée mise à jour ✓" };
+}
+
+// Suppression d'une soirée gérée (import ou facture libre).
+export async function deleteManagedQuote(formData: FormData) {
+  if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { ok: false as const, error: "Soirée introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("id, notes, customer_name")
+    .eq("id", id)
+    .maybeSingle();
+  if (!quote || !isManagedQuote(quote.notes)) {
+    return { ok: false as const, error: "Cette soirée n'est pas supprimable (devis client du site)." };
+  }
+
+  const { error } = await supabase.from("quotes").delete().eq("id", id);
+  if (error) {
+    console.error("Suppression soirée impossible", error);
+    return { ok: false as const, error: "Suppression impossible." };
+  }
+
+  revalidatePath("/admin/import");
+  revalidatePath("/admin");
+  return { ok: true as const, message: `Soirée « ${quote.customer_name} » supprimée ✓` };
 }
 
 // Ajout manuel d'une soirée datant d'avant le site (devis papier signé).

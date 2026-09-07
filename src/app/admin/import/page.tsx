@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdmin } from "@/lib/admin-auth";
 import { ImportQuoteForm } from "@/components/import-quote-form";
+import { ManagedQuoteRow } from "@/components/managed-quote-row";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -13,11 +14,11 @@ export default async function AdminImportPage() {
   }
 
   const supabase = createAdminClient();
+  // Soirées "gérées" : imports papier + soirées créées par facture libre.
   const { data: imported } = await supabase
     .from("quotes")
     .select("id, customer_name, formula_name, total_cents, event_date, event_location")
-    .eq("status", "confirme")
-    .like("notes", "%[[import-avant-site]]%")
+    .or("notes.like.%[[import-avant-site]]%,notes.like.%[[facture-libre]]%")
     .order("event_date", { ascending: false });
 
   const total = (imported ?? []).reduce(
@@ -48,9 +49,9 @@ export default async function AdminImportPage() {
 
       <section className="space-y-3">
         <h2 className="font-medium">
-          Déjà importées{" "}
+          Soirées gérées{" "}
           <span className="text-sm font-normal text-muted-foreground">
-            ({(imported ?? []).length} soirée(s) · {formatCA(total)})
+            ({(imported ?? []).length} · {formatCA(total)}) — modifiables et supprimables
           </span>
         </h2>
         {(imported ?? []).length === 0 ? (
@@ -60,29 +61,15 @@ export default async function AdminImportPage() {
         ) : (
           <ul className="divide-y divide-border rounded-xl border border-border">
             {imported!.map((quote) => (
-              <li key={quote.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{quote.customer_name}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {quote.formula_name}
-                    {quote.event_location ? ` · ${quote.event_location}` : ""}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-sm font-medium">
-                    {quote.event_date
-                      ? new Date(`${quote.event_date}T12:00:00`).toLocaleDateString("fr-FR", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })
-                      : "—"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCA(Number(quote.total_cents) || 0)}
-                  </p>
-                </div>
-              </li>
+              <ManagedQuoteRow
+                key={quote.id}
+                id={quote.id}
+                customerName={quote.customer_name}
+                formulaName={quote.formula_name}
+                eventDate={quote.event_date ?? ""}
+                eventLocation={quote.event_location ?? ""}
+                totalCents={Number(quote.total_cents) || 0}
+              />
             ))}
           </ul>
         )}
