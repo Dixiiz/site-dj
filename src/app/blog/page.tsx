@@ -28,6 +28,15 @@ const articles = [
       "Ouverture du bal, piste de danse en feu, slow qui rassemble : la sélection testée et approuvée par un DJ du Loir-et-Cher. Et les pièges à éviter.",
     readingTime: "5 min",
   },
+  {
+    href: "/blog/dj-ou-playlist-spotify",
+    emoji: "🔊",
+    tag: "Réflexion",
+    title: "DJ mariage ou playlist Spotify : ce que ça change vraiment",
+    excerpt:
+      "Lecture de la piste de danse, imprévus, matériel, transitions : le comparatif honnête entre une enceinte Bluetooth et un DJ professionnel (et quand la playlist suffit).",
+    readingTime: "5 min",
+  },
 ];
 
 export default function BlogPage() {
@@ -75,7 +84,7 @@ export default function BlogPage() {
             <div className="flex h-full flex-col justify-center rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
               <span className="text-3xl">📝</span>
               <p className="mt-3">
-                Bientôt : <strong>« DJ mariage ou playlist Spotify : ce que ça change vraiment »</strong>
+                Bientôt : <strong>« Organiser un mariage à Blois : le checklist complet des prestataires »</strong>
               </p>
             </div>
           </FadeIn>
