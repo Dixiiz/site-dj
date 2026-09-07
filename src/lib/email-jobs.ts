@@ -178,9 +178,6 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
 
   for (const q of toReview ?? []) {
     if ((q.notes ?? "").includes(MARK_AVIS)) continue;
-    // Exception : un devis importé peut recevoir la demande d'avis si la
-    // note [[avis-ok]] a été ajoutée à la main (ex : mariage de Thomas).
-    if (isImport(q.notes) && !(q.notes ?? "").includes("[[avis-ok]]")) continue;
     if (!q.customer_email) continue;
 
     const eventFr = q.event_date
