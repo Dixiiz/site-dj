@@ -3,7 +3,8 @@ import { sendScheduledEmails, backupSignedDocuments } from "@/lib/email-jobs";
 // Tâche planifiée (Cron Vercel, 9h chaque jour) :
 //  - relance J+10 des devis non confirmés
 //  - relance acompte J+5 après signature
-//  - rappel J-7 avant les soirées confirmées
+//  - rappel J-30 playlist vide (avant les soirées confirmées)
+//  - rappel J-7 avant les soirées confirmées (renforcé si playlist vide)
 //  - demande d'avis après les soirées
 //  - sauvegarde des documents signés récents (bucket « backups »)
 // Protégée par CRON_SECRET si défini (Bearer token).
