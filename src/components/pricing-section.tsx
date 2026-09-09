@@ -6,6 +6,7 @@ import { FadeIn } from "@/components/fade-in";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import InstallmentSimulator from "@/components/installment-simulator";
 import { formatEuros } from "@/lib/money";
 
 type Pack = {
@@ -559,12 +560,12 @@ export function PricingSection() {
                 </span>
               ))}
             </p>
-            <p className="mt-3 rounded-lg border border-accent/30 bg-accent/5 px-4 py-2.5 text-sm text-muted-foreground">
-              💳 <strong className="text-foreground">Payable en plusieurs fois</strong> —
-              de 2 à 10 fois par carte bancaire : un acompte à la réservation, puis
-              des échéances adaptées à votre budget, toujours avant la soirée.
-              Estimez vos échéances dans le devis ci-dessous.
-            </p>
+            <InstallmentSimulator
+              baseCents={
+                active.packs.find((p) => p.name === selectedPack)?.price ??
+                null
+              }
+            />
           </div>
         </div>
       )}
