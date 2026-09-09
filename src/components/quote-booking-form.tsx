@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 const emptySubscribe = () => () => {};
 import { formatEuros } from "@/lib/money";
-import { montantsEcheances, niveauxDisponibles } from "@/lib/installments";
+import { acompteCents, montantsEcheances, niveauxDisponibles } from "@/lib/installments";
 import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
 import type { Formula, QuoteOption } from "@/lib/types";
 
@@ -921,8 +921,9 @@ function RecapInstallments({ total }: { total: number }) {
         <p className="mt-1.5 animate-in fade-in slide-in-from-bottom-1 text-muted-foreground duration-200">
           {niveau}× ={" "}
           <span className="font-medium text-foreground">{formatEuros(detail.first)}</span>{" "}
-          (acompte) puis {niveau - 1} × {formatEuros(detail.rest)} — frais inclus.
-          À choisir dans ton espace client.
+          puis {niveau - 1} × {formatEuros(detail.rest)} — la 1ʳᵉ échéance couvre
+          l&apos;acompte ({formatEuros(acompteCents(total))}). Frais inclus. À
+          choisir dans ton espace client.
         </p>
       ) : null}
     </div>

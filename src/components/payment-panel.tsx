@@ -280,7 +280,7 @@ export default function PaymentPanel({
               <p className="mt-1 text-xs text-muted-foreground">
                 {acomptePaid
                   ? `Répartissez le solde (${euros(solde)}) de 2 à 10 fois, toujours avant la soirée.`
-                  : `Répartissez le total de 2 à 10 fois — la 1ʳᵉ échéance couvre l'acompte (${euros(acompte)}), les suivantes étalent le reste. Toujours avant la soirée.`}
+                  : `Répartissez le total de 2 à 10 fois — la 1ʳᵉ échéance couvre l'acompte (${euros(acompte)}), les montants affichés ci-dessous sont les échéances suivantes. Toujours avant la soirée.`}
               </p>
               <div className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-5 md:grid-cols-9">
                 {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
@@ -294,7 +294,7 @@ export default function PaymentPanel({
                       onClick={() => setBrouillon(n)}
                       title={
                         dispo
-                          ? `Voir le détail en ${n} fois`
+                          ? `${n} fois : 1ʳᵉ échéance ${euros(m.first)} puis ${n - 1} × ${euros(m.rest)}`
                           : `Non disponible : minimum 150 € par échéance${n > 3 ? " et total de 1 000 € minimum au-delà de x3" : ""}`
                       }
                       className={`rounded-md border p-2 text-center transition-all disabled:opacity-30 ${
@@ -305,7 +305,7 @@ export default function PaymentPanel({
                     >
                       <span className="block text-sm font-semibold">{n}×</span>
                       <span className="block text-xs text-muted-foreground">
-                        {dispo ? euros(m.first) : "—"}
+                        {dispo ? `puis ${euros(m.rest)}` : "—"}
                       </span>
                     </button>
                   );
