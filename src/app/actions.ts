@@ -759,65 +759,70 @@ export async function updateQuoteStatus(formData: FormData) {
   if (!id || !allowed.includes(status)) return;
   const supabase = createAdminClient();
 
-  // Notification e-mail au client quand le devis est confirmé.
-  if (status === "confirme") {
-    const { data: quote } = await supabase
-      .from("quotes")
-      .select("customer_email, event_date")
-      .eq("id", id)
-      .single();
-    try {
-      if (quote?.customer_email) {
-        const { Resend } = await import("resend");
-        const apiKey = process.env.RESEND_API_KEY;
-        const from = process.env.NOTIF_EMAIL;
-        if (apiKey && from) {
-          const resend = new Resend(apiKey);
-          const { buildEmailHtml, buildEmailText, stepsSection } = await import("@/lib/emails");
-          const dateFr = quote.event_date
-            ? new Date(quote.event_date).toLocaleDateString("fr-FR", {
-                weekday: "long", day: "numeric", month: "long", year: "numeric",
-              })
-            : null;
-          const emailData = {
-            title: "Votre devis est confirmé !",
-            emoji: "",
-            intro: `Bonjour,<br/><br/>Excellente nouvelle : votre devis${dateFr ? ` pour le <strong>${dateFr}</strong>` : ""} est désormais <strong style="color:${"#219653"};">confirmé</strong> !<br/><br/>La date est bloquée pour vous. Vous pouvez dès maintenant préparer votre soirée.`,
-            sections: [
-              stepsSection("confirme"),
-              {
-                title: "Prochaines étapes",
-                lines: [
- "Renseignez votre <strong>playlist</strong> (musiques des temps forts + piste de danse)",
- "Retrouvez et téléchargez vos <strong>documents</strong>",
- "Une question ? Écrivez-nous directement depuis votre espace",
-                ],
-              },
-            ],
-            button: {
-              label: "Ouvrir mon espace client",
-              href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${id}`)}`,
-            },
-          };
-          await resend.emails.send({
-            from: EMAIL_FROM,
-            replyTo: quote.customer_email,
-            to: quote.customer_email,
-            subject: "Votre devis est confirmé ! — Propul'Sound DJ",
-            html: buildEmailHtml(emailData),
-            text: buildEmailText(emailData),
-          });
-        }
-      }
-    } catch {
-      // best effort
-    }
-  }
-
+  // Le statut est mis à jour D'ABORD (réponse immédiate pour l'admin) ;
+  // l'e-mail de confirmation part ensuite en arrière-plan.
   await supabase.from("quotes").update({ status }).eq("id", id);
   revalidatePath("/admin/devis");
   revalidatePath("/admin/planning");
   revalidatePath("/disponibilites");
+
+  // Notification e-mail au client quand le devis est confirmé.
+  // Fire-and-forget : ne bloque pas la réponse de l'action.
+  if (status === "confirme") {
+    void (async () => {
+      try {
+        const { data: quote } = await supabase
+          .from("quotes")
+          .select("customer_email, event_date")
+          .eq("id", id)
+          .single();
+        if (quote?.customer_email) {
+          const { Resend } = await import("resend");
+          const apiKey = process.env.RESEND_API_KEY;
+          const from = process.env.NOTIF_EMAIL;
+          if (apiKey && from) {
+            const resend = new Resend(apiKey);
+            const { buildEmailHtml, buildEmailText, stepsSection } = await import("@/lib/emails");
+            const dateFr = quote.event_date
+              ? new Date(quote.event_date).toLocaleDateString("fr-FR", {
+                  weekday: "long", day: "numeric", month: "long", year: "numeric",
+                })
+              : null;
+            const emailData = {
+              title: "Votre devis est confirmé !",
+              emoji: "",
+              intro: `Bonjour,<br/><br/>Excellente nouvelle : votre devis${dateFr ? ` pour le <strong>${dateFr}</strong>` : ""} est désormais <strong style="color:${"#219653"};">confirmé</strong> !<br/><br/>La date est bloquée pour vous. Vous pouvez dès maintenant préparer votre soirée.`,
+              sections: [
+                stepsSection("confirme"),
+                {
+                  title: "Prochaines étapes",
+                  lines: [
+ "Renseignez votre <strong>playlist</strong> (musiques des temps forts + piste de danse)",
+ "Retrouvez et téléchargez vos <strong>documents</strong>",
+ "Une question ? Écrivez-nous directement depuis votre espace",
+                  ],
+                },
+              ],
+              button: {
+                label: "Ouvrir mon espace client",
+                href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${id}`)}`,
+              },
+            };
+            await resend.emails.send({
+              from: EMAIL_FROM,
+              replyTo: quote.customer_email,
+              to: quote.customer_email,
+              subject: "Votre devis est confirmé ! — Propul'Sound DJ",
+              html: buildEmailHtml(emailData),
+              text: buildEmailText(emailData),
+            });
+          }
+        }
+      } catch {
+        // best effort
+      }
+    })();
+  }
 }
 
 export async function deleteQuote(formData: FormData) {
