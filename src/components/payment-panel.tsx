@@ -16,9 +16,19 @@ function euros(cents: number) {
   return (cents / 100).toFixed(2).replace(".", ",") + " €";
 }
 
-// Montant par échéance avec frais Stripe intégrés (1,5 % + 0,25 €/paiement).
-function montantEcheance(totalCents: number, n: number) {
-  return Math.ceil((totalCents / n + 25) / 0.985);
+// Montant de l'acompte (20 %, solde arrondi à la dizaine inférieure —
+// même règle que le devis PDF) et échéances avec frais Stripe intégrés.
+function acompteCents(totalCents: number) {
+  const solde = Math.floor((totalCents * 0.008) / 10) * 1000;
+  return Math.max(0, totalCents - solde);
+}
+function montantPremiere(totalCents: number) {
+  return Math.ceil((acompteCents(totalCents) + 25) / 0.985);
+}
+function montantSuivantes(totalCents: number, n: number) {
+  if (n <= 1) return 0;
+  const rest = totalCents - acompteCents(totalCents);
+  return Math.ceil((rest / (n - 1) + 25) / 0.985);
 }
 
 export default function PaymentPanel({
@@ -47,21 +57,22 @@ export default function PaymentPanel({
       if (res.ok) {
         toast.success(res.message ?? "Échéancier créé !");
         // Reconstruit l'affichage localement (la page se recharge via router.refresh du parent).
-        const amount = montantEcheance(totalCents, n);
+        const first = montantPremiere(totalCents);
+        const rest = montantSuivantes(totalCents, n);
         const today = new Date();
         today.setHours(12, 0, 0, 0);
         const event = eventDate ? new Date(`${eventDate}T12:00:00`) : null;
         const daysUntil = event
           ? Math.max(10, Math.floor((event.getTime() - today.getTime()) / 86400_000) - 2)
           : 30;
+        const firstDue = new Date(today.getTime() + 3 * 86400_000);
+        const step = Math.floor(Math.max(7, daysUntil - 3) / Math.max(1, n - 1));
         setRows(
           Array.from({ length: n }, (_, i) => ({
             numero: i + 1,
             total: n,
-            amount_cents: amount,
-            due_date: new Date(
-              today.getTime() + Math.ceil(((i + 1) * daysUntil) / n) * 86400_000
-            )
+            amount_cents: i === 0 ? first : rest,
+            due_date: new Date(firstDue.getTime() + i * step * 86400_000)
               .toISOString()
               .slice(0, 10),
             status: "a_payer" as const,
@@ -95,14 +106,17 @@ export default function PaymentPanel({
                 >
                   <span className="block text-lg font-semibold">{n}×</span>
                   <span className="block text-xs text-muted-foreground">
-                    {euros(montantEcheance(totalCents, n))}
+                    {euros(montantPremiere(totalCents))} puis {n - 1} ×{" "}
+                    {euros(montantSuivantes(totalCents, n))}
                   </span>
                 </button>
               ))}
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              Les frais de paiement en ligne (1,5 % + 0,25 € par échéance) sont inclus
-              dans les montants affichés.
+              La 1ʳᵉ échéance correspond à l&apos;acompte de votre devis, à régler
+              immédiatement — les suivantes sont espacées d&apos;environ un mois, et
+              toujours avant la soirée. Les frais de paiement en ligne (1,5 % +
+              0,25 € par échéance) sont inclus dans les montants affichés.
             </p>
           </>
         ) : (
@@ -128,6 +142,11 @@ export default function PaymentPanel({
                     <span className="font-medium">
                       Échéance {r.numero}/{r.total}
                     </span>
+                    {r.numero === 1 ? (
+                      <span className="ml-2 rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
+                        Acompte
+                      </span>
+                    ) : null}
                     <span className="ml-2 text-muted-foreground">
                       avant le {new Date(`${r.due_date}T12:00:00`).toLocaleDateString("fr-FR")}
                     </span>

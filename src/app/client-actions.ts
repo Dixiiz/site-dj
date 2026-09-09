@@ -2188,20 +2188,35 @@ export async function creerEcheancier(formData: FormData) {
     };
   }
 
-  // Montant par échéance : frais Stripe (1,5 % + 0,25 €) répercutés au client.
-  const amount_cents = Math.ceil((total_cents / nombre + 25) / 0.985);
+  // Montant de l'acompte (20 % du total, même règle que le devis PDF :
+  // le solde est arrondi à la dizaine inférieure).
+  const soldeStandard = Math.floor((total_cents * 0.008) / 10) * 1000;
+  const acompte = Math.max(0, total_cents - soldeStandard);
+
+  // Échéance 1 = l'acompte (payée tout de suite). Les suivantes étalent le
+  // reste. Frais Stripe (1,5 % + 0,25 €/paiement) répercutés au client.
+  const firstAmount = Math.ceil((acompte + 25) / 0.985);
+  const restTotal = total_cents - acompte;
+  const restAmount =
+    nombre > 1 ? Math.ceil((restTotal / (nombre - 1) + 25) / 0.985) : 0;
 
   // Remplace l'échéancier existant (non payé) par le nouveau.
   await supabase.from("payment_schedule").delete().eq("quote_id", quoteId);
 
+  // Échéance 1 due sous 3 jours (paiement immédiat attendu) ; les suivantes
+  // sont espacées régulièrement jusqu'à 2 jours avant la soirée.
+  const firstDue = new Date(today.getTime() + 3 * 86400_000);
+  const spanDays = Math.max(7, daysUntil - 3);
+  const step = Math.floor(spanDays / Math.max(1, nombre - 1));
+
   const rows = Array.from({ length: nombre }, (_, i) => {
-    const due = new Date(today.getTime() + Math.ceil(((i + 1) * daysUntil) / nombre) * 86400_000);
+    const due = new Date(firstDue.getTime() + i * step * 86400_000);
     return {
       quote_id: quoteId,
       user_id: user.id,
       numero: i + 1,
       total: nombre,
-      amount_cents,
+      amount_cents: i === 0 ? firstAmount : restAmount,
       due_date: due.toISOString().slice(0, 10),
     };
   });
@@ -2211,7 +2226,10 @@ export async function creerEcheancier(formData: FormData) {
     return { ok: false as const, error: "Création de l'échéancier impossible." };
   }
 
-  return { ok: true as const, message: `Échéancier créé : ${nombre} fois ${eur(amount_cents)}` };
+  return {
+    ok: true as const,
+    message: `Échéancier créé : ${eur(firstAmount)} (acompte) puis ${nombre - 1} × ${eur(restAmount)}`,
+  };
 }
 
 function eur(cents: number) {

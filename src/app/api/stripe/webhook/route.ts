@@ -46,9 +46,24 @@ export async function POST(request: Request) {
             .eq("numero", numero)
             .eq("status", "a_payer");
           console.log(
-            `[stripe-webhook] Échéance ${numero}/${session.metadata.quote_total ?? "?"} du devis ${quoteId}:`,
+            `[stripe-webhook] Échéance ${numero} du devis ${quoteId}:`,
             error ? `ERREUR ${error.message}` : "marquée payée ✓"
           );
+          // L'échéance 1 vaut acompte : le devis devient confirmé.
+          if (numero === 1 && !error) {
+            const { data: quote } = await supabase
+              .from("quotes")
+              .select("acompte_paid_at, status")
+              .eq("id", quoteId)
+              .single();
+            if (quote && !quote.acompte_paid_at) {
+              await supabase
+                .from("quotes")
+                .update({ acompte_paid_at: new Date().toISOString(), status: "confirme" })
+                .eq("id", quoteId);
+              console.log(`[stripe-webhook] Acompte (échéance 1) confirmé pour ${quoteId}`);
+            }
+          }
         }
         return NextResponse.json({ received: true });
       }
