@@ -2256,6 +2256,29 @@ export async function creerEcheancier(formData: FormData) {
   };
 }
 
+// Annule un échéancier tant qu'aucune échéance n'est payée : le client
+// garde le droit de marche arrière et peut revenir au paiement classique.
+export async function annulerEcheancier(formData: FormData) {
+  const quoteId = String(formData.get("quote_id") ?? "").trim();
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  const { user } = await getOwnedQuote(quoteId);
+  if (!user) return { ok: false as const, error: "Non autorisé." };
+
+  const supabase = createAdminClient();
+  const { data: rows } = await supabase
+    .from("payment_schedule")
+    .select("id, status")
+    .eq("quote_id", quoteId);
+  if ((rows ?? []).some((row) => row.status === "payee")) {
+    return { ok: false as const, error: "Impossible : une échéance est déjà réglée." };
+  }
+
+  const { error } = await supabase.from("payment_schedule").delete().eq("quote_id", quoteId);
+  if (error) return { ok: false as const, error: "Annulation impossible." };
+  return { ok: true as const, message: "Échéancier annulé — vous pouvez choisir un autre mode de paiement." };
+}
+
 function eur(cents: number) {
   return (cents / 100).toFixed(2).replace(".", ",") + " €";
 }

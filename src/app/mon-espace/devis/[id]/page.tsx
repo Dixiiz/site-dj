@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import {
-  declareAcompteSent,
   getMyQuote,
   getPlaylistTracks,
   getQuoteFiles,
@@ -22,7 +22,7 @@ import { PACK_IMAGES } from "@/components/pricing-section";
 import { SignaturePad } from "@/components/signature-pad";
 import { SubmitButton } from "@/components/submit-button";
 import PaymentPanel, { type ScheduleRow } from "@/components/payment-panel";
-import { startAcompteCheckout, verifyStripeAcompte } from "@/app/client-actions";
+import { verifyStripeAcompte } from "@/app/client-actions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEuros } from "@/lib/money";
 import type { SelectedOption } from "@/lib/types";
@@ -176,8 +176,9 @@ export default async function ClientQuotePage({
             totalCents={Number(quote.total_cents ?? 0)}
             eventDate={quote.event_date}
             initial={schedule}
-            acomptePaid={Boolean(quote.acompte_paid_at)}
+            acomptePaid={Boolean(quote.acompte_paid_at) || paiementOk}
             acompteDeclared={Boolean(quote.acompte_declared_at)}
+            libelleVirement={`${quote.customer_name} — ${quote.event_date ?? ""}`}
           />
         </TabsContent>
         <TabsContent value="soiree" className="tab-anim min-w-0 flex-1 space-y-6">
@@ -278,100 +279,19 @@ export default async function ClientQuotePage({
       {confirmed ? (
         <RdvCallSection quoteId={id} requests={rdvRequests} />
       ) : null}
-      {/* Acompte par virement : visible dès que les documents sont signés */}
+      {/* Paiements : acompte, carte ou virement, échéancier — tout est
+          centralisé dans le panneau dédié de l'onglet Paiement. */}
       {confirmed || quote.status === "attente_acompte" ? (
-        (() => {
-          const total = (quote.total_cents ?? 0) / 100;
-          const solde = Math.floor((total * 0.8) / 10) * 10;
-          const acompte = total - solde;
-          const libelle = `${quote.customer_name} — ${quote.event_date ?? ""}`;
-          return (
-            <section id="acompte" className="rounded-xl border border-border bg-muted/50 p-5">
-              <h2 className="font-medium">Acompte de réservation</h2>
-              {paiementOk || quote.acompte_paid_at ? (
-                <p className="mt-2 text-sm font-medium text-green-400">
-                  ✓ Acompte reçu, merci ! Votre réservation est entièrement validée.
-                </p>
-              ) : query.paiement === "success" ? (
-                <p className="mt-2 text-sm text-orange-300">
-                  ⏳ Paiement en cours de validation — actualisez la page dans un instant.
-                </p>
-              ) : (
-                <>
-                  {quote.acompte_declared_at ? (
-                    <p className="mb-3 text-sm text-orange-300">
-                      ⏳ Virement déclaré le{" "}
-                      {new Date(quote.acompte_declared_at).toLocaleDateString("fr-FR")} — en
-                      attente de réception. Vous pouvez aussi régler par carte ci-dessous
-                      pour une confirmation immédiate.
-                    </p>
-                  ) : null}
-                  {/* Paiement par carte via Stripe (recommandé) */}
-                  <div className="mt-3 rounded-lg border border-accent/40 bg-accent/5 p-3">
-                    <p className="text-sm">
-                      Réglez votre acompte de{" "}
-                      <span className="font-semibold text-accent">
-                        {formatEuros(Math.round(acompte * 100))}
-                      </span>{" "}
-                      par carte bancaire — confirmation immédiate.
-                    </p>
-                    <form action={startAcompteCheckout} className="mt-2">
-                      <input type="hidden" name="quote_id" value={id} />
-                      <SubmitButton
-                        pendingLabel="Redirection vers le paiement…"
-                        className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
-                      >
-                        💳 Payer l&apos;acompte par carte
-                      </SubmitButton>
-                    </form>
-                  </div>
-                  <p className="mt-4 text-sm text-muted-foreground">
-                    Vous préférez le virement ? Réglez le même montant avec le
-                    libellé&nbsp;:{" "}
-                    <span className="font-mono text-xs text-foreground">{libelle}</span>
-                  </p>
-                  <div className="mt-3 space-y-0.5 rounded-lg border border-border bg-white/5 p-3 text-sm">
-                    <p>
-                      <span className="text-muted-foreground">Titulaire :</span>{" "}
-                      SOULAINE Maxime
-                    </p>
-                    <p className="break-all">
-                      <span className="text-muted-foreground">IBAN :</span>{" "}
-                      <span className="font-mono text-xs">
-                        FR76 1027 8374 6200 0110 8580 173
-                      </span>
-                    </p>
-                    <p>
-                      <span className="text-muted-foreground">BIC :</span>{" "}
-                      <span className="font-mono text-xs">CMCIFR2A</span>
-                    </p>
-                  </div>
-                  {quote.acompte_declared_at ? (
-                    <p className="mt-3 inline-flex items-center gap-2 rounded-lg border border-orange-500/50 bg-orange-500/10 px-3 py-2 text-xs font-medium text-orange-300">
-                      ⏳ Envoi déclaré — en attente de confirmation par le prestataire
-                    </p>
-                  ) : (
-                    <form
-                      action={async (formData: FormData) => {
- "use server";
-                        await declareAcompteSent(formData);
-                      }}
-                      className="mt-3"
-                    >
-                      <input type="hidden" name="quote_id" value={id} />
-                      <SubmitButton
-                        pendingLabel="Envoi de la confirmation…"
-                        className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
-                      >
-                        ✓ J&apos;ai envoyé l&apos;acompte
-                      </SubmitButton>
-                    </form>
-                  )}
-                </>
-              )}
-            </section>
-          );
-        })()
+        <Link
+          href={`/mon-espace/devis/${id}#paiement`}
+          className="flex items-center justify-between gap-4 rounded-xl border border-accent/30 bg-accent/5 p-4 text-sm transition-colors hover:border-accent"
+        >
+          <span>
+            <strong>💳 Paiements</strong> — acompte, carte ou virement,
+            échéancier : tout est centralisé dans l&apos;onglet Paiement.
+          </span>
+          <span className="text-accent">Ouvrir →</span>
+        </Link>
       ) : null}
 
 

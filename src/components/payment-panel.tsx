@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { creerEcheancier, startAcompteCheckout } from "@/app/client-actions";
+import {
+  creerEcheancier,
+  annulerEcheancier,
+  startAcompteCheckout,
+  declareAcompteSent,
+} from "@/app/client-actions";
 import { acompteCents, montantsEcheances, montantsEcheancesSolde } from "@/lib/installments";
 import { toast } from "sonner";
 import { SubmitButton } from "@/components/submit-button";
@@ -18,6 +23,21 @@ function euros(cents: number) {
   return (cents / 100).toFixed(2).replace(".", ",") + " €";
 }
 
+// Dates indicatives d'un échéancier (aperçu avant confirmation).
+function datesApercu(eventDate: string | null, n: number): string[] {
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const event = eventDate ? new Date(`${eventDate}T12:00:00`) : null;
+  const daysUntil = event
+    ? Math.max(10, Math.floor((event.getTime() - today.getTime()) / 86400_000) - 2)
+    : 30;
+  const firstDue = new Date(today.getTime() + 3 * 86400_000);
+  const step = Math.floor(Math.max(7, daysUntil - 3) / Math.max(1, n - 1));
+  return Array.from({ length: n }, (_, i) =>
+    new Date(firstDue.getTime() + i * step * 86400_000).toISOString().slice(0, 10)
+  );
+}
+
 export default function PaymentPanel({
   quoteId,
   totalCents,
@@ -25,6 +45,7 @@ export default function PaymentPanel({
   initial,
   acomptePaid = false,
   acompteDeclared = false,
+  libelleVirement,
 }: {
   quoteId: string;
   totalCents: number;
@@ -32,44 +53,41 @@ export default function PaymentPanel({
   initial: ScheduleRow[];
   acomptePaid?: boolean;
   acompteDeclared?: boolean;
+  libelleVirement?: string;
 }) {
   const [rows, setRows] = useState<ScheduleRow[]>(initial);
+  // Sélection en cours (avant confirmation) : nombre d'échéances choisi.
+  const [brouillon, setBrouillon] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const dejaPaye = rows.filter((r) => r.status === "payee").length;
-  const payeCents = rows.filter((r) => r.status === "payee").reduce((s, r) => s + r.amount_cents, 0);
   const total = Number.isFinite(totalCents) ? totalCents : 0;
   const acompte = acompteCents(total);
   const solde = Math.max(0, total - acompte);
+  const dejaPaye = rows.filter((r) => r.status === "payee").length;
+  const payeCents = rows.filter((r) => r.status === "payee").reduce((s, r) => s + r.amount_cents, 0);
+  // L'échéancier inclut-il l'acompte (1ʳᵉ échéance) ou porte-t-il sur le solde ?
+  const echeancierAvecAcompte = rows.length > 0 && !acomptePaid;
+  // Bloc acompte : seulement s'il n'est pas réglé ET pas couvert par l'échéancier.
+  const montrerBlocAcompte = !acomptePaid && !echeancierAvecAcompte && rows.length === 0 && !brouillon;
 
-  function choisir(n: number) {
+  function confirmerEcheancier(n: number) {
     const fd = new FormData();
     fd.set("quote_id", quoteId);
     fd.set("nombre", String(n));
     startTransition(async () => {
       const res = await creerEcheancier(fd);
       if (res.ok) {
-        toast.success(res.message ?? "Échéancier créé !");
-        // Reconstruit l'affichage localement (la page se recharge via router.refresh du parent).
+        toast.success(res.message ?? "Échéancier confirmé !");
+        setBrouillon(null);
         const { first, rest } = acomptePaid
           ? montantsEcheancesSolde(solde, n)
           : montantsEcheances(total, n);
-        const today = new Date();
-        today.setHours(12, 0, 0, 0);
-        const event = eventDate ? new Date(`${eventDate}T12:00:00`) : null;
-        const daysUntil = event
-          ? Math.max(10, Math.floor((event.getTime() - today.getTime()) / 86400_000) - 2)
-          : 30;
-        const firstDue = new Date(today.getTime() + 3 * 86400_000);
-        const step = Math.floor(Math.max(7, daysUntil - 3) / Math.max(1, n - 1));
         setRows(
           Array.from({ length: n }, (_, i) => ({
             numero: i + 1,
             total: n,
             amount_cents: i === 0 ? first : rest,
-            due_date: new Date(firstDue.getTime() + i * step * 86400_000)
-              .toISOString()
-              .slice(0, 10),
+            due_date: datesApercu(eventDate, n)[i],
             status: "a_payer" as const,
           }))
         );
@@ -79,76 +97,184 @@ export default function PaymentPanel({
     });
   }
 
+  function annulerEcheancierActif() {
+    const fd = new FormData();
+    fd.set("quote_id", quoteId);
+    startTransition(async () => {
+      const res = await annulerEcheancier(fd);
+      if (res.ok) {
+        toast.success(res.message ?? "Échéancier annulé.");
+        setRows([]);
+        setBrouillon(null);
+      } else {
+        toast.error(res.error ?? "Erreur");
+      }
+    });
+  }
+
+  // Lignes du brouillon (aperçu avant confirmation).
+  const lignesBrouillon = brouillon
+    ? (() => {
+        const { first, rest } = acomptePaid
+          ? montantsEcheancesSolde(solde, brouillon)
+          : montantsEcheances(total, brouillon);
+        const dates = datesApercu(eventDate, brouillon);
+        return Array.from({ length: brouillon }, (_, i) => ({
+          numero: i + 1,
+          amount: i === 0 ? first : rest,
+          due: dates[i],
+        }));
+      })()
+    : null;
+
   return (
     <section className="space-y-4">
       <div className="rounded-xl border border-border bg-muted/50 p-5">
         <h2 className="font-medium">Paiement</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          À toi de choisir — le paiement en plusieurs fois est une{" "}
-          <strong className="text-foreground">option</strong>, jamais une obligation.
+          Carte ou virement, en une fois ou étalé de 2 à 10 fois — tout se
+          règle ici, à votre rythme.
         </p>
 
-        {rows.length === 0 ? (
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {/* Option 1 : paiement classique (acompte puis solde) */}
-            <div className="flex flex-col rounded-lg border border-accent/40 bg-accent/5 p-4">
-              <p className="text-sm font-medium">
-                Option 1 — Paiement classique{" "}
-                <span className="ml-1 rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
-                  Le plus simple
-                </span>
-              </p>
-              <p className="mt-1.5 flex-1 text-xs text-muted-foreground">
-                Réglez l&apos;acompte de <strong className="text-foreground">{euros(acompte)}</strong>{" "}
-                pour verrouiller votre date, puis le solde ({euros(solde)}) au plus
-                tard 2 jours avant la soirée.
-              </p>
-              {acomptePaid || acompteDeclared ? (
-                <p className="mt-3 rounded-md bg-green-100 px-3 py-2 text-xs font-medium text-green-700">
-                  ✓ Acompte réglé
-                  {acompteDeclared && !acomptePaid ? " (virement en attente de réception)" : ""} —
-                  il ne reste que le solde. Vous pouvez aussi l&apos;étaler avec
-                  l&apos;option 2.
+        {/* ---------- Brouillon : confirmation avant création ---------- */}
+        {rows.length === 0 && brouillon && lignesBrouillon ? (
+          <div className="mt-4 space-y-3 rounded-lg border border-accent/40 bg-accent/5 p-4">
+            <p className="text-sm font-medium">
+              Votre échéancier en {brouillon} fois — vérifiez avant de confirmer :
+            </p>
+            <ul className="divide-y divide-border rounded-lg border border-border bg-background text-sm">
+              {lignesBrouillon.map((l) => (
+                <li key={l.numero} className="flex items-center justify-between gap-3 p-2.5">
+                  <div>
+                    <span className="font-medium">
+                      Échéance {l.numero}/{brouillon}
+                    </span>
+                    {l.numero === 1 && !acomptePaid ? (
+                      <span className="ml-2 rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
+                        Acompte
+                      </span>
+                    ) : null}
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      avant le {new Date(`${l.due}T12:00:00`).toLocaleDateString("fr-FR")}
+                    </span>
+                  </div>
+                  <span className="font-medium">{euros(l.amount)}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-muted-foreground">
+              Total : {euros(lignesBrouillon.reduce((s, l) => s + l.amount, 0))} —
+              frais de paiement en ligne inclus. Rappels par e-mail 3 jours
+              avant chaque échéance.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => confirmerEcheancier(brouillon)}
+                disabled={pending}
+                className="rounded-md bg-[#21619A] px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-[#1a4d7a] disabled:opacity-50"
+              >
+                {pending ? "Création…" : "✓ Je confirme cet échéancier"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setBrouillon(null)}
+                disabled={pending}
+                className="rounded-md border border-border px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+              >
+                ← Retour
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {/* ---------- Choix du mode ---------- */}
+        {rows.length === 0 && !brouillon ? (
+          <div className="mt-4 space-y-4">
+            {/* Acompte de réservation (carte + virement) */}
+            {montrerBlocAcompte ? (
+              <div className="rounded-lg border border-accent/40 bg-accent/5 p-4">
+                <p className="text-sm font-medium">
+                  Acompte de réservation —{" "}
+                  <span className="text-accent">{euros(acompte)}</span>
                 </p>
-              ) : (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Il verrouille votre date dès réception. Réglez-le par carte
+                  (confirmation immédiate) ou par virement.
+                </p>
+                {acompteDeclared ? (
+                  <p className="mt-2 rounded-md bg-orange-100 px-3 py-2 text-xs font-medium text-orange-700">
+                    ⏳ Virement déclaré — en attente de réception.
+                  </p>
+                ) : null}
                 <form action={startAcompteCheckout} className="mt-3">
                   <input type="hidden" name="quote_id" value={quoteId} />
                   <SubmitButton
                     pendingLabel="Redirection…"
-                    className="w-full rounded-md bg-[#21619A] px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-[#1a4d7a]"
+                    className="rounded-md bg-[#21619A] px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-[#1a4d7a]"
                   >
                     💳 Payer l&apos;acompte par carte
                   </SubmitButton>
                 </form>
-              )}
-              {!acomptePaid ? (
-                <p className="mt-2 text-center text-xs text-muted-foreground">
-                  Ou par virement : voir l&apos;onglet « Ma soirée ».
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Ou par virement — libellé&nbsp;:{" "}
+                  <span className="font-mono text-foreground">{libelleVirement}</span>
                 </p>
-              ) : null}
-            </div>
+                <div className="mt-2 space-y-0.5 rounded-lg border border-border bg-white/5 p-3 text-xs">
+                  <p>
+                    <span className="text-muted-foreground">Titulaire :</span> SOULAINE Maxime
+                  </p>
+                  <p className="break-all">
+                    <span className="text-muted-foreground">IBAN :</span>{" "}
+                    <span className="font-mono">FR76 1027 8374 6200 0110 8580 173</span>
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">BIC :</span>{" "}
+                    <span className="font-mono">CMCIFR2A</span>
+                  </p>
+                </div>
+                <form
+                  action={async (formData: FormData) => {
+                    "use server";
+                    await declareAcompteSent(formData);
+                  }}
+                  className="mt-3"
+                >
+                  <input type="hidden" name="quote_id" value={quoteId} />
+                  <SubmitButton
+                    pendingLabel="Envoi…"
+                    className="rounded-md border border-accent/40 px-4 py-2 text-xs font-medium text-accent transition-colors hover:bg-accent/15"
+                  >
+                    ✓ J&apos;ai envoyé l&apos;acompte
+                  </SubmitButton>
+                </form>
+              </div>
+            ) : (
+              <p className="rounded-md bg-green-100 px-3 py-2 text-xs font-medium text-green-700">
+                ✓ Acompte réglé — merci ! Votre date est verrouillée.
+              </p>
+            )}
 
-            {/* Option 2 : paiement en plusieurs fois (optionnel) */}
-            <div className="flex flex-col rounded-lg border border-border bg-background p-4">
+            {/* Étaler en plusieurs fois */}
+            <div className="rounded-lg border border-border bg-background p-4">
               <p className="text-sm font-medium">
-                Option 2 — Étaler en plusieurs fois{" "}
-                <span className="ml-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-                  Optionnel
-                </span>
+                {montrerBlocAcompte ? "Ou étalez en plusieurs fois" : "Étalez le solde en plusieurs fois"}
               </p>
-              <p className="mt-1.5 flex-1 text-xs text-muted-foreground">
-                De 2 à 10 fois par carte, toujours avant la soirée. Cliquez sur un
-                format pour créer votre échéancier :
+              <p className="mt-1 text-xs text-muted-foreground">
+                {acomptePaid
+                  ? `Répartissez le solde (${euros(solde)}) de 2 à 10 fois, toujours avant la soirée.`
+                  : `Répartissez le total de 2 à 10 fois — la 1ʳᵉ échéance couvre l'acompte (${euros(acompte)}), les suivantes étalent le reste. Toujours avant la soirée.`}
               </p>
-              <div className="mt-3 grid grid-cols-3 gap-1.5">
+              <div className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-5 md:grid-cols-9">
                 {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
                   const m = acomptePaid ? montantsEcheancesSolde(solde, n) : montantsEcheances(total, n);
                   return (
                     <button
                       key={n}
+                      type="button"
                       disabled={pending}
-                      onClick={() => choisir(n)}
-                      title={`Créer un échéancier en ${n} fois`}
+                      onClick={() => setBrouillon(n)}
+                      title={`Voir le détail en ${n} fois`}
                       className="rounded-md border border-border p-2 text-center transition-all hover:border-accent hover:shadow-sm disabled:opacity-50"
                     >
                       <span className="block text-sm font-semibold">{n}×</span>
@@ -160,9 +286,9 @@ export default function PaymentPanel({
                 })}
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Montants par échéance, frais de paiement en ligne inclus. Aucun
-                échéancier n&apos;est créé sans votre clic — et le virement reste
-                toujours possible.
+                Cliquez pour voir le détail — rien n&apos;est créé avant votre
+                confirmation, et vous pourrez changer d&apos;avis tant qu&apos;aucune
+                échéance n&apos;est réglée.
               </p>
             </div>
           </div>
@@ -189,9 +315,9 @@ export default function PaymentPanel({
                     <span className="font-medium">
                       Échéance {r.numero}/{r.total}
                     </span>
-                    {r.numero === 1 ? (
+                    {r.numero === 1 && echeancierAvecAcompte ? (
                       <span className="ml-2 rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
-                        Acompte
+                        Acompte inclus
                       </span>
                     ) : null}
                     <span className="ml-2 text-muted-foreground">
@@ -216,6 +342,16 @@ export default function PaymentPanel({
                 </li>
               ))}
             </ul>
+            {dejaPaye === 0 ? (
+              <button
+                type="button"
+                onClick={annulerEcheancierActif}
+                disabled={pending}
+                className="text-xs text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground disabled:opacity-50"
+              >
+                Changer de mode de paiement (annuler cet échéancier)
+              </button>
+            ) : null}
           </div>
         )}
       </div>

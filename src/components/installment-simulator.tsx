@@ -25,11 +25,11 @@ export default function InstallmentSimulator({ baseCents }: { baseCents: number 
   return (
     <div className="mt-4 rounded-xl border border-accent/30 bg-accent/5 p-5">
       <p className="font-medium text-accent">
-        💳 Simulateur — payez en plusieurs fois, de 2 à 10 fois
+        💳 Payez votre soirée en plusieurs fois, de 2 à 10 fois
       </p>
       <p className="mt-1 text-sm text-muted-foreground">
-        Estimez vos échéances en un clic. Montant indicatif — le montant exact
-        sera fixé sur votre devis.
+        Estimez vos échéances en un clic, selon votre budget. Montant indicatif —
+        le montant exact sera fixé sur votre devis.
       </p>
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -74,26 +74,29 @@ export default function InstallmentSimulator({ baseCents }: { baseCents: number 
           </p>
           <div className="space-y-1 text-muted-foreground">
             <p>
-              <span className="text-foreground">1ʳᵉ échéance : {formatEuros(detail.first)}</span>{" "}
-              — acompte de réservation, verrouille votre date dès signature
+              <span className="font-medium text-foreground">
+                1ʳᵉ échéance : {formatEuros(detail.first)}
+              </span>{" "}
+              — c&apos;est l&apos;acompte de réservation : il verrouille votre
+              date dès la signature.
             </p>
             {niveau > 1 ? (
               <p>
                 puis {niveau - 1} échéance(s) de{" "}
-                <span className="text-foreground">{formatEuros(detail.rest)}</span>, espacées
-                d&apos;environ un mois, toujours avant la soirée
+                <span className="font-medium text-foreground">{formatEuros(detail.rest)}</span>,
+                espacées d&apos;environ un mois, toujours avant la soirée.
               </p>
             ) : null}
             <p className="text-xs">
-              Total payé : {formatEuros(detail.first + detail.rest * (niveau - 1))}
-              {" — "}frais de paiement en ligne inclus (1,5 % + 0,25 €/échéance).
-              Le virement reste toujours possible sans ces frais.
+              Total payé : {formatEuros(detail.first + detail.rest * (niveau - 1))} —
+              frais de paiement en ligne inclus (1,5 % + 0,25 €/échéance). Le
+              virement reste possible sans ces frais.
             </p>
           </div>
           <p className="pt-1 text-xs text-muted-foreground">
-            Vous choisirez (ou non — c&apos;est une option) votre échéancier dans
-            votre espace client, après confirmation du devis. Estimation
-            indicative sur la base du montant saisi.
+            Vous choisirez votre échéancier dans votre espace client, après
+            confirmation du devis — et vous pourrez le modifier tant qu&apos;aucune
+            échéance n&apos;est réglée. Estimation indicative.
           </p>
         </div>
       ) : (
