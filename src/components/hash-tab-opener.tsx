@@ -1,47 +1,28 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import { Tabs } from "@/components/ui/tabs";
-
-// Onglets du devis en mode contrôlé : l'onglet Paiement s'active tout seul
-// quand le hash #paiement est présent — au chargement ET lors d'un simple
-// changement de hash dans la même page (clic sur le lien de Ma soirée),
-// ce que les onglets non contrôlés n'entendent pas.
-export default function DevisTabs({
-  children,
-  className,
-  orientation = "horizontal",
-}: {
-  children: ReactNode;
-  className?: string;
-  orientation?: "horizontal" | "vertical";
-}) {
-  const [tab, setTab] = useState("soiree");
-
-  useEffect(() => {
-    function applyHash() {
-      if (window.location.hash !== "#paiement") return;
-      setTab("paiement");
-      // Scroll doux vers le contenu de l'onglet (utile depuis Ma soirée).
-      window.setTimeout(() => {
-        document
-          .getElementById("tabs-devis")
-          ?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 120);
-    }
-    applyHash();
-    window.addEventListener("hashchange", applyHash);
-    return () => window.removeEventListener("hashchange", applyHash);
-  }, []);
-
+// Carte de renvoi de l'onglet Ma soirée vers le panneau Paiement.
+// Utilise un événement personnalisé (pas de hash) : 100 % fiable en
+// navigation client — l'onglet s'active immédiatement au clic.
+export default function OpenPaiementCard({ quoteId }: { quoteId: string }) {
   return (
-    <Tabs
-      value={tab}
-      onValueChange={(value) => setTab(String(value ?? "soiree"))}
-      orientation={orientation}
-      className={className}
+    <button
+      type="button"
+      onClick={() => {
+        window.dispatchEvent(new CustomEvent("propul:open-paiement"));
+        window.history.replaceState(
+          null,
+          "",
+          `/mon-espace/devis/${quoteId}#paiement`
+        );
+      }}
+      className="flex w-full items-center justify-between gap-4 rounded-xl border border-accent/30 bg-accent/5 p-4 text-left text-sm transition-colors hover:border-accent"
     >
-      {children}
-    </Tabs>
+      <span>
+        <strong>💳 Paiements</strong> — acompte, carte ou virement,
+        échéancier : tout est centralisé dans l&apos;onglet Paiement.
+      </span>
+      <span className="shrink-0 text-accent">Ouvrir →</span>
+    </button>
   );
 }
+

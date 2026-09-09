@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import {
   getMyQuote,
   getPlaylistTracks,
@@ -9,7 +8,8 @@ import {
   signClientDocument,
 } from "@/app/client-actions";
 import { AutoRefresh } from "@/components/auto-refresh";
-import DevisTabs from "@/components/hash-tab-opener";
+import DevisTabs from "@/components/devis-tabs";
+import OpenPaiementCard from "@/components/hash-tab-opener";
 import { HashHighlight } from "@/components/hash-highlight";
 import { RdvCallSection } from "@/components/rdv-call";
 import { TimelinePanel, type TimelineRow } from "@/components/timeline-panel";
@@ -283,16 +283,7 @@ export default async function ClientQuotePage({
       {/* Paiements : acompte, carte ou virement, échéancier — tout est
           centralisé dans le panneau dédié de l'onglet Paiement. */}
       {confirmed || quote.status === "attente_acompte" ? (
-        <Link
-          href={`/mon-espace/devis/${id}#paiement`}
-          className="flex items-center justify-between gap-4 rounded-xl border border-accent/30 bg-accent/5 p-4 text-sm transition-colors hover:border-accent"
-        >
-          <span>
-            <strong>💳 Paiements</strong> — acompte, carte ou virement,
-            échéancier : tout est centralisé dans l&apos;onglet Paiement.
-          </span>
-          <span className="text-accent">Ouvrir →</span>
-        </Link>
+        <OpenPaiementCard quoteId={id} />
       ) : null}
 
 
