@@ -108,7 +108,7 @@ export type MediaItem = {
 export function listLocalMedia(folder: MediaFolder): MediaItem[] {
   try {
     const dir = join(process.cwd(), LOCAL_DIRS[folder]);
-    return readdirSync(dir)
+    return readdirSync(/* turbopackIgnore: true */ dir)
       .filter((f) => !f.startsWith(".") && /\.(jpe?g|png|webp|avif|mp4|mov|webm)$/i.test(f))
       .sort()
       .map((name) => ({
@@ -123,7 +123,7 @@ export function listLocalMedia(folder: MediaFolder): MediaItem[] {
 
 export function deleteLocalMedia(folder: MediaFolder, name: string): { ok: boolean; error?: string } {
   try {
-    unlinkSync(join(process.cwd(), LOCAL_DIRS[folder], name));
+    unlinkSync(/* turbopackIgnore: true */ join(process.cwd(), LOCAL_DIRS[folder], name));
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Suppression impossible." };
@@ -135,7 +135,7 @@ export async function importLocalToStorage(
   name: string
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    const bytes = readFileSync(join(process.cwd(), LOCAL_DIRS[folder], name));
+    const bytes = readFileSync(/* turbopackIgnore: true */ join(process.cwd(), LOCAL_DIRS[folder], name));
     await ensureMediaBucket();
     const supabase = createAdminClient();
     const ext = name.split(".").pop()?.toLowerCase() ?? "";

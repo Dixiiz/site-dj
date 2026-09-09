@@ -235,7 +235,6 @@ export default function PaymentPanel({
                 </div>
                 <form
                   action={async (formData: FormData) => {
-                    "use server";
                     await declareAcompteSent(formData);
                   }}
                   className="mt-3"
