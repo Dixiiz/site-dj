@@ -160,11 +160,11 @@ export default async function ClientQuotePage({
         </div>
       </div>
 
+      <div id="tabs-devis" className="scroll-mt-24">
       <DevisTabs
         orientation="vertical"
         className="flex-col gap-4 md:flex-row md:gap-8 md:items-start"
       >
-        <div id="tabs-devis" className="scroll-mt-24 md:contents">
         <TabsList className="flex w-full flex-row overflow-x-auto md:sticky md:top-20 md:w-48 md:flex-col md:self-start">
           <TabsTrigger value="soiree" className="md:flex-none">Ma soirée</TabsTrigger>
           <TabsTrigger value="paiement" className="md:flex-none">Paiement</TabsTrigger>
@@ -467,8 +467,8 @@ export default async function ClientQuotePage({
         <ClientQuoteMessages quoteId={id} messages={messages} />
       </div>
         </TabsContent>
-        </div>
       </DevisTabs>
+      </div>
     </main>
   );
 }
