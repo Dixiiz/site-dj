@@ -16,6 +16,28 @@ import {
 import { toast } from "sonner";
 import { SubmitButton } from "@/components/submit-button";
 
+// Petit bouton "Payer" qui navigue vers le lien d'échéance en navigation
+// classique (full page) : plus fiable qu'un <a> en navigation client, qui
+// peut échouer avec "Load failed" quand la route serveur met du temps à
+// créer la session Stripe (timeout du prefetch/routeur).
+function EcheancePayLink({ href }: { href: string }) {
+  const [loading, setLoading] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={loading}
+      onClick={() => {
+        setLoading(true);
+        window.location.assign(href);
+      }}
+      className="rounded-md bg-[#21619A] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#1a4d7a] disabled:opacity-60"
+      title="Paiement sécurisé par carte — redirection vers Stripe"
+    >
+      {loading ? "Redirection…" : "Payer"}
+    </button>
+  );
+}
+
 export type ScheduleRow = {
   numero: number;
   total: number;
@@ -358,12 +380,7 @@ export default function PaymentPanel({
                         ✓ Payée
                       </span>
                     ) : (
-                      <a
-                        href={`/paiement/${quoteId}/${r.numero}`}
-                        className="rounded-md bg-[#21619A] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#1a4d7a]"
-                      >
-                        Payer
-                      </a>
+                      <EcheancePayLink href={`/paiement/${quoteId}/${r.numero}`} />
                     )}
                   </div>
                 </li>
