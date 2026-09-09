@@ -2193,12 +2193,23 @@ export async function creerEcheancier(formData: FormData) {
   const soldeStandard = Math.floor((total_cents * 0.008) / 10) * 1000;
   const acompte = Math.max(0, total_cents - soldeStandard);
 
-  // Échéance 1 = l'acompte (payée tout de suite). Les suivantes étalent le
-  // reste. Frais Stripe (1,5 % + 0,25 €/paiement) répercutés au client.
-  const firstAmount = Math.ceil((acompte + 25) / 0.985);
-  const restTotal = total_cents - acompte;
+  // Frais Stripe (1,5 % + 0,25 €/paiement) répercutés au client.
+  const avecFrais = (base: number) => Math.ceil((base + 25) / 0.985);
+
+  // Règle : la 1ʳᵉ échéance doit couvrir AU MINIMUM l'acompte (la date est
+  // sécurisée dès le 1ᵉʳ paiement). Si une répartition égale donne des parts
+  // PLUS GROSSES que l'acompte, on garde un échéancier réparti harmonieux
+  // (ex. 2× = moitié + moitié) au lieu de forcer une petite 1ʳᵉ échéance.
+  const partEgale = Math.floor(total_cents / nombre);
+  const harmonieux = partEgale >= acompte;
+
+  const firstAmount = harmonieux ? avecFrais(partEgale) : avecFrais(acompte);
   const restAmount =
-    nombre > 1 ? Math.ceil((restTotal / (nombre - 1) + 25) / 0.985) : 0;
+    nombre > 1
+      ? harmonieux
+        ? avecFrais(Math.ceil((total_cents - partEgale) / (nombre - 1)))
+        : avecFrais(Math.ceil((total_cents - acompte) / (nombre - 1)))
+      : 0;
 
   // Remplace l'échéancier existant (non payé) par le nouveau.
   await supabase.from("payment_schedule").delete().eq("quote_id", quoteId);

@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 const emptySubscribe = () => () => {};
 import { formatEuros } from "@/lib/money";
+import { acompteCents, montantsEcheances } from "@/lib/installments";
 import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
 import type { Formula, QuoteOption } from "@/lib/types";
 
@@ -818,6 +819,29 @@ export function QuoteBookingForm({
               <span>Total estimé</span>
               <span>{formatEuros(total)}</span>
             </div>
+            {total > 0 ? (
+              <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs">
+                <p className="font-medium text-accent">
+                  💳 Payable en plusieurs fois — de 2 à 10 fois par carte
+                </p>
+                <p className="mt-1.5 text-muted-foreground">
+                  Acompte de réservation :{" "}
+                  <strong className="text-foreground">{formatEuros(acompteCents(total))}</strong>{" "}
+                  (verrouille ta date dès signature)
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  Puis étale le reste, toujours avant la soirée — ex. en 3 fois
+                  (1ʳᵉ {formatEuros(montantsEcheances(total, 3).first)} puis{" "}
+                  2 × {formatEuros(montantsEcheances(total, 3).rest)}) ou en
+                  6 fois (1ʳᵉ {formatEuros(montantsEcheances(total, 6).first)}{" "}
+                  puis 5 × {formatEuros(montantsEcheances(total, 6).rest)}).
+                </p>
+                <p className="mt-1.5 text-muted-foreground">
+                  Tu choisiras ton échéancier dans ton espace client, après
+                  confirmation du devis. Frais de paiement en ligne inclus.
+                </p>
+              </div>
+            ) : null}
             <Button
               type="submit"
               className="w-full"

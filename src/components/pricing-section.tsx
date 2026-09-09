@@ -559,6 +559,12 @@ export function PricingSection() {
                 </span>
               ))}
             </p>
+            <p className="mt-3 rounded-lg border border-accent/30 bg-accent/5 px-4 py-2.5 text-sm text-muted-foreground">
+              💳 <strong className="text-foreground">Payable en plusieurs fois</strong> —
+              de 2 à 10 fois par carte bancaire : un acompte à la réservation, puis
+              des échéances adaptées à votre budget, toujours avant la soirée.
+              Estimez vos échéances dans le devis ci-dessous.
+            </p>
           </div>
         </div>
       )}

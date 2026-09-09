@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { creerEcheancier } from "@/app/client-actions";
+import { montantsEcheances } from "@/lib/installments";
 import { toast } from "sonner";
 
 export type ScheduleRow = {
@@ -14,21 +15,6 @@ export type ScheduleRow = {
 
 function euros(cents: number) {
   return (cents / 100).toFixed(2).replace(".", ",") + " €";
-}
-
-// Montant de l'acompte (20 %, solde arrondi à la dizaine inférieure —
-// même règle que le devis PDF) et échéances avec frais Stripe intégrés.
-function acompteCents(totalCents: number) {
-  const solde = Math.floor((totalCents * 0.008) / 10) * 1000;
-  return Math.max(0, totalCents - solde);
-}
-function montantPremiere(totalCents: number) {
-  return Math.ceil((acompteCents(totalCents) + 25) / 0.985);
-}
-function montantSuivantes(totalCents: number, n: number) {
-  if (n <= 1) return 0;
-  const rest = totalCents - acompteCents(totalCents);
-  return Math.ceil((rest / (n - 1) + 25) / 0.985);
 }
 
 export default function PaymentPanel({
@@ -57,8 +43,7 @@ export default function PaymentPanel({
       if (res.ok) {
         toast.success(res.message ?? "Échéancier créé !");
         // Reconstruit l'affichage localement (la page se recharge via router.refresh du parent).
-        const first = montantPremiere(totalCents);
-        const rest = montantSuivantes(totalCents, n);
+        const { first, rest } = montantsEcheances(totalCents, n);
         const today = new Date();
         today.setHours(12, 0, 0, 0);
         const event = eventDate ? new Date(`${eventDate}T12:00:00`) : null;
@@ -106,8 +91,8 @@ export default function PaymentPanel({
                 >
                   <span className="block text-lg font-semibold">{n}×</span>
                   <span className="block text-xs text-muted-foreground">
-                    {euros(montantPremiere(totalCents))} puis {n - 1} ×{" "}
-                    {euros(montantSuivantes(totalCents, n))}
+                    {euros(montantsEcheances(totalCents, n).first)} puis {n - 1} ×{" "}
+                    {euros(montantsEcheances(totalCents, n).rest)}
                   </span>
                 </button>
               ))}
