@@ -43,10 +43,13 @@ export default async function ClientQuotePage({
   const query = await searchParams;
 
   // Retour de Stripe Checkout : on vérifie la session côté serveur et on
-  // marque l'acompte comme réglé si le paiement est confirmé.
+  // marque l'acompte OU l'échéance comme réglée si le paiement est confirmé.
   let paiementOk = false;
   if (query.paiement === "success" && query.session_id) {
-    paiementOk = await verifyStripeAcompte(id, query.session_id);
+    const { verifyStripeEcheance } = await import("@/app/client-actions");
+    paiementOk =
+      (await verifyStripeEcheance(id, query.session_id)) ||
+      (await verifyStripeAcompte(id, query.session_id));
   }
 
   const quote = await getMyQuote(id);

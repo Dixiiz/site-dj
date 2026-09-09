@@ -1830,6 +1830,60 @@ export async function verifyStripeAcompte(quoteId: string, sessionId: string): P
   }
 }
 
+// Au retour de Stripe pour une ÉCHÉANCE : vérifie la session côté serveur et
+// marque l'échéance payée si confirmée (ceinture + bretelles avec le webhook —
+// si le webhook tarde, le retour client fait le travail immédiatement).
+export async function verifyStripeEcheance(
+  quoteId: string,
+  sessionId: string
+): Promise<boolean> {
+  const { getStripe } = await import("@/lib/stripe");
+  const stripe = getStripe();
+  if (!stripe || !quoteId || !sessionId) return false;
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (
+      session.payment_status !== "paid" ||
+      session.metadata?.quote_id !== quoteId ||
+      session.metadata?.payment_type !== "echeance"
+    ) {
+      return false;
+    }
+    const numero = parseInt(session.metadata.payment_numero ?? "0", 10);
+    if (!(numero > 0)) return false;
+
+    const supabase = createAdminClient();
+    const { error } = await supabase
+      .from("payment_schedule")
+      .update({ status: "payee", paid_at: new Date().toISOString() })
+      .eq("quote_id", quoteId)
+      .eq("numero", numero)
+      .eq("status", "a_payer");
+    if (error) return false;
+
+    // Cohérence devis : la 1ʳᵉ échéance couvre l'acompte (jamais sur un
+    // échéancier de solde — l'acompte est déjà payé dans ce cas).
+    if (numero === 1) {
+      const { data: quote } = await supabase
+        .from("quotes")
+        .select("acompte_paid_at, status")
+        .eq("id", quoteId)
+        .single();
+      if (quote && !quote.acompte_paid_at && !["refuse", "annule"].includes(quote.status ?? "")) {
+        await supabase
+          .from("quotes")
+          .update({ acompte_paid_at: new Date().toISOString(), status: "confirme" })
+          .eq("id", quoteId);
+      }
+    }
+    revalidatePath(`/mon-espace/devis/${quoteId}`);
+    revalidatePath("/admin/devis");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Sauvegarde les ajustements de facture (lignes ajoutées/retirées par l'admin).
 export async function saveInvoiceAdjustments(adjustments: { label: string; amount: string }[], quoteId: string) {
   const { isAdmin } = await import("@/lib/admin-auth");
@@ -2169,6 +2223,20 @@ export async function creerEcheancier(formData: FormData) {
   if (total_cents <= 0) return { ok: false as const, error: "Montant invalide." };
   if (!quote.event_date) {
     return { ok: false as const, error: "Ce devis n'a pas de date d'événement." };
+  }
+
+  // Même règle que l'acompte : le paiement n'est possible qu'une fois les
+  // documents signés (attente_acompte) ou le devis confirmé. Jamais avant.
+  const { data: statut } = await supabase
+    .from("quotes")
+    .select("status")
+    .eq("id", quoteId)
+    .single();
+  if (!["attente_acompte", "confirme"].includes(statut?.status ?? "")) {
+    return {
+      ok: false as const,
+      error: "Le paiement est possible après la signature des documents.",
+    };
   }
 
   // Vérifie qu'aucune échéance n'est déjà payée (sinon : pas de recréation).

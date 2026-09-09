@@ -60,7 +60,7 @@ export async function GET(
       payment_type: "echeance",
       payment_numero: String(row.numero),
     },
-    success_url: `${SITE_URL}/mon-espace/devis/${quoteId}?paiement=ok#paiement`,
+    success_url: `${SITE_URL}/mon-espace/devis/${quoteId}?paiement=success&session_id={CHECKOUT_SESSION_ID}#paiement`,
     cancel_url: `${SITE_URL}/mon-espace/devis/${quoteId}#paiement`,
   });
 

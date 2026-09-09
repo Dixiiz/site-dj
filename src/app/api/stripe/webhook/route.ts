@@ -39,29 +39,45 @@ export async function POST(request: Request) {
       if (session.metadata?.payment_type === "echeance") {
         const numero = parseInt(session.metadata.payment_numero ?? "0", 10);
         if (numero > 0) {
-          const { error } = await supabase
+          const { error, count } = await supabase
             .from("payment_schedule")
-            .update({ status: "payee", paid_at: new Date().toISOString() })
+            .update({ status: "payee", paid_at: new Date().toISOString() }, { count: "exact" })
             .eq("quote_id", quoteId)
             .eq("numero", numero)
             .eq("status", "a_payer");
-          console.log(
-            `[stripe-webhook] Échéance ${numero} du devis ${quoteId}:`,
-            error ? `ERREUR ${error.message}` : "marquée payée ✓"
-          );
-          // L'échéance 1 vaut acompte : le devis devient confirmé.
-          if (numero === 1 && !error) {
-            const { data: quote } = await supabase
-              .from("quotes")
-              .select("acompte_paid_at, status")
-              .eq("id", quoteId)
-              .single();
-            if (quote && !quote.acompte_paid_at) {
-              await supabase
+          if (error) {
+            console.error(
+              `[stripe-webhook] Échéance ${numero} du devis ${quoteId}: ERREUR ${error.message}`
+            );
+          } else if ((count ?? 0) === 0) {
+            // Argent encaissé mais aucune échéance correspondante : échéancier
+            // annulé entre-temps, ou déjà marquée payée. Alerte pour action manuelle.
+            console.warn(
+              `[stripe-webhook] ⚠️ Échéance ${numero} du devis ${quoteId} payée (${session.amount_total ?? "?"} centimes) mais 0 ligne mise à jour — vérifier dans Stripe et rattraper manuellement si besoin.`
+            );
+          } else {
+            console.log(
+              `[stripe-webhook] Échéance ${numero} du devis ${quoteId}: marquée payée ✓`
+            );
+            // Cohérence devis : la 1ʳᵉ échéance couvre l'acompte. Jamais sur un
+            // devis refusé/annulé (on n'écrase pas un statut de refus).
+            if (numero === 1) {
+              const { data: quote } = await supabase
                 .from("quotes")
-                .update({ acompte_paid_at: new Date().toISOString(), status: "confirme" })
-                .eq("id", quoteId);
-              console.log(`[stripe-webhook] Acompte (échéance 1) confirmé pour ${quoteId}`);
+                .select("acompte_paid_at, status")
+                .eq("id", quoteId)
+                .single();
+              if (
+                quote &&
+                !quote.acompte_paid_at &&
+                !["refuse", "annule"].includes(quote.status ?? "")
+              ) {
+                await supabase
+                  .from("quotes")
+                  .update({ acompte_paid_at: new Date().toISOString(), status: "confirme" })
+                  .eq("id", quoteId);
+                console.log(`[stripe-webhook] Acompte (échéance 1) confirmé pour ${quoteId}`);
+              }
             }
           }
         }
