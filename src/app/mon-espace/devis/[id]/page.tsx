@@ -9,6 +9,7 @@ import {
   signClientDocument,
 } from "@/app/client-actions";
 import { AutoRefresh } from "@/components/auto-refresh";
+import HashTabOpener from "@/components/hash-tab-opener";
 import { HashHighlight } from "@/components/hash-highlight";
 import { RdvCallSection } from "@/components/rdv-call";
 import { TimelinePanel, type TimelineRow } from "@/components/timeline-panel";
@@ -111,6 +112,7 @@ export default async function ClientQuotePage({
   return (
     <main className="space-y-10">
       <AutoRefresh />
+      <HashTabOpener />
       <HashHighlight />
       <TimelinePanel quoteId={id} initial={timeline} />
       <div className="flex flex-wrap items-center gap-4">
@@ -166,7 +168,7 @@ export default async function ClientQuotePage({
       >
         <TabsList className="flex w-full flex-row overflow-x-auto md:sticky md:top-20 md:w-48 md:flex-col md:self-start">
           <TabsTrigger value="soiree" className="md:flex-none">Ma soirée</TabsTrigger>
-          <TabsTrigger value="paiement" className="md:flex-none">Paiement</TabsTrigger>
+          <TabsTrigger id="tab-paiement" value="paiement" className="md:flex-none">Paiement</TabsTrigger>
           <TabsTrigger value="playlist" className="md:flex-none">Musiques</TabsTrigger>
           <TabsTrigger value="messages" className="md:flex-none">Messagerie</TabsTrigger>
         </TabsList>

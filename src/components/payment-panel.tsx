@@ -131,6 +131,11 @@ export default function PaymentPanel({
         }));
       })()
     : null;
+  // Détail des frais de l'aperçu : total payé - montant net (frais Stripe).
+  const baseBrouillon = acomptePaid ? solde : total;
+  const fraisBrouillon = lignesBrouillon
+    ? Math.max(0, lignesBrouillon.reduce((s, l) => s + l.amount, 0) - baseBrouillon)
+    : 0;
 
   return (
     <section className="space-y-4">
@@ -168,9 +173,17 @@ export default function PaymentPanel({
               ))}
             </ul>
             <p className="text-xs text-muted-foreground">
-              Total : {euros(lignesBrouillon.reduce((s, l) => s + l.amount, 0))} —
-              frais de paiement en ligne inclus. Rappels par e-mail 3 jours
-              avant chaque échéance.
+              Total payé :{" "}
+              <span className="font-medium text-foreground">
+                {euros(lignesBrouillon.reduce((s, l) => s + l.amount, 0))}
+              </span>{" "}
+              — dont{" "}
+              <span className="font-medium text-foreground">
+                {euros(fraisBrouillon)}
+              </span>{" "}
+              de frais de paiement en ligne (1,5 % + 0,25 € par échéance), soit
+              {euros(baseBrouillon)} nets pour le prestataire. Rappels par
+              e-mail 3 jours avant chaque échéance.
             </p>
             <div className="flex flex-wrap gap-2">
               <button
