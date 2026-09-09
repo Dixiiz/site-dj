@@ -603,20 +603,52 @@ function TrackRow({ track, onRemove }: { track: Track; onRemove: () => void }) {
           {track.artist ? <span className="text-muted-foreground"> — {track.artist}</span> : null}
         </p>
       </div>
-      {track.preview_url ? (
-        <audio
-          controls
-          preload="none"
-          src={track.preview_url}
-          className="h-8 w-full min-w-0 sm:w-44"
-        />
-      ) : null}
+      {track.preview_url ? <TrackRowPlayer src={track.preview_url} /> : null}
       <form action={onRemove} className="ml-auto sm:ml-0">
         <Button type="submit" variant="outline" size="sm">
           Retirer
         </Button>
       </form>
     </li>
+  );
+}
+
+// Lecteur compact pour une musique choisie : bouton ▶/■ au lieu du
+// lecteur natif (qui passait sous le titre sur mobile).
+function TrackRowPlayer({ src }: { src: string }) {
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Stoppe la lecture si le titre est retiré de la liste.
+  useEffect(() => () => audioRef.current?.pause(), []);
+
+  function toggle() {
+    if (playing) {
+      audioRef.current?.pause();
+      audioRef.current = null;
+      setPlaying(false);
+      return;
+    }
+    const audio = new Audio(src);
+    audioRef.current = audio;
+    audio.onended = () => setPlaying(false);
+    audio.play().catch(() => {});
+    setPlaying(true);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={playing ? "Arrêter la lecture" : "Écouter un extrait"}
+      className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+        playing
+          ? "border-accent bg-accent/15 text-accent"
+          : "border-accent/40 text-accent hover:bg-accent/15"
+      }`}
+    >
+      {playing ? "■ Stop" : "▶ Écouter"}
+    </button>
   );
 }
 

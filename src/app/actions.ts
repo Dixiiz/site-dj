@@ -617,7 +617,7 @@ export async function loginAdmin(formData: FormData) {
     return { ok: false as const, error: "Mot de passe incorrect." };
   }
   await setAdminSession();
-  redirect("/admin/devis");
+  redirect("/admin");
 }
 
 export async function updateQuoteAdmin(formData: FormData) {

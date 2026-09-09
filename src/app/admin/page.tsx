@@ -30,11 +30,29 @@ export default async function AdminDashboard({
   const todayIso = now.toLocaleDateString("fr-CA");
 
   // Tous les devis confirmés, triés par date d'événement.
-  const { data: confirmed } = await supabase
-    .from("quotes")
-    .select("id, customer_name, formula_name, total_cents, event_date, event_location, status, created_at, notes")
-    .eq("status", "confirme")
-    .order("event_date", { ascending: true });
+  // (Requêtes en parallèle pour un chargement rapide du tableau de bord.)
+  const [confirmedRes, devisAttenteRes, devisRecentsRes, facturesRes] = await Promise.all([
+    supabase
+      .from("quotes")
+      .select("id, customer_name, formula_name, total_cents, event_date, event_location, status, created_at, notes")
+      .eq("status", "confirme")
+      .order("event_date", { ascending: true }),
+    supabase
+      .from("quotes")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["nouveau", "contacte", "attente_acompte"]),
+    supabase
+      .from("quotes")
+      .select("id, customer_name, formula_name, status, created_at")
+      .in("status", ["nouveau", "contacte", "attente_acompte"])
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase.storage.from("client-files").list("admin/factures-libres", { limit: 100 }),
+  ]);
+  const confirmed = confirmedRes.data;
+  const devisAttente = devisAttenteRes.count ?? 0;
+  const devisRecents = devisRecentsRes.data;
+  const nbFactures = (facturesRes.data ?? []).filter((f) => f.name.endsWith(".pdf")).length;
 
   const montant = (q: { total_cents: unknown }) => {
     const n = Number(q.total_cents ?? 0);
@@ -85,24 +103,6 @@ export default async function AdminDashboard({
   const aValiderToutes = allConfirmed
     .filter((q) => (q.event_date ?? "") <= todayIso && !soldeValide(q));
   const soldeAValiderToutes = aValiderToutes.reduce((sum, q) => sum + soldeDe(q), 0);
-
-  // ---- Devis ----
-  const { count: devisAttente } = await supabase
-    .from("quotes")
-    .select("id", { count: "exact", head: true })
-    .in("status", ["nouveau", "contacte", "attente_acompte"]);
-  const { data: devisRecents } = await supabase
-    .from("quotes")
-    .select("id, customer_name, formula_name, status, created_at")
-    .in("status", ["nouveau", "contacte", "attente_acompte"])
-    .order("created_at", { ascending: false })
-    .limit(5);
-
-  // ---- Factures libres ----
-  const { data: factures } = await supabase.storage
-    .from("client-files")
-    .list("admin/factures-libres", { limit: 100 });
-  const nbFactures = (factures ?? []).filter((f) => f.name.endsWith(".pdf")).length;
 
   const prochaines = upcoming.slice(0, 5);
   const aujourdhui = now.toLocaleDateString("fr-FR", {
