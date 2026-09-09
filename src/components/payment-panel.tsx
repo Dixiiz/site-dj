@@ -7,7 +7,12 @@ import {
   startAcompteCheckout,
   declareAcompteSent,
 } from "@/app/client-actions";
-import { acompteCents, montantsEcheances, montantsEcheancesSolde } from "@/lib/installments";
+import {
+  acompteCents,
+  montantsEcheances,
+  montantsEcheancesSolde,
+  niveauxDisponibles,
+} from "@/lib/installments";
 import { toast } from "sonner";
 import { SubmitButton } from "@/components/submit-button";
 
@@ -267,18 +272,27 @@ export default function PaymentPanel({
               <div className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-5 md:grid-cols-9">
                 {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
                   const m = acomptePaid ? montantsEcheancesSolde(solde, n) : montantsEcheances(total, n);
+                  const dispo = niveauxDisponibles(acomptePaid ? solde : total).includes(n);
                   return (
                     <button
                       key={n}
                       type="button"
-                      disabled={pending}
+                      disabled={pending || !dispo}
                       onClick={() => setBrouillon(n)}
-                      title={`Voir le détail en ${n} fois`}
-                      className="rounded-md border border-border p-2 text-center transition-all hover:border-accent hover:shadow-sm disabled:opacity-50"
+                      title={
+                        dispo
+                          ? `Voir le détail en ${n} fois`
+                          : `Non disponible : minimum 150 € par échéance${n > 3 ? " et total de 1 000 € minimum au-delà de x3" : ""}`
+                      }
+                      className={`rounded-md border p-2 text-center transition-all disabled:opacity-30 ${
+                        dispo
+                          ? "border-border hover:border-accent hover:shadow-sm"
+                          : "border-border/50 cursor-not-allowed"
+                      }`}
                     >
                       <span className="block text-sm font-semibold">{n}×</span>
                       <span className="block text-xs text-muted-foreground">
-                        {euros(m.first)}
+                        {dispo ? euros(m.first) : "—"}
                       </span>
                     </button>
                   );
@@ -287,7 +301,8 @@ export default function PaymentPanel({
               <p className="mt-2 text-xs text-muted-foreground">
                 Cliquez pour voir le détail — rien n&apos;est créé avant votre
                 confirmation, et vous pourrez changer d&apos;avis tant qu&apos;aucune
-                échéance n&apos;est réglée.
+                échéance n&apos;est réglée. Minimum 150 € par échéance ; au-delà
+                de x3, total de 1 000 € minimum.
               </p>
             </div>
           </div>

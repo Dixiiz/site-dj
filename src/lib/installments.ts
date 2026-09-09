@@ -5,6 +5,11 @@
 // client. La 1re échéance couvre au minimum l'acompte ; si la répartition
 // égale donne des parts plus grosses, l'échéancier est réparti harmonieusement
 // (ex. 2× = moitié + moitié).
+// Planchers : aucune échéance ne peut être < 150 € ; au-delà de x3,
+// seulement à partir de 1 000 € de total.
+export const ECHEANCE_MIN_CENTS = 15_000;
+export const ECHEANCIER_LONG_MIN_CENTS = 100_000;
+
 export function acompteCents(totalCents: number): number {
   const solde = Math.floor((totalCents * 0.008) / 10) * 1000;
   return Math.max(0, totalCents - solde);
@@ -41,4 +46,15 @@ export function montantsEcheancesSolde(
   const part = avecFrais(Math.ceil(soldeCents / n));
   return { first: part, rest: part };
 }
+
+// Formats disponibles pour un total : chaque échéance doit respecter le
+// plancher de 150 € ; x4 et plus exige 1 000 € minimum.
+export function niveauxDisponibles(totalCents: number): number[] {
+  return [2, 3, 4, 5, 6, 7, 8, 9, 10].filter((n) => {
+    if (n > 3 && totalCents < ECHEANCIER_LONG_MIN_CENTS) return false;
+    const { first, rest } = montantsEcheances(totalCents, n);
+    return Math.min(first, rest || first) >= ECHEANCE_MIN_CENTS;
+  });
+}
+
 

@@ -2153,6 +2153,10 @@ export async function creerEcheancier(formData: FormData) {
   const { user } = await getOwnedQuote(quoteId);
   if (!user) return { ok: false as const, error: "Non autorisé." };
 
+  // Planchers revalidés côté serveur : 150 € min par échéance, x4+ seulement
+  // à partir de 1 000 € (cf. installments.ts — règle unique partagée).
+  const { niveauxDisponibles } = await import("@/lib/installments");
+
   const supabase = createAdminClient();
   const { data: quote } = await supabase
     .from("quotes")
@@ -2192,6 +2196,18 @@ export async function creerEcheancier(formData: FormData) {
   // le solde est arrondi à la dizaine inférieure).
   const soldeStandard = Math.floor((total_cents * 0.008) / 10) * 1000;
   const acompte = Math.max(0, total_cents - soldeStandard);
+
+  // Planchers revalidés avec le vrai total : le format demandé doit faire
+  // partie des niveaux disponibles (150 € min/échéance, x4+ dès 1 000 €).
+  const baseEcheancier = Boolean(quote.acompte_paid_at)
+    ? Math.max(0, total_cents - acompte)
+    : total_cents;
+  if (!niveauxDisponibles(baseEcheancier).includes(nombre)) {
+    return {
+      ok: false as const,
+      error: "Ce format n'est pas disponible pour ce montant (minimum 150 € par échéance ; x4 et plus à partir de 1 000 €).",
+    };
+  }
 
   // Frais Stripe (1,5 % + 0,25 €/paiement) répercutés au client.
   const avecFrais = (base: number) => Math.ceil((base + 25) / 0.985);

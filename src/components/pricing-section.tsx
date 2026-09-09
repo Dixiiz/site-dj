@@ -6,7 +6,6 @@ import { FadeIn } from "@/components/fade-in";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import InstallmentSimulator from "@/components/installment-simulator";
 import { formatEuros } from "@/lib/money";
 
 type Pack = {
@@ -560,12 +559,10 @@ export function PricingSection() {
                 </span>
               ))}
             </p>
-            <InstallmentSimulator
-              baseCents={
-                active.packs.find((p) => p.name === selectedPack)?.price ??
-                null
-              }
-            />
+            <p className="mt-3 text-sm text-muted-foreground">
+              💳 Payable en plusieurs fois (2 à 10×) — estimez vos échéances en
+              direct dans le récapitulatif du devis ci-dessous.
+            </p>
           </div>
         </div>
       )}

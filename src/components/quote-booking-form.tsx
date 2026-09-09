@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 const emptySubscribe = () => () => {};
 import { formatEuros } from "@/lib/money";
-import { acompteCents, montantsEcheances } from "@/lib/installments";
+import { montantsEcheances, niveauxDisponibles } from "@/lib/installments";
 import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
 import type { Formula, QuoteOption } from "@/lib/types";
 
@@ -819,29 +819,7 @@ export function QuoteBookingForm({
               <span>Total estimé</span>
               <span>{formatEuros(total)}</span>
             </div>
-            {total > 0 ? (
-              <div className="rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs">
-                <p className="font-medium text-accent">
-                  💳 Payable en plusieurs fois — de 2 à 10 fois par carte
-                </p>
-                <p className="mt-1.5 text-muted-foreground">
-                  Acompte de réservation :{" "}
-                  <strong className="text-foreground">{formatEuros(acompteCents(total))}</strong>{" "}
-                  (verrouille ta date dès signature)
-                </p>
-                <p className="mt-1 text-muted-foreground">
-                  Puis étale le reste, toujours avant la soirée — ex. en 3 fois
-                  (1ʳᵉ {formatEuros(montantsEcheances(total, 3).first)} puis{" "}
-                  2 × {formatEuros(montantsEcheances(total, 3).rest)}) ou en
-                  6 fois (1ʳᵉ {formatEuros(montantsEcheances(total, 6).first)}{" "}
-                  puis 5 × {formatEuros(montantsEcheances(total, 6).rest)}).
-                </p>
-                <p className="mt-1.5 text-muted-foreground">
-                  Tu choisiras ton échéancier dans ton espace client, après
-                  confirmation du devis. Frais de paiement en ligne inclus.
-                </p>
-              </div>
-            ) : null}
+            {total > 0 ? <RecapInstallments total={total} /> : null}
             <Button
               type="submit"
               className="w-full"
@@ -902,6 +880,52 @@ export function QuoteBookingForm({
           document.body
         )}
     </form>
+  );
+}
+
+// Ligne minimaliste d'échéancier dans le récapitulatif : chips x2…xN,
+// le clic affiche une seule ligne de détail. Aucun encadré verbeux.
+function RecapInstallments({ total }: { total: number }) {
+  const [niveau, setNiveau] = useState<number | null>(null);
+  const dispo = niveauxDisponibles(total);
+  const detail = niveau ? montantsEcheances(total, niveau) : null;
+
+  return (
+    <div className="pt-1 text-xs">
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="mr-1 text-muted-foreground">💳 Étaler :</span>
+        {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
+          const ok = dispo.includes(n);
+          return (
+            <button
+              key={n}
+              type="button"
+              disabled={!ok}
+              onClick={() => setNiveau(niveau === n ? null : n)}
+              aria-pressed={niveau === n}
+              title={ok ? `Voir en ${n} fois` : "Minimum 150 € par échéance (x4+ dès 1 000 €)"}
+              className={`rounded-full px-2 py-0.5 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-25 ${
+                niveau === n
+                  ? "bg-accent text-white"
+                  : ok
+                    ? "border border-accent/40 text-accent hover:bg-accent/15"
+                    : "border border-border/50 text-muted-foreground"
+              }`}
+            >
+              {n}×
+            </button>
+          );
+        })}
+      </div>
+      {detail && niveau ? (
+        <p className="mt-1.5 animate-in fade-in slide-in-from-bottom-1 text-muted-foreground duration-200">
+          {niveau}× ={" "}
+          <span className="font-medium text-foreground">{formatEuros(detail.first)}</span>{" "}
+          (acompte) puis {niveau - 1} × {formatEuros(detail.rest)} — frais inclus.
+          À choisir dans ton espace client.
+        </p>
+      ) : null}
+    </div>
   );
 }
 
