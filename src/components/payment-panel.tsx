@@ -148,7 +148,7 @@ export default function PaymentPanel({
 
         {/* ---------- Choix du mode ---------- */}
         {rows.length === 0 ? (
-          <div className="mt-4 space-y-4">
+          <div className="mt-4 animate-in fade-in slide-in-from-bottom-2 space-y-4 duration-300">
             {/* Acompte de réservation (carte + virement) */}
             {montrerBlocAcompte ? (
               <div className="rounded-lg border border-accent/40 bg-accent/5 p-4">
@@ -237,9 +237,10 @@ export default function PaymentPanel({
                           ? `${n} fois : 1ʳᵉ échéance ${euros(m.first)} puis ${n - 1} × ${euros(m.rest)}`
                           : `Non disponible : minimum 150 € par échéance${n > 3 ? " et total de 1 000 € minimum au-delà de x3" : ""}`
                       }
-                      className={`rounded-md border p-2 text-center transition-all disabled:opacity-30 ${
+                      style={{ animationDelay: `${(n - 2) * 40}ms` }}
+                      className={`animate-in fade-in slide-in-from-bottom-1 fill-mode-both rounded-md border p-2 text-center transition-all duration-300 disabled:opacity-30 ${
                         dispo
-                          ? "border-border hover:border-accent hover:shadow-sm"
+                          ? "border-border hover:border-accent hover:shadow-sm hover:-translate-y-0.5"
                           : "border-border/50 cursor-not-allowed"
                       }`}
                     >
@@ -259,7 +260,7 @@ export default function PaymentPanel({
               </p>
         {/* ---------- Brouillon : confirmation avant création ---------- */}
         {rows.length === 0 && brouillon && lignesBrouillon ? (
-          <div className="mt-4 space-y-3 rounded-lg border border-accent/40 bg-accent/5 p-4">
+          <div className="mt-4 animate-in fade-in slide-in-from-bottom-3 space-y-3 rounded-lg border border-accent/40 bg-accent/5 p-4 duration-300">
             <p className="text-sm font-medium">
               Votre échéancier en {brouillon} fois — vérifiez avant de confirmer :
             </p>
@@ -319,7 +320,7 @@ export default function PaymentPanel({
             </div>
           </div>
         ) : (
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 animate-in fade-in slide-in-from-bottom-2 space-y-3 duration-300">
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span>
                 {dejaPaye}/{rows.length} échéance(s) réglée(s)

@@ -9,11 +9,11 @@ import {
   signClientDocument,
 } from "@/app/client-actions";
 import { AutoRefresh } from "@/components/auto-refresh";
-import HashTabOpener from "@/components/hash-tab-opener";
+import DevisTabs from "@/components/hash-tab-opener";
 import { HashHighlight } from "@/components/hash-highlight";
 import { RdvCallSection } from "@/components/rdv-call";
 import { TimelinePanel, type TimelineRow } from "@/components/timeline-panel";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { eventMoments } from "@/components/admin-quote-playlist";
 import { DiversFiles } from "@/components/client-files";
 import { ClientOptionsEditor } from "@/components/client-options-editor";
@@ -112,7 +112,6 @@ export default async function ClientQuotePage({
   return (
     <main className="space-y-10">
       <AutoRefresh />
-      <HashTabOpener />
       <HashHighlight />
       <TimelinePanel quoteId={id} initial={timeline} />
       <div className="flex flex-wrap items-center gap-4">
@@ -161,14 +160,14 @@ export default async function ClientQuotePage({
         </div>
       </div>
 
-      <Tabs
-        defaultValue="soiree"
+      <DevisTabs
         orientation="vertical"
         className="flex-col gap-4 md:flex-row md:gap-8 md:items-start"
       >
+        <div id="tabs-devis" className="scroll-mt-24 md:contents">
         <TabsList className="flex w-full flex-row overflow-x-auto md:sticky md:top-20 md:w-48 md:flex-col md:self-start">
           <TabsTrigger value="soiree" className="md:flex-none">Ma soirée</TabsTrigger>
-          <TabsTrigger id="tab-paiement" value="paiement" className="md:flex-none">Paiement</TabsTrigger>
+          <TabsTrigger value="paiement" className="md:flex-none">Paiement</TabsTrigger>
           <TabsTrigger value="playlist" className="md:flex-none">Musiques</TabsTrigger>
           <TabsTrigger value="messages" className="md:flex-none">Messagerie</TabsTrigger>
         </TabsList>
@@ -468,7 +467,8 @@ export default async function ClientQuotePage({
         <ClientQuoteMessages quoteId={id} messages={messages} />
       </div>
         </TabsContent>
-      </Tabs>
+        </div>
+      </DevisTabs>
     </main>
   );
 }
