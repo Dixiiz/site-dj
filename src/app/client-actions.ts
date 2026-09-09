@@ -2139,3 +2139,82 @@ export async function getMusicPreviewUrl(title: string, artist: string) {
   }
 }
 
+// Création de l'échéancier de paiement (2 à 10 fois) : montants ajustés
+// pour couvrir les frais Stripe (1,5 % + 0,25 €/paiement), échéances
+// réparties entre aujourd'hui et la veille de la soirée.
+export async function creerEcheancier(formData: FormData) {
+  const quoteId = String(formData.get("quote_id") ?? "").trim();
+  const nombre = Math.round(Number(formData.get("nombre") ?? 0));
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+  if (!(nombre >= 2 && nombre <= 10)) {
+    return { ok: false as const, error: "Le nombre d'échéances doit être entre 2 et 10." };
+  }
+
+  const { user } = await getOwnedQuote(quoteId);
+  if (!user) return { ok: false as const, error: "Non autorisé." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("total_cents, event_date")
+    .eq("id", quoteId)
+    .maybeSingle();
+  if (!quote) return { ok: false as const, error: "Devis introuvable." };
+
+  const total_cents = Number(quote.total_cents ?? 0);
+  if (total_cents <= 0) return { ok: false as const, error: "Montant invalide." };
+  if (!quote.event_date) {
+    return { ok: false as const, error: "Ce devis n'a pas de date d'événement." };
+  }
+
+  // Vérifie qu'aucune échéance n'est déjà payée (sinon : pas de recréation).
+  const { data: existing } = await supabase
+    .from("payment_schedule")
+    .select("id, status")
+    .eq("quote_id", quoteId);
+  if ((existing ?? []).some((row) => row.status === "payee")) {
+    return { ok: false as const, error: "Un échéancier avec paiement déjà effectué existe." };
+  }
+
+  // Jours restants avant la soirée (les échéances s'arrêtent 2 jours avant).
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const event = new Date(`${quote.event_date}T12:00:00`);
+  const daysUntil = Math.floor((event.getTime() - today.getTime()) / 86400_000) - 2;
+  if (daysUntil < 10) {
+    return {
+      ok: false as const,
+      error: `Il ne reste que ${daysUntil + 2} jours avant la soirée : trop court pour un échéancier.`,
+    };
+  }
+
+  // Montant par échéance : frais Stripe (1,5 % + 0,25 €) répercutés au client.
+  const amount_cents = Math.ceil((total_cents / nombre + 25) / 0.985);
+
+  // Remplace l'échéancier existant (non payé) par le nouveau.
+  await supabase.from("payment_schedule").delete().eq("quote_id", quoteId);
+
+  const rows = Array.from({ length: nombre }, (_, i) => {
+    const due = new Date(today.getTime() + Math.ceil(((i + 1) * daysUntil) / nombre) * 86400_000);
+    return {
+      quote_id: quoteId,
+      user_id: user.id,
+      numero: i + 1,
+      total: nombre,
+      amount_cents,
+      due_date: due.toISOString().slice(0, 10),
+    };
+  });
+  const { error } = await supabase.from("payment_schedule").insert(rows);
+  if (error) {
+    console.error("Création échéancier impossible", error);
+    return { ok: false as const, error: "Création de l'échéancier impossible." };
+  }
+
+  return { ok: true as const, message: `Échéancier créé : ${nombre} fois ${eur(amount_cents)}` };
+}
+
+function eur(cents: number) {
+  return (cents / 100).toFixed(2).replace(".", ",") + " €";
+}
+

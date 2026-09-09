@@ -33,7 +33,26 @@ create index if not exists playlist_tracks_quote_idx on playlist_tracks (quote_i
 alter table quote_messages enable row level security;
 alter table playlist_tracks enable row level security;
 
--- Extraits audio + pochettes (API iTunes)
+-- ============ ÉCHÉANCIER DE PAIEMENT (2 à 10 fois) ============
+-- À exécuter une fois dans le SQL Editor Supabase :
+create table if not exists payment_schedule (
+  id uuid primary key default gen_random_uuid(),
+  quote_id uuid not null references quotes(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete set null,
+  numero int not null,
+  total int not null,
+  amount_cents integer not null,
+  due_date date not null,
+  status text not null default 'a_payer' check (status in ('a_payer', 'payee')),
+  paid_at timestamptz,
+  reminder_sent_at timestamptz,
+  unique (quote_id, numero)
+);
+
+alter table payment_schedule enable row level security;
+
+-- Les clients passent par le serveur Next (service role) : aucune table
+-- accessible directement depuis le navigateur.
 alter table playlist_tracks add column if not exists preview_url text;
 alter table playlist_tracks add column if not exists artwork_url text;
 

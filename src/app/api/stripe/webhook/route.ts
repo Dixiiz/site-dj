@@ -34,6 +34,26 @@ export async function POST(request: Request) {
     const quoteId = session.metadata?.quote_id;
     if (session.payment_status === "paid" && quoteId) {
       const supabase = createAdminClient();
+
+      // Échéance d'un échéancier (paiement en plusieurs fois).
+      if (session.metadata?.payment_type === "echeance") {
+        const numero = parseInt(session.metadata.payment_numero ?? "0", 10);
+        if (numero > 0) {
+          const { error } = await supabase
+            .from("payment_schedule")
+            .update({ status: "payee", paid_at: new Date().toISOString() })
+            .eq("quote_id", quoteId)
+            .eq("numero", numero)
+            .eq("status", "a_payer");
+          console.log(
+            `[stripe-webhook] Échéance ${numero}/${session.metadata.quote_total ?? "?"} du devis ${quoteId}:`,
+            error ? `ERREUR ${error.message}` : "marquée payée ✓"
+          );
+        }
+        return NextResponse.json({ received: true });
+      }
+
+      // Acompte classique.
       const { data: quote } = await supabase
         .from("quotes")
         .select("acompte_paid_at, status")

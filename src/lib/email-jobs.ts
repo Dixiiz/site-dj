@@ -7,6 +7,8 @@
 //     la remplir.
 //  4. J-7 avant la soirée : rappel général, renforcé si la playlist est
 //     toujours vide.
+//  5. Échéancier : rappel J-3 avant chaque échéance de paiement avec
+//     lien de paiement direct (paiement en plusieurs fois).
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildEmailHtml, buildEmailText, stepsSection, EMAIL_FROM } from "@/lib/emails";
 import { SITE_URL as SITE } from "@/lib/site-url";
@@ -342,6 +344,69 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
   }
 
   return { relances, avis, acomptes };
+}
+
+// ---------- 5. Rappels d'échéances (paiement en plusieurs fois) ----------
+// J-3 avant chaque échéance à payer : e-mail avec lien de paiement direct.
+export async function runEcheanceReminders() {
+  const supabase = createAdminClient();
+  let envoyes = 0;
+
+  const now = new Date();
+  const in3Days = new Date(now.getTime() + 3 * 86400_000).toISOString().slice(0, 10);
+
+  const { data: due } = await supabase
+    .from("payment_schedule")
+    .select(
+      "id, numero, total, amount_cents, due_date, reminder_sent_at, quote_id, quotes(customer_name, customer_email, event_date, notes)"
+    )
+    .eq("status", "a_payer")
+    .eq("due_date", in3Days)
+    .limit(30);
+
+  for (const row of due ?? []) {
+    if (row.reminder_sent_at) continue;
+    const q = (Array.isArray(row.quotes) ? row.quotes[0] : row.quotes) as
+      | { customer_name: string | null; customer_email: string | null; event_date: string | null; notes: string | null }
+      | null;
+    if (!q?.customer_email) continue;
+    if (isImport(q.notes) && !(q.notes ?? "").includes("[[avis-ok]]")) continue;
+
+    const montant = (row.amount_cents / 100).toFixed(2).replace(".", ",") + " €";
+    const eventFr = q.event_date
+      ? new Date(q.event_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+      : null;
+
+    const ok = await sendEmail(
+      q.customer_email,
+      `💳 Échéance ${row.numero}/${row.total} — ${montant} à régler d'ici le ${new Date(row.due_date).toLocaleDateString("fr-FR")}`,
+      {
+        title: `Échéance ${row.numero} sur ${row.total}`,
+        emoji: "💳",
+        intro: `Bonjour ${q.customer_name ?? ""},<br/><br/>Conformément à votre échéancier de paiement, votre <strong>${row.numero}${row.numero === 1 ? "ᵉʳᵉ" : "ᵉ"} échéance de ${montant}</strong> est à régler avant le <strong>${new Date(row.due_date).toLocaleDateString("fr-FR")}</strong>${eventFr ? ` (soirée prévue le ${eventFr})` : ""}.`,
+        sections: [
+          {
+            title: "Régler en un clic",
+            lines: [
+              `Montant : <strong>${montant}</strong>`,
+              "Paiement sécurisé par carte bancaire via Stripe.",
+            ],
+          },
+        ],
+        button: {
+          label: `Payer ${montant}`,
+          href: `${SITE}/paiement/${row.quote_id}/${row.numero}`,
+        },
+        footer: "Une question sur votre échéancier ? Répondez à cet e-mail. — Maxime",
+      }
+    );
+    if (ok) {
+      envoyes++;
+      await supabase.from("payment_schedule").update({ reminder_sent_at: new Date().toISOString() }).eq("id", row.id);
+    }
+  }
+
+  return { envoyes };
 }
 
 // ---------- Sauvegarde hebdomadaire des documents signés ----------

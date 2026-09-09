@@ -21,6 +21,7 @@ import { ClientQuoteMessages } from "@/components/client-quote-messages";
 import { PACK_IMAGES } from "@/components/pricing-section";
 import { SignaturePad } from "@/components/signature-pad";
 import { SubmitButton } from "@/components/submit-button";
+import PaymentPanel, { type ScheduleRow } from "@/components/payment-panel";
 import { startAcompteCheckout, verifyStripeAcompte } from "@/app/client-actions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEuros } from "@/lib/money";
@@ -93,6 +94,19 @@ export default async function ClientQuotePage({
   const packImage = PACK_IMAGES[quote.formula_name] ?? null;
   // Timeline de la soirée (JSON dans quotes.timeline).
   const timeline = (Array.isArray(quote.timeline) ? quote.timeline : []) as TimelineRow[];
+  // Échéancier de paiement (table payment_schedule ; repli silencieux si
+  // la migration n'a pas encore été exécutée).
+  let schedule: ScheduleRow[] = [];
+  try {
+    const { data: sched } = await supabase
+      .from("payment_schedule")
+      .select("numero, total, amount_cents, due_date, status")
+      .eq("quote_id", id)
+      .order("numero", { ascending: true });
+    schedule = (sched ?? []) as ScheduleRow[];
+  } catch {
+    schedule = [];
+  }
 
   return (
     <main className="space-y-10">
@@ -152,9 +166,18 @@ export default async function ClientQuotePage({
       >
         <TabsList className="flex w-full flex-row overflow-x-auto md:sticky md:top-20 md:w-48 md:flex-col md:self-start">
           <TabsTrigger value="soiree" className="md:flex-none">Ma soirée</TabsTrigger>
+          <TabsTrigger value="paiement" className="md:flex-none">Paiement</TabsTrigger>
           <TabsTrigger value="playlist" className="md:flex-none">Musiques</TabsTrigger>
           <TabsTrigger value="messages" className="md:flex-none">Messagerie</TabsTrigger>
         </TabsList>
+        <TabsContent value="paiement" className="tab-anim min-w-0 flex-1 space-y-6">
+          <PaymentPanel
+            quoteId={id}
+            totalCents={Number(quote.total_cents ?? 0)}
+            eventDate={quote.event_date}
+            initial={schedule}
+          />
+        </TabsContent>
         <TabsContent value="soiree" className="tab-anim min-w-0 flex-1 space-y-6">
       {/* Récapitulatif */}
       <section className="rounded-xl border border-border bg-muted/50 p-5">
