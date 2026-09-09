@@ -73,7 +73,7 @@ export default function PaymentPanel({
   // L'échéancier inclut-il l'acompte (1ʳᵉ échéance) ou porte-t-il sur le solde ?
   const echeancierAvecAcompte = rows.length > 0 && !acomptePaid;
   // Bloc acompte : seulement s'il n'est pas réglé ET pas couvert par l'échéancier.
-  const montrerBlocAcompte = !acomptePaid && !echeancierAvecAcompte && rows.length === 0 && !brouillon;
+  const montrerBlocAcompte = !acomptePaid && !echeancierAvecAcompte && rows.length === 0;
 
   function confirmerEcheancier(n: number) {
     const fd = new FormData();
@@ -146,68 +146,8 @@ export default function PaymentPanel({
           règle ici, à votre rythme.
         </p>
 
-        {/* ---------- Brouillon : confirmation avant création ---------- */}
-        {rows.length === 0 && brouillon && lignesBrouillon ? (
-          <div className="mt-4 space-y-3 rounded-lg border border-accent/40 bg-accent/5 p-4">
-            <p className="text-sm font-medium">
-              Votre échéancier en {brouillon} fois — vérifiez avant de confirmer :
-            </p>
-            <ul className="divide-y divide-border rounded-lg border border-border bg-background text-sm">
-              {lignesBrouillon.map((l) => (
-                <li key={l.numero} className="flex items-center justify-between gap-3 p-2.5">
-                  <div>
-                    <span className="font-medium">
-                      Échéance {l.numero}/{brouillon}
-                    </span>
-                    {l.numero === 1 && !acomptePaid ? (
-                      <span className="ml-2 rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
-                        Acompte
-                      </span>
-                    ) : null}
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      avant le {new Date(`${l.due}T12:00:00`).toLocaleDateString("fr-FR")}
-                    </span>
-                  </div>
-                  <span className="font-medium">{euros(l.amount)}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="text-xs text-muted-foreground">
-              Total payé :{" "}
-              <span className="font-medium text-foreground">
-                {euros(lignesBrouillon.reduce((s, l) => s + l.amount, 0))}
-              </span>{" "}
-              — dont{" "}
-              <span className="font-medium text-foreground">
-                {euros(fraisBrouillon)}
-              </span>{" "}
-              de frais de paiement en ligne (1,5 % + 0,25 € par échéance), soit
-              {euros(baseBrouillon)} nets pour le prestataire. Rappels par
-              e-mail 3 jours avant chaque échéance.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => confirmerEcheancier(brouillon)}
-                disabled={pending}
-                className="rounded-md bg-[#21619A] px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-[#1a4d7a] disabled:opacity-50"
-              >
-                {pending ? "Création…" : "✓ Je confirme cet échéancier"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setBrouillon(null)}
-                disabled={pending}
-                className="rounded-md border border-border px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
-              >
-                ← Retour
-              </button>
-            </div>
-          </div>
-        ) : null}
-
         {/* ---------- Choix du mode ---------- */}
-        {rows.length === 0 && !brouillon ? (
+        {rows.length === 0 ? (
           <div className="mt-4 space-y-4">
             {/* Acompte de réservation (carte + virement) */}
             {montrerBlocAcompte ? (
@@ -317,6 +257,65 @@ export default function PaymentPanel({
                 échéance n&apos;est réglée. Minimum 150 € par échéance ; au-delà
                 de x3, total de 1 000 € minimum.
               </p>
+        {/* ---------- Brouillon : confirmation avant création ---------- */}
+        {rows.length === 0 && brouillon && lignesBrouillon ? (
+          <div className="mt-4 space-y-3 rounded-lg border border-accent/40 bg-accent/5 p-4">
+            <p className="text-sm font-medium">
+              Votre échéancier en {brouillon} fois — vérifiez avant de confirmer :
+            </p>
+            <ul className="divide-y divide-border rounded-lg border border-border bg-background text-sm">
+              {lignesBrouillon.map((l) => (
+                <li key={l.numero} className="flex items-center justify-between gap-3 p-2.5">
+                  <div>
+                    <span className="font-medium">
+                      Échéance {l.numero}/{brouillon}
+                    </span>
+                    {l.numero === 1 && !acomptePaid ? (
+                      <span className="ml-2 rounded-full bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
+                        Acompte
+                      </span>
+                    ) : null}
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      avant le {new Date(`${l.due}T12:00:00`).toLocaleDateString("fr-FR")}
+                    </span>
+                  </div>
+                  <span className="font-medium">{euros(l.amount)}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-muted-foreground">
+              Total payé :{" "}
+              <span className="font-medium text-foreground">
+                {euros(lignesBrouillon.reduce((s, l) => s + l.amount, 0))}
+              </span>{" "}
+              — dont{" "}
+              <span className="font-medium text-foreground">
+                {euros(fraisBrouillon)}
+              </span>{" "}
+              de frais de paiement en ligne (1,5 % + 0,25 € par échéance), soit
+              {euros(baseBrouillon)} nets pour le prestataire. Rappels par
+              e-mail 3 jours avant chaque échéance.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => confirmerEcheancier(brouillon)}
+                disabled={pending}
+                className="rounded-md bg-[#21619A] px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-[#1a4d7a] disabled:opacity-50"
+              >
+                {pending ? "Création…" : "✓ Je confirme cet échéancier"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setBrouillon(null)}
+                disabled={pending}
+                className="rounded-md border border-border px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+              >
+                ✕ Annuler la sélection
+              </button>
+            </div>
+          </div>
+        ) : null}
             </div>
           </div>
         ) : (
