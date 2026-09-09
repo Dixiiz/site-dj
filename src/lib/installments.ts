@@ -31,3 +31,14 @@ export function montantsEcheances(
     rest: n > 1 ? avecFrais(Math.ceil((totalCents - acompte) / (n - 1))) : 0,
   };
 }
+
+// Échéancier du solde uniquement (quand l'acompte est déjà réglé) :
+// toutes les parts sont égales.
+export function montantsEcheancesSolde(
+  soldeCents: number,
+  n: number
+): { first: number; rest: number } {
+  const part = avecFrais(Math.ceil(soldeCents / n));
+  return { first: part, rest: part };
+}
+

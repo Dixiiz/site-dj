@@ -2156,7 +2156,7 @@ export async function creerEcheancier(formData: FormData) {
   const supabase = createAdminClient();
   const { data: quote } = await supabase
     .from("quotes")
-    .select("total_cents, event_date")
+    .select("total_cents, event_date, acompte_paid_at")
     .eq("id", quoteId)
     .maybeSingle();
   if (!quote) return { ok: false as const, error: "Devis introuvable." };
@@ -2196,20 +2196,31 @@ export async function creerEcheancier(formData: FormData) {
   // Frais Stripe (1,5 % + 0,25 €/paiement) répercutés au client.
   const avecFrais = (base: number) => Math.ceil((base + 25) / 0.985);
 
-  // Règle : la 1ʳᵉ échéance doit couvrir AU MINIMUM l'acompte (la date est
-  // sécurisée dès le 1ᵉʳ paiement). Si une répartition égale donne des parts
-  // PLUS GROSSES que l'acompte, on garde un échéancier réparti harmonieux
-  // (ex. 2× = moitié + moitié) au lieu de forcer une petite 1ʳᵉ échéance.
-  const partEgale = Math.floor(total_cents / nombre);
-  const harmonieux = partEgale >= acompte;
+  // Acompte déjà réglé (par carte ou virement) ? L'échéancier porte alors
+  // sur le SOLDE uniquement — on ne repasse jamais l'acompte.
+  const acompteDejaPaye = Boolean(quote.acompte_paid_at);
+  let firstAmount: number;
+  let restAmount: number;
+  if (acompteDejaPaye) {
+    const solde = Math.max(0, total_cents - acompte);
+    firstAmount = avecFrais(Math.ceil(solde / nombre));
+    restAmount = firstAmount;
+  } else {
+    // Règle : la 1ʳᵉ échéance doit couvrir AU MINIMUM l'acompte (la date est
+    // sécurisée dès le 1ᵉʳ paiement). Si une répartition égale donne des parts
+    // PLUS GROSSES que l'acompte, on garde un échéancier réparti harmonieux
+    // (ex. 2× = moitié + moitié) au lieu de forcer une petite 1ʳᵉ échéance.
+    const partEgale = Math.floor(total_cents / nombre);
+    const harmonieux = partEgale >= acompte;
 
-  const firstAmount = harmonieux ? avecFrais(partEgale) : avecFrais(acompte);
-  const restAmount =
-    nombre > 1
-      ? harmonieux
-        ? avecFrais(Math.ceil((total_cents - partEgale) / (nombre - 1)))
-        : avecFrais(Math.ceil((total_cents - acompte) / (nombre - 1)))
-      : 0;
+    firstAmount = harmonieux ? avecFrais(partEgale) : avecFrais(acompte);
+    restAmount =
+      nombre > 1
+        ? harmonieux
+          ? avecFrais(Math.ceil((total_cents - partEgale) / (nombre - 1)))
+          : avecFrais(Math.ceil((total_cents - acompte) / (nombre - 1)))
+        : 0;
+  }
 
   // Remplace l'échéancier existant (non payé) par le nouveau.
   await supabase.from("payment_schedule").delete().eq("quote_id", quoteId);
@@ -2239,7 +2250,9 @@ export async function creerEcheancier(formData: FormData) {
 
   return {
     ok: true as const,
-    message: `Échéancier créé : ${eur(firstAmount)} (acompte) puis ${nombre - 1} × ${eur(restAmount)}`,
+    message: acompteDejaPaye
+      ? `Échéancier du solde créé : ${nombre} × ${eur(firstAmount)}`
+      : `Échéancier créé : ${eur(firstAmount)} (acompte) puis ${nombre - 1} × ${eur(restAmount)}`,
   };
 }
 

@@ -176,6 +176,8 @@ export default async function ClientQuotePage({
             totalCents={Number(quote.total_cents ?? 0)}
             eventDate={quote.event_date}
             initial={schedule}
+            acomptePaid={Boolean(quote.acompte_paid_at)}
+            acompteDeclared={Boolean(quote.acompte_declared_at)}
           />
         </TabsContent>
         <TabsContent value="soiree" className="tab-anim min-w-0 flex-1 space-y-6">
