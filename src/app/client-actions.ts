@@ -35,28 +35,109 @@ export async function signUpClient(formData: FormData) {
     };
   }
 
-  const supabase = await createAuthClient();
-  const { data, error } = await supabase.auth.signUp({
+  // Le mailleur par défaut de Supabase (confirmations de compte) est peu fiable
+  // (limite horaire, spams fréquents) : le client n'avait jamais l'e-mail et
+  // restait bloqué sans mot de passe actif. On crée donc le compte via l'API
+  // admin, qui renvoie le lien de confirmation SANS envoyer d'e-mail, puis on
+  // l'envoie nous-mêmes via Resend (domaine du site, délivrabilité maîtrisée).
+  const admin = createAdminClient();
+  let actionLink: string | null = null;
+  let alreadyConfirmed = false;
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: "signup",
     email,
     password,
-    options: { data: { name } },
+    options: { data: { name }, redirectTo: `${SITE_URL}/connexion` },
   });
+  if (error || !data) {
+    const dejaPris = /already|exist|registered|duplicate/i.test(error?.message ?? "");
+    return {
+      ok: false as const,
+      error: dejaPris
+        ? "Un compte existe déjà avec cet e-mail. Connectez-vous, ou utilisez « Mot de passe oublié »."
+        : "Création du compte impossible pour le moment. Réessayez dans un instant.",
+    };
+  }
+  actionLink = data.properties?.action_link ?? null;
+  // Si la confirmation par e-mail est désactivée côté Supabase, le compte est
+  // déjà actif : on connecte directement le client, sans passer par un e-mail.
+  alreadyConfirmed = Boolean(data.user.email_confirmed_at ?? data.user.confirmed_at);
 
-  if (error) {
-    return { ok: false as const, error: error.message };
+  if (alreadyConfirmed) {
+    const auth = await createAuthClient();
+    const { error: loginError } = await auth.auth.signInWithPassword({ email, password });
+    if (loginError) {
+      return { ok: false as const, error: loginError.message };
+    }
+    redirect("/mon-espace");
   }
 
-  // Si la confirmation par e-mail est activée, pas de session immédiate.
-  if (!data.session) {
+  // Compte créé mais non confirmé : envoi du mail d'activation via Resend.
+  if (!actionLink) {
     return {
-      ok: true as const,
-      needsConfirmation: true as const,
-      message:
- "Compte créé ! Vérifiez votre boîte mail pour confirmer votre adresse, puis connectez-vous.",
+      ok: false as const,
+      error: "Lien d'activation indisponible. Contactez-nous pour activer votre compte.",
+    };
+  }
+  const { Resend } = await import("resend");
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error("[signUpClient] RESEND_API_KEY manquante : e-mail d'activation non envoyé.");
+    return {
+      ok: false as const,
+      error: "Envoi d'e-mail momentanément indisponible. Réessayez ou contactez-nous.",
+    };
+  }
+  const resend = new Resend(apiKey);
+  const { error: sendError } = await resend.emails.send({
+    from: EMAIL_FROM,
+    to: email,
+    subject: "Activez votre compte Propul'Sound DJ",
+    html: buildEmailHtml({
+      title: "Votre compte est prêt !",
+      emoji: "🎉",
+      intro: `Bonjour ${name},<br/><br/>Votre compte client vient d'être créé. Une dernière étape : <strong>confirmez votre adresse e-mail</strong> en cliquant sur le bouton ci-dessous. Votre mot de passe (celui que vous avez choisi) sera actif immédiatement après.`,
+      button: { label: "Activer mon compte", href: actionLink },
+      sections: [
+        {
+          title: "Ensuite",
+          lines: [
+            "Cliquez sur le bouton : votre adresse est confirmée.",
+            "Revenez sur le site et connectez-vous avec votre e-mail et votre mot de passe.",
+            "Vous retrouvez votre devis, vos documents et votre playlist dans votre espace.",
+          ],
+        },
+      ],
+      footer: "Si vous n'êtes pas à l'origine de ce compte, ignorez simplement cet e-mail.",
+    }),
+    text: buildEmailText({
+      intro: `Bonjour ${name}, votre compte client Propul'Sound DJ vient d'être créé. Confirmez votre adresse e-mail pour activer votre mot de passe.`,
+      sections: [
+        {
+          title: "Ensuite",
+          lines: [
+            "Cliquez sur le bouton ci-dessous : votre adresse est confirmée.",
+            "Connectez-vous ensuite avec votre e-mail et votre mot de passe.",
+          ],
+        },
+      ],
+      button: { label: "Activer mon compte", href: actionLink },
+    }),
+  });
+  if (sendError) {
+    console.error("[signUpClient] Echec envoi e-mail d'activation:", sendError);
+    return {
+      ok: false as const,
+      error: "L'e-mail d'activation n'a pas pu partir. Réessayez dans un instant.",
     };
   }
 
-  redirect("/mon-espace");
+  return {
+    ok: true as const,
+    needsConfirmation: true as const,
+    message:
+      "Compte créé ! Un e-mail d'activation vient de partir (vérifiez vos spams si besoin). Cliquez sur le lien : votre mot de passe sera actif immédiatement.",
+  };
 }
 
 export async function requestPasswordReset(formData: FormData) {
