@@ -91,6 +91,28 @@ export default async function AdminDashboard({
   // (ils sont exclus du calcul de solde par devis pour éviter les doubles comptes).
   const echeancierQuoteIds = new Set(echeancesEnCours.map((e) => e.quoteId));
 
+  // Progression d'échéancier par devis : nombre d'échéances réglées / total et
+  // montants payés / dus — alimente la barre de progression sous chaque ligne.
+  const progressionParDevis = new Map<
+    string,
+    { payees: number; total: number; payeCents: number; totalCents: number }
+  >();
+  for (const e of echeancesEnCours) {
+    const p = progressionParDevis.get(e.quoteId) ?? {
+      payees: 0,
+      total: 0,
+      payeCents: 0,
+      totalCents: 0,
+    };
+    p.total = Math.max(p.total, e.totalEcheances);
+    p.totalCents += e.amountCents;
+    if (e.status === "payee") {
+      p.payees += 1;
+      p.payeCents += e.amountCents;
+    }
+    progressionParDevis.set(e.quoteId, p);
+  }
+
   const montant = (q: { total_cents: unknown }) => {
     const n = Number(q.total_cents ?? 0);
     return Number.isFinite(n) ? n : 0;
@@ -284,28 +306,57 @@ export default async function AdminDashboard({
             </p>
           ) : (
             <ul className="divide-y divide-border rounded-lg border border-border">
-              {echeancesDuMois.map((e) => (
-                <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
-                  <div className="min-w-0">
-                    <Link
-                      href={`/admin/devis?focus=${e.quoteId}`}
-                      className="font-medium transition-colors hover:text-accent hover:underline"
-                      title="Ouvrir ce devis dans la liste"
-                    >
-                      {e.client}
-                    </Link>
-                    <p className="text-xs text-muted-foreground">
-                      Échéance {e.numero}/{e.totalEcheances} — avant le{" "}
-                      {new Date(`${e.dueDate}T12:00:00`).toLocaleDateString("fr-FR", {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short",
-                      })}
-                    </p>
-                  </div>
-                  <span className="font-medium">{eur(e.amountCents)}</span>
-                </li>
-              ))}
+              {echeancesDuMois.map((e) => {
+                const prog = progressionParDevis.get(e.quoteId);
+                const pct =
+                  prog && prog.total > 0
+                    ? Math.round((prog.payees / prog.total) * 100)
+                    : 0;
+                return (
+                  <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+                    <div className="min-w-0">
+                      <Link
+                        href={`/admin/devis?focus=${e.quoteId}`}
+                        className="font-medium transition-colors hover:text-accent hover:underline"
+                        title="Ouvrir ce devis dans la liste"
+                      >
+                        {e.client}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">
+                        Échéance {e.numero}/{e.totalEcheances} — avant le{" "}
+                        {new Date(`${e.dueDate}T12:00:00`).toLocaleDateString("fr-FR", {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                        })}
+                      </p>
+                    </div>
+                    <span className="font-medium">{eur(e.amountCents)}</span>
+                    {/* Barre de progression de l'échéancier (réglement vs total) */}
+                    {prog && prog.total > 0 && (
+                      <div className="w-full">
+                        <div
+                          className="h-1.5 overflow-hidden rounded-full bg-muted"
+                          role="progressbar"
+                          aria-valuenow={pct}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`Échéancier de ${e.client} : ${prog.payees} échéances réglées sur ${prog.total}`}
+                        >
+                          <div
+                            className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-emerald-500" : "bg-accent"}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          {prog.payees}/{prog.total} échéance{prog.total > 1 ? "s" : ""} réglée
+                          {prog.payees > 1 ? "s" : ""} · {eur(prog.payeCents)} sur {eur(prog.totalCents)}
+                        </p>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

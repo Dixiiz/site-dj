@@ -67,8 +67,32 @@ function DemoVideoPlayer({
   segments: Segment[];
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState({ origin: "50% 50%", scale: 1 });
   const [captionIndex, setCaptionIndex] = useState(-1);
+
+  // Lecture uniquement quand la démo est visible à l'écran : chaque vidéo
+  // démarre quand on arrive dessus (et jamais toutes en même temps).
+  // En sortie de viewport : pause + retour au début, pour que la démo
+  // reparte toujours du début à la prochaine visite.
+  useEffect(() => {
+    const video = videoRef.current;
+    const container = containerRef.current;
+    if (!video || !container) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+          video.currentTime = 0;
+        }
+      },
+      { threshold: 0.35 }
+    );
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     let raf = 0;
@@ -97,7 +121,10 @@ function DemoVideoPlayer({
   }, [segments, duration]);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border shadow-2xl">
+    <div
+      ref={containerRef}
+      className="relative overflow-hidden rounded-2xl border border-border shadow-2xl"
+    >
       <video
         ref={videoRef}
         className="w-full transition-transform duration-[2500ms] ease-in-out"
@@ -107,7 +134,6 @@ function DemoVideoPlayer({
         }}
         src={src}
         poster={poster}
-        autoPlay
         muted
         loop
         playsInline

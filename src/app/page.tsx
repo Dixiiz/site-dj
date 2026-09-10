@@ -26,21 +26,25 @@ export const metadata = {
 const services = [
   {
     title: "Mariages",
+    href: "/mariage",
     description:
  "Une ambiance sur-mesure pour le plus beau jour de votre vie : cérémonie, cocktail, dîner et piste de danse jusqu'au bout de la nuit.",
   },
   {
     title: "Anniversaires & soirées privées",
+    href: "/anniversaire",
     description:
  "Anniversaires, fiançailles, fêtes entre amis : une programmation musicale qui met tout le monde d'accord.",
   },
   {
     title: "Événements d'entreprise",
+    href: "/evenement-entreprise",
     description:
  "Séminaires, soirées de gala, arbres de Noël : une prestation professionnelle et adaptée à votre image.",
   },
   {
     title: "Bars, clubs & soirées pro",
+    href: "/formules",
     description:
  "Sets adaptés à votre public : électro, house, hits du moment — je m'adapte à l'ambiance de votre établissement et de votre clientèle.",
   },
@@ -48,6 +52,7 @@ const services = [
 
 export default async function Home() {
   const hasHeroVideo = existsSync(join(process.cwd(), "public", "videos", "hero.mp4"));
+
   const showcaseDir = join(process.cwd(), "public", "videos", "showcase");
   const localShowcase = existsSync(showcaseDir)
     ? readdirSync(showcaseDir)
@@ -59,7 +64,13 @@ export default async function Home() {
   // bien plus vite, et la page est régénérée au max toutes les 5 min (cache).
   const [storageShowcase, showcaseOrder, storageHero] = await Promise.all([
     listMedia("videos/showcase")
-      .then((files) => files.map((f) => f.url))
+      .then((files) =>
+        files
+          // Seuls les vrais fichiers vidéo entrent dans le carrousel (les
+          // miniatures .jpg servent d'aperçu via l'attribut poster).
+          .filter((f) => /\.(mp4|webm|mov)$/i.test(f.url))
+          .map((f) => f.url)
+      )
       .catch(() => [] as string[]),
     getOrder("videos/showcase").catch(() => [] as string[]),
     listMedia("videos")
@@ -184,30 +195,31 @@ export default async function Home() {
               DJ &amp; animations — Loir-et-Cher
             </p>
             <h1
-              className="mx-auto mt-4 max-w-4xl text-5xl font-normal tracking-tight text-glow sm:text-7xl"
-              style={{ fontFamily: "var(--font-fjalla), sans-serif" }}
+              className="font-display mx-auto mt-4 max-w-4xl text-5xl font-normal tracking-tight text-glow sm:text-7xl"
             >
               Mettez de l&apos;énergie dans vos événements avec{" "}
-              <span className="text-accent">Propul&apos;Sound DJ</span>
+              <span className="text-gradient-neon">Propul&apos;Sound DJ</span>
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
               DJ &amp; Show Lumière à proximité de Blois. Une ambiance électro moderne et du
               matériel professionnel pour illuminer et faire vibrer vos événements.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-              <Link
-                href="/formules"
-                className="rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground shadow-lg transition hover:brightness-110"
-              >
+              <Link href="/formules" className="btn-primary">
                 Demander un devis
               </Link>
-              <Link
-                href="/disponibilites"
-                className="rounded-lg border border-border px-6 py-3 font-medium transition hover:border-accent hover:text-accent"
-              >
+              <Link href="/disponibilites" className="btn-outline">
                 Voir les disponibilités
               </Link>
             </div>
+            {/* Preuve sociale immédiate : la confiance doit être visible dès les 3 premières secondes */}
+            <p className="mt-5 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
+              <span className="tracking-wider text-amber-400" aria-hidden>★★★★★</span>
+              <span>
+                <strong className="font-medium text-foreground">4,9/5</strong> · +100 soirées animées en
+                Loir-et-Cher
+              </span>
+            </p>
           </FadeIn>
         </section>
 
@@ -225,7 +237,7 @@ export default async function Home() {
             />
             <div
               aria-hidden
-              className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-primary/25 blur-3xl"
+              className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-accent-2/20 blur-3xl"
             />
             {/* Photo de fond : se fond dans le bleu du site par un dégradé */}
             <div
@@ -261,13 +273,14 @@ export default async function Home() {
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 {services.map((service) => (
-                  <div
+                  <Link
                     key={service.title}
+                    href={service.href}
                     className="rounded-xl border border-border bg-background/70 p-5 backdrop-blur-sm transition hover:border-accent/50"
                   >
                     <h3 className="font-medium text-accent">{service.title}</h3>
                     <p className="mt-2 text-sm text-muted-foreground">{service.description}</p>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -284,6 +297,16 @@ export default async function Home() {
               Configurez votre devis en ligne en quelques minutes : formule, options, lieu,
               date et horaires. Réponse rapide garantie.
             </p>
+            {/* Renvoi discret vers le calendrier : le client vérifie sa date en un clic */}
+            <p className="mt-4 text-xs text-muted-foreground/80">
+              Votre date en tête ?{" "}
+              <Link
+                href="/disponibilites"
+                className="font-medium text-accent underline decoration-accent/40 underline-offset-4 transition-colors hover:decoration-accent"
+              >
+                Vérifiez sa disponibilité
+              </Link>
+            </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
               <Link
                 href="/formules"
@@ -298,6 +321,10 @@ export default async function Home() {
                 Voir comment ça se passe
               </Link>
             </div>
+            {/* Mention discrète : paiement en plusieurs fois (rassurance, pas un argument central) */}
+            <p className="mt-4 text-xs text-muted-foreground/80">
+              💳 Paiement en plusieurs fois possible (2 à 10×) — estimation en direct dans le devis.
+            </p>
           </FadeIn>
         </section>
 

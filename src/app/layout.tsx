@@ -1,16 +1,10 @@
 import type { Metadata } from "next";
-import { Poppins, Inter, Fjalla_One } from "next/font/google";
+import { Inter, Fjalla_One } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Providers } from "@/components/providers";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { SITE_URL, SITE_NAME } from "@/lib/site-url";
 import "./globals.css";
-
-const poppins = Poppins({
-  variable: "--font-poppins",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
 
 const inter = Inter({
   variable: "--font-inter",
@@ -67,14 +61,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="fr"
       suppressHydrationWarning
-      className={`${poppins.variable} ${inter.variable} ${fjallaOne.variable} dark h-full antialiased`}
+      className={`${inter.variable} ${fjallaOne.variable} dark h-full antialiased`}
     >
       <body className="min-h-full flex flex-col overflow-x-hidden bg-background text-foreground">
         <Providers>{children}</Providers>
-        <Analytics />
         <WhatsAppButton />
-        {/* Analytics uniquement en production (warning script en dev) */}
-        {process.env.NODE_ENV === "production" ? <Analytics /> : null}
+        {/* Analytics (actif en production uniquement — le composant gère le dev lui-même) */}
+        <Analytics />
       </body>
     </html>
   );

@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 const MotionSection = motion.section;
 const MotionAside = motion.aside;
 const MotionDiv = motion.div;
+const MotionLi = motion.li;
 
 export function FadeIn({
   children,
@@ -18,9 +19,10 @@ export function FadeIn({
   delay?: number;
   className?: string;
   y?: number;
-  as?: "div" | "section" | "aside";
+  as?: "div" | "section" | "aside" | "li";
 }) {
-  const MotionTag = as === "section" ? MotionSection : as === "aside" ? MotionAside : MotionDiv;
+  const MotionTag =
+    as === "section" ? MotionSection : as === "aside" ? MotionAside : as === "li" ? MotionLi : MotionDiv;
 
   return (
     <MotionTag

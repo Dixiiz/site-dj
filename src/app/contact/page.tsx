@@ -50,7 +50,40 @@ export default function ContactPage() {
         </FadeIn>
 
         <FadeIn delay={0.1}>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 rounded-xl border border-border bg-muted/50 px-6 py-5">
+          {/* Canaux rapides : WhatsApp en premier (canal privilégié des clients), puis téléphone */}
+          <div className="mt-8 grid gap-3 sm:grid-cols-2">
+            <a
+              href="https://wa.me/33674850769?text=Bonjour%20Propul'Sound%20DJ%2C%20j'ai%20une%20question%20pour%20mon%20%C3%A9v%C3%A9nement"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-4 rounded-xl border border-[#25D366]/50 bg-[#25D366]/10 p-4 transition hover:border-[#25D366]"
+            >
+              <svg viewBox="0 0 24 24" fill="#25D366" className="h-8 w-8 shrink-0" aria-hidden>
+                <path d={BRANDS[2].path} />
+              </svg>
+              <span>
+                <span className="block font-medium">WhatsApp — réponse la plus rapide</span>
+                <span className="block text-xs text-muted-foreground">
+                  Posez votre question en 2 clics, réponse souvent en moins d&apos;une heure
+                </span>
+              </span>
+            </a>
+            <a
+              href="tel:+33674850769"
+              className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition hover:border-accent"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8 shrink-0 text-accent" aria-hidden>
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+              <span>
+                <span className="block font-medium">06 74 85 07 69</span>
+                <span className="block text-xs text-muted-foreground">
+                  Pour discuter de vive voix de votre événement
+                </span>
+              </span>
+            </a>
+          </div>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-6 rounded-xl border border-border bg-muted/50 px-6 py-5">
             {BRANDS.map((b) => (
               <a
                 key={b.name}

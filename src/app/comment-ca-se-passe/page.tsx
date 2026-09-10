@@ -36,6 +36,7 @@ const acts = [
     highlights: [
       "Devis + contrat signés au doigt",
       "Acompte par carte ou virement",
+      "Solde en plusieurs fois (2 à 10×)",
       "Date verrouillée dès réception",
     ],
   },
@@ -66,7 +67,7 @@ export default function CommentCaSePassePage() {
           </h1>
           <p className="mt-3 max-w-2xl text-muted-foreground">
             Réserver un DJ ne devrait pas être une course aux messages perdus.
-            Installe-toi, clique sur play : en 2 minutes, tu sauras tout.
+            Installe-toi, les démos se lancent en défilant : en 2 minutes, tu sauras tout.
           </p>
         </FadeIn>
 
@@ -117,16 +118,10 @@ export default function CommentCaSePassePage() {
               Ton devis t&apos;attend — et ton espace client aussi.
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-3">
-              <Link
-                href="/formules"
-                className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-              >
+              <Link href="/formules" className="btn-primary">
                 Créer mon devis
               </Link>
-              <Link
-                href="/faq"
-                className="rounded-lg border border-border px-5 py-2.5 text-sm text-foreground transition-colors hover:border-accent/50 hover:text-accent"
-              >
+              <Link href="/faq" className="btn-outline">
                 Questions fréquentes
               </Link>
             </div>

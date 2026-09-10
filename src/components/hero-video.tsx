@@ -88,6 +88,7 @@ export function HeroVideo({ src = "/videos/hero.mp4" }: { src?: string }) {
             loop
             playsInline
             preload="metadata"
+            poster="/videos/hero-poster.jpg"
             style={{
               transform: "scale(1.15)",
               transitionDuration: `${FADE_MS}ms`,

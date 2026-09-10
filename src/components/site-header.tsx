@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { getClientUser } from "@/app/client-actions";
 import { MainNav } from "@/components/main-nav";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 export async function SiteHeader() {
   const user = await getClientUser();
@@ -19,10 +18,7 @@ export async function SiteHeader() {
             className="h-8 w-auto object-contain sm:h-10"
             priority
           />
-          <span
-            className="hidden text-lg font-normal tracking-wide sm:inline"
-            style={{ fontFamily: "var(--font-fjalla), sans-serif" }}
-          >
+          <span className="font-display hidden text-lg font-normal tracking-wide sm:inline">
             Propul&apos;Sound DJ
           </span>
         </Link>
@@ -48,7 +44,6 @@ export async function SiteHeader() {
             </svg>
             <span>Mon espace</span>
           </Link>
-          <ThemeToggle />
         </div>
       </div>
     </header>

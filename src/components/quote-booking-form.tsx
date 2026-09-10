@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 const emptySubscribe = () => () => {};
 import { formatEuros } from "@/lib/money";
+import { track } from "@vercel/analytics";
 import { acompteCents, montantsEcheances, niveauxDisponibles } from "@/lib/installments";
 import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
 import type { Formula, QuoteOption } from "@/lib/types";
@@ -129,6 +130,12 @@ export function QuoteBookingForm({
     return () => observer.disconnect();
   }, []);
 
+  // Analytics du tunnel : on mesure où les visiteurs décrochent.
+  // 1) ouverture du configurateur (une seule fois par visite)
+  useEffect(() => {
+    track("configurateur_vu");
+  }, []);
+
   // Pré-sélection depuis la section "Nos Formules & Tarifs" (bouton d'un pack).
   // Pré-remplissage de la date depuis /disponibilites (?date=YYYY-MM-DD).
   useEffect(() => {
@@ -164,6 +171,7 @@ export function QuoteBookingForm({
         setFormulaId(match.id);
       }
       setRecapVisible(false); // une sélection vient d'être faite → mini récap immédiat
+      track("pack_selectionne", { pack: packName }); // 2) pack choisi (étape clé du tunnel)
       setPack({
         name: packName,
         priceCents: detail?.priceCents ?? match?.price_cents ?? 0,
@@ -448,6 +456,7 @@ export function QuoteBookingForm({
   }
 
   function onSubmit(formData: FormData) {
+    track("devis_envoye"); // 3) soumission du devis (mesure la fin du tunnel)
     startTransition(async () => {
       const result = await submitQuoteAndBooking(formData);
       if (result && !result.ok) {

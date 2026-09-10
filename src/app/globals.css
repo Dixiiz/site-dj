@@ -9,7 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-inter);
-  --font-heading: var(--font-poppins);
+  --font-heading: var(--font-fjalla);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -29,6 +29,7 @@
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -84,6 +85,7 @@
   --sidebar-border: oklch(0.24 0.04 265 / 12%);
   --sidebar-ring: oklch(0.62 0.14 232);
   --highlight: oklch(0.55 0.16 254);
+  --accent-2: oklch(0.6 0.22 350);
 }
 
 .dark {
@@ -119,6 +121,8 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.754 0.139 232.7);
   --highlight: oklch(0.714 0.143 254.6);
+  /* Magenta "lumière de soirée" : seconde couleur d'accent, à utiliser avec parcimonie */
+  --accent-2: oklch(0.72 0.19 350);
 }
 
 @layer base {
@@ -127,7 +131,7 @@
   }
   h1,
   h2 {
-    font-family: var(--font-fjalla), var(--font-poppins), sans-serif;
+    font-family: var(--font-heading), sans-serif;
     font-weight: 400;
     letter-spacing: 0.01em;
   }
@@ -140,6 +144,31 @@
 }
 
 @layer utilities {
+  /* Police display (logo, titres forts) — remplace les font-family en dur */
+  .font-display {
+    font-family: var(--font-heading), sans-serif;
+  }
+  /* Bouton principal : un seul style sur tout le site */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium text-primary-foreground shadow-lg transition hover:brightness-110;
+  }
+  /* Bouton secondaire : contour discret, même géométrie */
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-border px-6 py-3 font-medium transition hover:border-accent hover:text-accent;
+  }
+  /* Bouton phare : dégradé néon bleu → magenta (identité "show lumière") */
+  .btn-gradient {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-8 py-3 font-medium text-white shadow-lg transition hover:brightness-110;
+    background-image: linear-gradient(100deg, var(--color-accent), var(--color-accent-2));
+    box-shadow: 0 8px 30px -8px var(--color-accent);
+  }
+  /* Texte en dégradé bleu néon → magenta (titres à mettre en scène) */
+  .text-gradient-neon {
+    background-image: linear-gradient(100deg, var(--color-accent), var(--color-accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
   .glow-hover {
     transition: transform 300ms ease, box-shadow 300ms ease, border-color 300ms ease;
   }

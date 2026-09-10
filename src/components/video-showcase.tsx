@@ -19,6 +19,25 @@ export function VideoShowcase({ videos, orientation = "landscape" }: VideoShowca
     Object.fromEntries(videos.map((v) => [v, true]))
   );
   const refs = useRef<Record<string, HTMLVideoElement | null>>({});
+  // Lazy : on ne charge les .mp4 que quand le carrousel entre dans le viewport
+  // (l'attribut poster sert d'aperçu entre-temps). Gain important sur mobile.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "400px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // 1 vidéo visible en mobile, 3 en desktop (mode carrousel)
   useEffect(() => {
@@ -77,6 +96,7 @@ export function VideoShowcase({ videos, orientation = "landscape" }: VideoShowca
 
   return (
     <div
+      ref={rootRef}
       className="touch-pan-y relative mt-10"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
@@ -107,11 +127,11 @@ export function VideoShowcase({ videos, orientation = "landscape" }: VideoShowca
                   ref={(el) => {
                     refs.current[src] = el;
                   }}
-                  src={src}
+                  src={inView ? src : undefined}
                   poster={src.replace(/\.mp4$/, ".jpg")}
                   muted={mutedStates[src]}
                   playsInline
-                  preload="metadata"
+                  preload="none"
                   className={videoClass}
                   onEnded={advance}
                 />
