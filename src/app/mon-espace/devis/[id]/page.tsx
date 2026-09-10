@@ -183,6 +183,7 @@ export default async function ClientQuotePage({
             acomptePaid={Boolean(quote.acompte_paid_at) || paiementOk}
             acompteDeclared={Boolean(quote.acompte_declared_at)}
             libelleVirement={`${quote.customer_name} — ${quote.event_date ?? ""}`}
+            notice={query.paiement}
           />
         </TabsContent>
         <TabsContent value="soiree" className="tab-anim min-w-0 flex-1 space-y-6">

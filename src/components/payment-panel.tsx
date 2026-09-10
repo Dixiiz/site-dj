@@ -73,6 +73,7 @@ export default function PaymentPanel({
   acomptePaid = false,
   acompteDeclared = false,
   libelleVirement,
+  notice,
 }: {
   quoteId: string;
   totalCents: number;
@@ -81,6 +82,7 @@ export default function PaymentPanel({
   acomptePaid?: boolean;
   acompteDeclared?: boolean;
   libelleVirement?: string;
+  notice?: string;
 }) {
   const [rows, setRows] = useState<ScheduleRow[]>(initial);
   // Sélection en cours (avant confirmation) : nombre d'échéances choisi.
@@ -163,6 +165,12 @@ export default function PaymentPanel({
     <section className="space-y-4">
       <div className="rounded-xl border border-border bg-muted/50 p-5">
         <h2 className="font-medium">Paiement</h2>
+        {notice === "ordre" ? (
+          <p className="mt-2 rounded-lg border border-orange-500/40 bg-orange-500/10 px-3 py-2 text-xs font-medium text-orange-600">
+            ⏳ Les échéances se règlent dans l&apos;ordre — réglez d&apos;abord la
+            précédente pour débloquer la suivante.
+          </p>
+        ) : null}
         <p className="mt-1 text-sm text-muted-foreground">
           Carte ou virement, en une fois ou étalé de 2 à 10 fois — tout se
           règle ici, à votre rythme.
@@ -358,8 +366,13 @@ export default function PaymentPanel({
               />
             </div>
             <ul className="divide-y divide-border rounded-lg border border-border bg-background">
-              {rows.map((r) => (
-                <li key={r.numero} className="flex items-center justify-between gap-3 p-3 text-sm">
+              {rows.map((r) => {
+                // Paiement dans l'ordre : seule la PREMIÈRE échéance non
+                // réglée est payable, les suivantes sont verrouillées.
+                const premiereAPayer = rows.find((x) => x.status === "a_payer");
+                const payable = r.status === "a_payer" && premiereAPayer?.numero === r.numero;
+                return (
+                <li key={r.numero} className={`flex items-center justify-between gap-3 p-3 text-sm ${r.status === "a_payer" && !payable ? "opacity-60" : ""}`}>
                   <div>
                     <span className="font-medium">
                       Échéance {r.numero}/{r.total}
@@ -379,12 +392,20 @@ export default function PaymentPanel({
                       <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
                         ✓ Payée
                       </span>
-                    ) : (
+                    ) : payable ? (
                       <EcheancePayLink href={`/paiement/${quoteId}/${r.numero}`} />
+                    ) : (
+                      <span
+                        className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground"
+                        title={`Payez d'abord l'échéance ${premiereAPayer?.numero ?? 1}`}
+                      >
+                        🔒 après l&apos;échéance {premiereAPayer?.numero ?? 1}
+                      </span>
                     )}
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ul>
             {dejaPaye === 0 ? (
               <button

@@ -30,6 +30,18 @@ export async function GET(
     .maybeSingle();
   if (!row) return new Response("Échéance introuvable.", { status: 404 });
 
+  // Paiement DANS L'ORDRE : toutes les échéances précédentes doivent être
+  // réglées avant celle-ci. Sinon redirection avec un message explicite.
+  const { data: toutes } = await supabase
+    .from("payment_schedule")
+    .select("numero, status")
+    .eq("quote_id", quoteId)
+    .lt("numero", row.numero)
+    .neq("status", "payee");
+  if ((toutes ?? []).length > 0) {
+    redirect(`${SITE_URL}/mon-espace/devis/${quoteId}?paiement=ordre#paiement`);
+  }
+
   if (row.status === "payee") {
     redirect(`${SITE_URL}/mon-espace/devis/${quoteId}?paiement=deja#paiement`);
   }
