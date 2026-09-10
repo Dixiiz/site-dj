@@ -31,7 +31,7 @@ export default async function AdminDashboard({
 
   // Tous les devis confirmés, triés par date d'événement.
   // (Requêtes en parallèle pour un chargement rapide du tableau de bord.)
-  const [confirmedRes, devisAttenteRes, devisRecentsRes, facturesRes] = await Promise.all([
+  const [confirmedRes, devisAttenteRes, devisRecentsRes, facturesRes, echeanciersRes] = await Promise.all([
     supabase
       .from("quotes")
       .select("id, customer_name, formula_name, total_cents, event_date, event_location, status, created_at, notes")
@@ -48,11 +48,32 @@ export default async function AdminDashboard({
       .order("created_at", { ascending: false })
       .limit(5),
     supabase.storage.from("client-files").list("admin/factures-libres", { limit: 100 }),
+    supabase
+      .from("payment_schedule")
+      .select("id, numero, total, amount_cents, due_date, status, quote_id, quotes(id, customer_name, formula_name)")
+      .eq("status", "a_payer")
+      .order("due_date", { ascending: true }),
   ]);
   const confirmed = confirmedRes.data;
   const devisAttente = devisAttenteRes.count ?? 0;
   const devisRecents = devisRecentsRes.data;
   const nbFactures = (facturesRes.data ?? []).filter((f) => f.name.endsWith(".pdf")).length;
+
+  // Échéanciers en cours : échéances impayées triées par date limite.
+  const echeancesEnCours = (echeanciersRes.data ?? []).map((row) => {
+    const q = (Array.isArray(row.quotes) ? row.quotes[0] : row.quotes) as
+      | { customer_name: string | null; formula_name: string | null }
+      | null;
+    return {
+      id: row.id,
+      quoteId: row.quote_id,
+      client: q?.customer_name ?? "Client",
+      numero: row.numero,
+      totalEcheances: row.total,
+      amountCents: row.amount_cents,
+      dueDate: row.due_date,
+    };
+  });
 
   const montant = (q: { total_cents: unknown }) => {
     const n = Number(q.total_cents ?? 0);
@@ -193,8 +214,9 @@ export default async function AdminDashboard({
       </div>
 
       {/* BLOC 2 : détails (cliquables → détail) */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
+          { vue: "echeanciers", label: "Échéances en cours", value: String(echeancesEnCours.length), hint: "échéance(s) impayée(s), triées par date limite" },
           { vue: "solde", label: "Soldes à valider", value: eur(soldeAValiderToutes), hint: `${aValiderToutes.length} soirée(s) terminée(s) — valider pour compter dans l'URSSAF` },
           { vue: "ca-avenir", label: "CA à venir (déjà signé)", value: eur(caAVenir), hint: `${upcoming.length} soirée(s) confirmée(s) restante(s)` },
           { vue: null, label: "Devis en attente", value: String(devisAttente ?? 0), hint: "à relancer ou traiter", href: "/admin/devis" },
@@ -217,6 +239,48 @@ export default async function AdminDashboard({
           );
         })}
       </div>
+
+      {/* DÉTAIL : échéanciers en cours (animé, fermable) */}
+      {vue === "echeanciers" ? (
+        <div className="animate-in fade-in slide-in-from-bottom-2 space-y-3 rounded-xl border border-border bg-card p-5 duration-300">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-medium">💳 Échéances en cours — dates limites à venir</h2>
+            <Link href="/admin" className="text-xs text-accent hover:underline">
+              ✕ Fermer
+            </Link>
+          </div>
+          {echeancesEnCours.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Aucune échéance impayée — tous les échéanciers sont à jour ✓
+            </p>
+          ) : (
+            <ul className="divide-y divide-border rounded-lg border border-border">
+              {echeancesEnCours.map((e) => (
+                <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+                  <div className="min-w-0">
+                    <Link
+                      href={`/admin/devis?focus=${e.quoteId}`}
+                      className="font-medium transition-colors hover:text-accent hover:underline"
+                      title="Ouvrir ce devis dans la liste"
+                    >
+                      {e.client}
+                    </Link>
+                    <p className="text-xs text-muted-foreground">
+                      Échéance {e.numero}/{e.totalEcheances} — avant le{" "}
+                      {new Date(`${e.dueDate}T12:00:00`).toLocaleDateString("fr-FR", {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </p>
+                  </div>
+                  <span className="font-medium">{eur(e.amountCents)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : null}
 
       {/* DÉTAIL : soirées composant le chiffre cliqué (animé, fermable) */}
       {vue && detailVue ? (
@@ -246,7 +310,13 @@ export default async function AdminDashboard({
               {prochaines.map((quote) => (
                 <li key={quote.id} className="flex items-center justify-between gap-3 py-2.5">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{quote.customer_name}</p>
+                    <Link
+                      href={`/admin/devis?focus=${quote.id}`}
+                      className="block truncate text-sm font-medium transition-colors hover:text-accent hover:underline"
+                      title="Ouvrir ce devis"
+                    >
+                      {quote.customer_name}
+                    </Link>
                     <p className="truncate text-xs text-muted-foreground">
                       {quote.formula_name}
                       {quote.event_location ? ` · ${quote.event_location}` : ""}
@@ -287,7 +357,13 @@ export default async function AdminDashboard({
               {(devisRecents ?? []).map((quote) => (
                 <li key={quote.id} className="flex items-center justify-between gap-3 py-2.5">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{quote.customer_name}</p>
+                    <Link
+                      href={`/admin/devis?focus=${quote.id}`}
+                      className="block truncate text-sm font-medium transition-colors hover:text-accent hover:underline"
+                      title="Ouvrir ce devis"
+                    >
+                      {quote.customer_name}
+                    </Link>
                     <p className="truncate text-xs text-muted-foreground">{quote.formula_name}</p>
                   </div>
                   <span className="shrink-0 rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent">

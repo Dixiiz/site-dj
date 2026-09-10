@@ -66,13 +66,29 @@ export default async function DevisPage({
   // e-mails planifiés (relance J+10, avis post-soirée) à l'ouverture de l'admin.
   sendScheduledEmails().catch((e) => console.error("[email-jobs]", e));
 
-  const { q, tri } = await searchParams as { q?: string; tri?: string };
+  const { q, tri, focus } = await searchParams as { q?: string; tri?: string; focus?: string };
   const query = (q ?? "").trim().toLowerCase();
   const supabase = createAdminClient();
   const { data: quotes } = await supabase
     .from("quotes")
     .select("*")
     .order("created_at", { ascending: false });
+
+  // Échéanciers de paiement (barre de progression dans le détail de chaque devis).
+  const schedulesByQuote = new Map<string, { numero: number; total: number; amount_cents: number; due_date: string; status: string }[]>();
+  try {
+    const { data: schedules } = await supabase
+      .from("payment_schedule")
+      .select("quote_id, numero, total, amount_cents, due_date, status")
+      .order("numero", { ascending: true });
+    for (const row of schedules ?? []) {
+      const list = schedulesByQuote.get(row.quote_id) ?? [];
+      list.push({ numero: row.numero, total: row.total, amount_cents: row.amount_cents, due_date: row.due_date, status: row.status });
+      schedulesByQuote.set(row.quote_id, list);
+    }
+  } catch {
+    // Migration échéancier pas encore exécutée : silencieux.
+  }
 
   // Messages regroupés par devis (conversation initiale ; ensuite rafraîchie en direct).
   const { data: allMessages } = await supabase
@@ -186,7 +202,10 @@ export default async function DevisPage({
             return (
               <details
                 key={quote.id}
-                className="rounded-xl border border-border bg-card transition-colors hover:border-accent/50 open:border-accent/70"
+                open={quote.id === focus || undefined}
+                className={`rounded-xl border bg-card transition-colors hover:border-accent/50 open:border-accent/70 ${
+                  quote.id === focus ? "border-accent shadow-[0_0_24px_-8px_var(--accent)]" : "border-border"
+                }`}
               >
                 <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-2 p-4 [&::-webkit-details-marker]:hidden">
                   <div className="min-w-32">
@@ -346,7 +365,11 @@ export default async function DevisPage({
                     </div>
                   </div>
                 ) : null}
-                <AdminQuoteDetails quote={quote} options={options} />
+                <AdminQuoteDetails
+                  quote={quote}
+                  options={options}
+                  schedule={schedulesByQuote.get(quote.id)}
+                />
                 <AdminRdvRequests quoteId={quote.id} />
                 {/* Dossier complet : conversation, musiques et fichiers du client */}
                 <div className="space-y-6 border-t border-border px-4 pb-5 pt-4">

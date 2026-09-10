@@ -49,15 +49,79 @@ function parseNotes(notes: string | null) {
 export function AdminQuoteDetails({
   quote,
   options,
+  schedule,
 }: {
   quote: Quote;
   options: SelectedOption[];
+  schedule?: { numero: number; total: number; amount_cents: number; due_date: string; status: string }[];
 }) {
   const extras = (quote.extra_fee_cents ?? 0) + (quote.travel_fee_cents ?? 0);
   const parsed = parseNotes(quote.notes);
+  const payees = (schedule ?? []).filter((s) => s.status === "payee").length;
+  const totalSchedule = (schedule ?? []).length;
 
   return (
     <div className="space-y-4 border-t border-border px-4 pb-4 pt-4 text-sm">
+      {schedule && schedule.length > 0 ? (
+        <div className="space-y-1.5">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Échéancier de paiement
+          </h3>
+          <div className="flex items-center justify-between text-xs">
+            <span>
+              {payees}/{totalSchedule} échéance(s) réglée(s)
+            </span>
+            <span className="text-muted-foreground">
+              {(
+                schedule.filter((s) => s.status === "payee").reduce((sum, s) => sum + s.amount_cents, 0) / 100
+              )
+                .toFixed(2)
+                .replace(".", ",")}{" "}
+              € /{" "}
+              {(
+                schedule.reduce((sum, s) => sum + s.amount_cents, 0) / 100
+              )
+                .toFixed(2)
+                .replace(".", ",")}{" "}
+              €
+            </span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-border">
+            <div
+              className="h-full rounded-full bg-accent transition-all"
+              style={{ width: `${totalSchedule ? (payees / totalSchedule) * 100 : 0}%` }}
+            />
+          </div>
+          <ul className="divide-y divide-border rounded-lg border border-border">
+            {schedule.map((s) => (
+              <li key={s.numero} className="flex items-center justify-between gap-3 px-3 py-2 text-xs">
+                <span>
+                  <span className="font-medium">Échéance {s.numero}/{s.total}</span>
+                  <span className="ml-2 text-muted-foreground">
+                    avant le{" "}
+                    {new Date(`${s.due_date}T12:00:00`).toLocaleDateString("fr-FR")}
+                  </span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="font-medium">
+                    {(s.amount_cents / 100).toFixed(2).replace(".", ",")} €
+                  </span>
+                  {s.status === "payee" ? (
+                    <span className="rounded-full bg-green-500/15 px-2 py-0.5 font-medium text-green-600">
+                      ✓ Payée
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-orange-500/15 px-2 py-0.5 font-medium text-orange-500">
+                      À payer
+                    </span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       <div className="space-y-1.5">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Client

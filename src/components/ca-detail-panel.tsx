@@ -4,6 +4,7 @@ import { useEffect, useRef, useTransition } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { deleteQuote } from "@/app/actions";
+import Link from "next/link";
 import { ManagedQuoteRow } from "./managed-quote-row";
 import { ValidateSoldeButton } from "./validate-solde-button";
 import { formatEuros } from "@/lib/money";
@@ -122,12 +123,16 @@ export function CaDetailPanel({
             return (
               <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">
-                    {row.customerName}{" "}
-                    {solde && soldeValide(row.notes) ? (
-                      <span className="text-xs font-normal text-green-400">✓ solde validé</span>
-                    ) : null}
-                  </p>
+                  <Link
+                    href={`/admin/devis?focus=${row.id}`}
+                    className="block truncate text-sm font-medium transition-colors hover:text-accent hover:underline"
+                    title="Ouvrir ce devis dans la liste"
+                  >
+                    {row.customerName}
+                  </Link>
+                  {solde && soldeValide(row.notes) ? (
+                    <span className="text-xs font-normal text-green-400">✓ solde validé</span>
+                  ) : null}
                   <p className="truncate text-xs text-muted-foreground">
                     {row.formulaName}
                     {row.eventLocation ? ` · ${row.eventLocation}` : ""}
