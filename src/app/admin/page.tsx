@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEuros } from "@/lib/money";
 import Link from "next/link";
 import { CaDetailPanel } from "@/components/ca-detail-panel";
+import { ValidateEcheanceButton } from "@/components/validate-echeance-button";
 
 export const dynamic = "force-dynamic";
 
@@ -50,8 +51,7 @@ export default async function AdminDashboard({
     supabase.storage.from("client-files").list("admin/factures-libres", { limit: 100 }),
     supabase
       .from("payment_schedule")
-      .select("id, numero, total, amount_cents, due_date, status, quote_id, quotes(id, customer_name, formula_name)")
-      .eq("status", "a_payer")
+      .select("id, numero, total, amount_cents, due_date, status, valide_urssaf, paid_at, quote_id, quotes(id, customer_name, formula_name)")
       .order("due_date", { ascending: true }),
   ]);
   const confirmed = confirmedRes.data;
@@ -59,7 +59,7 @@ export default async function AdminDashboard({
   const devisRecents = devisRecentsRes.data;
   const nbFactures = (facturesRes.data ?? []).filter((f) => f.name.endsWith(".pdf")).length;
 
-  // Échéanciers en cours : échéances impayées triées par date limite.
+  // Échéanciers : toutes les échéances, avec les infos client.
   const echeancesEnCours = (echeanciersRes.data ?? []).map((row) => {
     const q = (Array.isArray(row.quotes) ? row.quotes[0] : row.quotes) as
       | { customer_name: string | null; formula_name: string | null }
@@ -72,8 +72,24 @@ export default async function AdminDashboard({
       totalEcheances: row.total,
       amountCents: row.amount_cents,
       dueDate: row.due_date,
+      status: row.status,
+      valideUrssaf: Boolean(row.valide_urssaf),
+      paidAt: row.paid_at,
     };
   });
+  // Carte "Échéances en cours" : impayées du MOIS ACTUEL seulement (ce que
+  // tu es censé recevoir ce mois-ci).
+  const echeancesDuMois = echeancesEnCours.filter((e) => e.dueDate.startsWith(monthPrefix));
+  // Reçues mais pas encore confirmées URSSAF (toutes périodes).
+  const echeancesAConfirmer = echeancesEnCours.filter((e) => e.status === "payee" && !e.valideUrssaf);
+  // Confirmées URSSAF (attribuées au mois de la date limite de l'échéance).
+  const echeancesValidees = echeancesEnCours.filter((e) => e.status === "payee" && e.valideUrssaf);
+  const urssafEcheances = echeancesValidees
+    .filter((e) => e.dueDate.startsWith(monthPrefix))
+    .reduce((sum, e) => sum + e.amountCents, 0);
+  // Devis avec échéancier : leur argent est suivi échéance par échéance
+  // (ils sont exclus du calcul de solde par devis pour éviter les doubles comptes).
+  const echeancierQuoteIds = new Set(echeancesEnCours.map((e) => e.quoteId));
 
   const montant = (q: { total_cents: unknown }) => {
     const n = Number(q.total_cents ?? 0);
@@ -113,16 +129,26 @@ export default async function AdminDashboard({
     (q) => (q.event_date ?? "").startsWith(monthPrefix) && (q.event_date ?? "") <= todayIso
   );
   const encaisse = ceMoisJouees.filter((q) => soldeValide(q));
-  const caMois = encaisse.reduce((sum, q) => sum + montant(q), 0);
+  const caMoisQuotes = encaisse.reduce((sum, q) => sum + montant(q), 0);
   const attenteValidation = ceMoisJouees.filter((q) => !soldeValide(q));
+  // Le CA URSSAF du mois inclut aussi les échéances d'échéancier confirmées
+  // (attribuées au mois de leur date limite).
+  const caMois = caMoisQuotes + urssafEcheances;
 
   // CA à venir : confirmé, pas encore joué.
   const caAVenir = upcoming.reduce((sum, q) => sum + montant(q), 0);
 
   // Soirées terminées (toutes périodes) dont le solde reste à valider :
   // visible dans le détail de la carte, pour ne rien oublier.
+  // Les devis avec échéancier en sont exclus : leur argent est suivi
+  // échéance par échéance (voir « Soldes à valider » / échéanciers).
   const aValiderToutes = allConfirmed
-    .filter((q) => (q.event_date ?? "") <= todayIso && !soldeValide(q));
+    .filter(
+      (q) =>
+        (q.event_date ?? "") <= todayIso &&
+        !soldeValide(q) &&
+        !echeancierQuoteIds.has(q.id)
+    );
   const soldeAValiderToutes = aValiderToutes.reduce((sum, q) => sum + soldeDe(q), 0);
 
   const prochaines = upcoming.slice(0, 5);
@@ -206,6 +232,9 @@ export default async function AdminDashboard({
           <p className="mt-2 text-4xl font-semibold">{eur(caMois)}</p>
           <p className="mt-2 text-sm text-muted-foreground">
             {encaisse.length} soirée(s) validée(s) ·{" "}
+            {urssafEcheances > 0
+              ? `${echeancesValidees.filter((e) => e.dueDate.startsWith(monthPrefix)).length} échéance(s) d'échéancier · `
+              : ""}
             {attenteValidation.length > 0
               ? `${attenteValidation.length} solde(s) en attente de validation`
               : "tout est validé ✓"}
@@ -216,8 +245,8 @@ export default async function AdminDashboard({
       {/* BLOC 2 : détails (cliquables → détail) */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { vue: "echeanciers", label: "Échéances en cours", value: String(echeancesEnCours.length), hint: "échéance(s) impayée(s), triées par date limite" },
-          { vue: "solde", label: "Soldes à valider", value: eur(soldeAValiderToutes), hint: `${aValiderToutes.length} soirée(s) terminée(s) — valider pour compter dans l'URSSAF` },
+          { vue: "echeanciers", label: "Échéances en cours", value: String(echeancesDuMois.length), hint: "échéance(s) à recevoir ce mois-ci — clic pour le détail" },
+          { vue: "solde", label: "Soldes à valider", value: eur(soldeAValiderToutes + echeancesAConfirmer.reduce((s, e) => s + e.amountCents, 0)), hint: `${aValiderToutes.length} solde(s) + ${echeancesAConfirmer.length} échéance(s) reçue(s) — valider pour compter dans l'URSSAF` },
           { vue: "ca-avenir", label: "CA à venir (déjà signé)", value: eur(caAVenir), hint: `${upcoming.length} soirée(s) confirmée(s) restante(s)` },
           { vue: null, label: "Devis en attente", value: String(devisAttente ?? 0), hint: "à relancer ou traiter", href: "/admin/devis" },
         ].map((card) => {
@@ -244,18 +273,18 @@ export default async function AdminDashboard({
       {vue === "echeanciers" ? (
         <div className="animate-in fade-in slide-in-from-bottom-2 space-y-3 rounded-xl border border-border bg-card p-5 duration-300">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="font-medium">💳 Échéances en cours — dates limites à venir</h2>
+            <h2 className="font-medium">💳 Échéances en cours — à recevoir ce mois-ci</h2>
             <Link href="/admin" className="text-xs text-accent hover:underline">
               ✕ Fermer
             </Link>
           </div>
-          {echeancesEnCours.length === 0 ? (
+          {echeancesDuMois.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Aucune échéance impayée — tous les échéanciers sont à jour ✓
+              Aucune échéance impayée ce mois-ci ✓
             </p>
           ) : (
             <ul className="divide-y divide-border rounded-lg border border-border">
-              {echeancesEnCours.map((e) => (
+              {echeancesDuMois.map((e) => (
                 <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
                   <div className="min-w-0">
                     <Link
@@ -275,6 +304,49 @@ export default async function AdminDashboard({
                     </p>
                   </div>
                   <span className="font-medium">{eur(e.amountCents)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : null}
+
+      {/* DÉTAIL : soldes + échéances reçues à confirmer (animé, fermable) */}
+      {vue === "solde" ? (
+        <div className="animate-in fade-in slide-in-from-bottom-2 space-y-3 rounded-xl border border-border bg-card p-5 duration-300">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-medium">🧾 Échéanciers — paiements reçus à confirmer</h2>
+            <Link href="/admin" className="text-xs text-accent hover:underline">
+              ✕ Fermer
+            </Link>
+          </div>
+          {echeancesAConfirmer.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Aucun paiement d&apos;échéancier en attente de confirmation ✓
+            </p>
+          ) : (
+            <ul className="divide-y divide-border rounded-lg border border-border">
+              {echeancesAConfirmer.map((e) => (
+                <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+                  <div className="min-w-0">
+                    <Link
+                      href={`/admin/devis?focus=${e.quoteId}`}
+                      className="font-medium transition-colors hover:text-accent hover:underline"
+                      title="Ouvrir ce devis dans la liste"
+                    >
+                      {e.client}
+                    </Link>
+                    <p className="text-xs text-muted-foreground">
+                      Échéance {e.numero}/{e.totalEcheances} — reçue le{" "}
+                      {e.paidAt
+                        ? new Date(e.paidAt).toLocaleDateString("fr-FR")
+                        : new Date(`${e.dueDate}T12:00:00`).toLocaleDateString("fr-FR")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-medium">{eur(e.amountCents)}</span>
+                    <ValidateEcheanceButton id={e.id} />
+                  </div>
                 </li>
               ))}
             </ul>

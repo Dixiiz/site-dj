@@ -1157,3 +1157,34 @@ export async function importPastQuote(formData: FormData) {
   revalidatePath("/admin");
   return { ok: true as const, message: `Soirée « ${formula_name} » du ${event_date} ajoutée ✓` };
 }
+
+// Confirme (ou annule) une échéance d'échéancier pour le CA URSSAF du mois
+// de sa date limite. Marque valide_urssaf sur la ligne payment_schedule.
+export async function validerEcheanceUrssaf(formData: FormData) {
+  if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
+  const id = String(formData.get("id") ?? "").trim();
+  const annuler = String(formData.get("annuler") ?? "") === "1";
+  if (!id) return { ok: false as const, error: "Échéance introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: echeance } = await supabase
+    .from("payment_schedule")
+    .select("id, status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!echeance) return { ok: false as const, error: "Échéance introuvable." };
+  if (echeance.status !== "payee") {
+    return { ok: false as const, error: "Cette échéance n'est pas encore réglée." };
+  }
+
+  const { error } = await supabase
+    .from("payment_schedule")
+    .update({ valide_urssaf: !annuler })
+    .eq("id", id);
+  if (error) return { ok: false as const, error: "Enregistrement impossible." };
+  revalidatePath("/admin");
+  return {
+    ok: true as const,
+    message: annuler ? "Échéance retirée du CA URSSAF." : "Échéance comptée dans le CA URSSAF ✓",
+  };
+}
