@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   getMyQuote,
   getPlaylistTracks,
@@ -53,7 +53,14 @@ export default async function ClientQuotePage({
   }
 
   const quote = await getMyQuote(id);
-  if (!quote) notFound();
+  if (!quote) {
+    // Non connecté ou devis inaccessible : renvoyer vers la connexion au lieu
+    // d'une 404 brute (les mails pointent vers cette page).
+    const { getClientUser } = await import("@/app/client-actions");
+    const user = await getClientUser();
+    if (!user) redirect(`/connexion?next=${encodeURIComponent(`/mon-espace/devis/${id}#documents`)}`);
+    notFound();
+  }
 
   const [messages, tracks, files] = await Promise.all([
     getQuoteMessages(id),
