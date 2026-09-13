@@ -1349,7 +1349,7 @@ export async function sendInvoiceDocument(formData: FormData) {
   const supabase = createAdminClient();
   const { data: file } = await supabase
     .from("quote_files")
-    .select("id, name, from_admin")
+    .select("id, name, from_admin, storage_path")
     .eq("id", fileId)
     .eq("quote_id", quoteId)
     .single();
@@ -1362,9 +1362,24 @@ export async function sendInvoiceDocument(formData: FormData) {
     .single();
   if (!quote?.customer_email) return { ok: false as const, error: "Client sans e-mail." };
 
+  // Lien de téléchargement signé (30 jours) : le client peut ouvrir et
+  // enregistrer la facture directement depuis le mail, sans compte.
+  let downloadUrl: string | undefined;
+  if (file.storage_path) {
+    const { data: signed } = await supabase.storage
+      .from("client-files")
+      .createSignedUrl(file.storage_path, 60 * 60 * 24 * 30);
+    downloadUrl = signed?.signedUrl;
+  }
+
   // L'e-mail part en tâche de fond (après la réponse) : le bouton répond
   // immédiatement au lieu de mouliner pendant l'envoi via Resend.
-  after(() => notifyClientDocuments(quoteId, [file.name]));
+  after(() =>
+    notifyClientDocuments(quoteId, [file.name], {
+      downloadUrl,
+      downloadFileName: file.name,
+    })
+  );
 
   return {
     ok: true as const,
@@ -1489,7 +1504,7 @@ export async function declareAcompteSent(formData: FormData) {
 async function notifyClientDocuments(
   quoteId: string,
   docNames: string[],
-  opts: { aSigner?: boolean } = {}
+  opts: { aSigner?: boolean; downloadUrl?: string; downloadFileName?: string } = {}
 ) {
   if (docNames.length === 0) return;
   try {
@@ -1523,13 +1538,23 @@ async function notifyClientDocuments(
         : [
             {
               title: "Rappel",
-              lines: ["Vous pouvez les consulter et les télécharger à tout moment depuis votre espace."],
+              lines: [
+                "Vous pouvez les consulter et les télécharger à tout moment depuis votre espace.",
+                opts.downloadUrl
+                  ? `Pour retrouver tous vos documents : <a href="${SITE_URL}/connexion" style="color:#21619A;">votre espace client</a>.`
+                  : "",
+              ].filter(Boolean),
             },
           ],
-      button: {
-        label: opts.aSigner ? "Signer maintenant" : "Voir les documents",
-        href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}#documents`)}`,
-      },
+      button: opts.downloadUrl
+        ? {
+            label: `Télécharger ${opts.downloadFileName ?? "le document"}`,
+            href: opts.downloadUrl,
+          }
+        : {
+            label: opts.aSigner ? "Signer maintenant" : "Voir les documents",
+            href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}#documents`)}`,
+          },
     };
     const resend = new Resend(apiKey);
     await resend.emails.send({
