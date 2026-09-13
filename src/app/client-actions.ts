@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -1354,13 +1355,21 @@ export async function sendInvoiceDocument(formData: FormData) {
     .single();
   if (!file?.from_admin) return { ok: false as const, error: "Facture introuvable." };
 
-  try {
-    await notifyClientDocuments(quoteId, [file.name]);
-    return { ok: true as const, message: `« ${file.name} » envoyée au client ✓` };
-  } catch (err) {
-    console.error("Envoi facture impossible", err);
-    return { ok: false as const, error: "Échec de l'envoi de l'e-mail." };
-  }
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("customer_email")
+    .eq("id", quoteId)
+    .single();
+  if (!quote?.customer_email) return { ok: false as const, error: "Client sans e-mail." };
+
+  // L'e-mail part en tâche de fond (après la réponse) : le bouton répond
+  // immédiatement au lieu de mouliner pendant l'envoi via Resend.
+  after(() => notifyClientDocuments(quoteId, [file.name]));
+
+  return {
+    ok: true as const,
+    message: `« ${file.name} » : envoi en cours vers ${quote.customer_email} ✓`,
+  };
 }
 
 // Le client supprime un devis encore au stade « nouveau » (erreur de saisie).
