@@ -168,14 +168,14 @@ const CATEGORIES: Category[] = [
       },
       {
         name: "Clé en main Standard",
-        price: 28000,
+        price: 25000,
         image: "/images/packs/cle.jpg",
         baseMinutes: 120,
         extraRateCents: 9000,
         defaultStart: "20:00",
         defaultEnd: "22:00",
         equipment: [
- "Minimum 2 h de mix (90 €/h) + installation 100 €",
+ "Minimum 2 h de mix (90 €/h) + installation 70 €",
  "Régie DJ + Sono Audiophony Modjo2000",
  "2 Lyres Beam + 2 Bars LED + 4 PAR LED",
  "Heure supplémentaire : 90 €/h",
@@ -183,7 +183,7 @@ const CATEGORIES: Category[] = [
       },
       {
         name: "Clé en main Premium",
-        price: 47000,
+        price: 34000,
         highlight: "show",
         image: "/images/packs/jeannebastien-1328.jpg",
         baseMinutes: 180,
@@ -191,8 +191,8 @@ const CATEGORIES: Category[] = [
         defaultStart: "20:00",
         defaultEnd: "23:00",
         equipment: [
- "Minimum 3 h de mix (90 €/h) + installation 100 €",
- "Matériel renforcé : +100 € par rapport au Standard (lyres et PAR en plus, 2 machines à fumée)",
+ "Minimum 3 h de mix (90 €/h) + installation 70 €",
+ "Matériel renforcé : +90 € par rapport au Standard (lyres et PAR en plus, 2 machines à fumée)",
  "Régie DJ + Sono Audiophony Modjo2000",
  "4 Lyres Beam + 2 Bars LED + 8 PAR LED",
  "2 Machines à fumée",
