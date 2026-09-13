@@ -98,7 +98,7 @@ export function CaDetailPanel({
       initial={{ opacity: 0, y: 18, scale: 0.985 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="rounded-xl border border-accent/40 bg-accent/5 p-5 shadow-lg"
+      className="rounded-xl border border-accent/40 bg-accent/5 p-4 shadow-lg sm:p-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-medium">{titre}</h2>

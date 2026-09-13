@@ -14,13 +14,13 @@ export function DevisFilterBar({ q, tri }: { q?: string; tri?: string }) {
         name="q"
         defaultValue={q ?? ""}
         placeholder="Rechercher : nom, e-mail, téléphone, lieu, date…"
-        className="w-full max-w-md rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+        className="w-full max-w-md flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
       />
       <select
         name="tri"
         defaultValue={tri ?? "date_proche"}
         onChange={() => formRef.current?.requestSubmit()}
-        className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent sm:w-auto"
       >
         <option value="date_proche">Événement : date la plus proche</option>
         <option value="date_loin">Événement : date la plus lointaine</option>
@@ -33,7 +33,7 @@ export function DevisFilterBar({ q, tri }: { q?: string; tri?: string }) {
       </select>
       <button
         type="submit"
-        className="rounded-lg border border-accent/60 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/10"
+        className="w-full rounded-lg border border-accent/60 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/10 sm:w-auto"
       >
         Filtrer
       </button>

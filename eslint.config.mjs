@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Scripts locaux (exemples PDF, seed) — jamais bundle dans l'app.
+    "scripts/**",
   ]),
 ]);
 
