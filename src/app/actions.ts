@@ -998,9 +998,11 @@ export async function updateManagedQuote(formData: FormData) {
     .select("id, notes")
     .eq("id", id)
     .maybeSingle();
-  if (!quote || !isManagedQuote(quote.notes)) {
-    return { ok: false as const, error: "Cette soirée n'est pas modifiable (devis client du site)." };
+  if (!quote) {
+    return { ok: false as const, error: "Soirée introuvable." };
   }
+  // Modifiable par l'admin pour toute soirée (site, import ou facture libre) :
+  // utile pour ajuster le solde d'un vrai devis (heures sup, options…).
 
   const event_date = str("event_date");
   const formula_name = str("formula_name");
