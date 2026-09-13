@@ -267,14 +267,18 @@ export function QuoteBookingForm({
   const isBarClub = pack
     ? /set dj|clé en main|bar|club|pro/i.test(pack.name)
     : false;
-  // Départ dès 14 h pour les mariages, 17 h pour le reste (20 h dernier départ).
+  // Départ dès 14 h pour les mariages, 18 h pour le reste. Pour les packs
+  // Bars/Clubs & Soirées Pro (Set DJ seul, clé en main), l'heure de début la
+  // plus tardive possible est 21 h 30.
   const startTimes = useMemo(() => {
     const first = isMariage ? 14 : 18;
-    return Array.from({ length: (20 - first) * 2 + 1 }, (_, i) => {
+    const last = isBarClub ? 21.5 : 20;
+    const count = Math.round((last - first) * 2) + 1;
+    return Array.from({ length: count }, (_, i) => {
       const minutes = first * 60 + i * 30;
       return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
     });
-  }, [isMariage]);
+  }, [isMariage, isBarClub]);
 
   const startMinutes = toMinutes(startTime);
   const endMinutes = endTime ? toMinutes(endTime) : null;
