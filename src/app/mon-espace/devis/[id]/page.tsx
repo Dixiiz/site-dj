@@ -54,11 +54,60 @@ export default async function ClientQuotePage({
 
   const quote = await getMyQuote(id);
   if (!quote) {
-    // Non connecté ou devis inaccessible : renvoyer vers la connexion au lieu
-    // d'une 404 brute (les mails pointent vers cette page).
+    // Non connecté : le devis reste privé (messages, playlist…), mais on
+    // affiche quand même les factures en téléchargement direct (les mails
+    // pointent vers cette page et certains clients n'ont pas de compte).
+    // L'UUID du devis fait office de clé d'accès imprévisible.
     const { getClientUser } = await import("@/app/client-actions");
     const user = await getClientUser();
-    if (!user) redirect(`/connexion?next=${encodeURIComponent(`/mon-espace/devis/${id}#documents`)}`);
+    if (!user) {
+      const supabase = createAdminClient();
+      const { data: factures } = await supabase
+        .from("quote_files")
+        .select("name, storage_path")
+        .eq("quote_id", id)
+        .eq("from_admin", true)
+        .like("name", "Facture %.pdf")
+        .order("created_at", { ascending: false });
+      const links: { name: string; url: string }[] = [];
+      for (const f of factures ?? []) {
+        const { data: signed } = await supabase.storage
+          .from("client-files")
+          .createSignedUrl(f.storage_path, 60 * 60 * 24 * 30);
+        if (signed?.signedUrl) links.push({ name: f.name, url: signed.signedUrl });
+      }
+
+      return (
+        <main className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center gap-6 px-6 text-center">
+          <h1 className="text-2xl font-medium">Vos documents</h1>
+          {links.length > 0 ? (
+            <div className="w-full space-y-3">
+              {links.map((l) => (
+                <a
+                  key={l.url}
+                  href={l.url}
+                  target="_blank"
+                  rel="noopener"
+                  className="block rounded-xl border border-accent/60 bg-card px-4 py-3 font-medium text-accent transition-colors hover:bg-accent/10"
+                >
+                  📄 {l.name}
+                </a>
+              ))}
+              <p className="text-xs text-muted-foreground">
+                Cliquez pour ouvrir et télécharger (lien valable 30 jours).
+              </p>
+            </div>
+          ) : (
+            <p className="text-muted-foreground">
+              Aucune facture disponible pour le moment.
+            </p>
+          )}
+          <a href={`/connexion?next=${encodeURIComponent(`/mon-espace/devis/${id}#documents`)}`} className="text-sm text-muted-foreground underline hover:text-foreground">
+            Accéder à mon espace client
+          </a>
+        </main>
+      );
+    }
     notFound();
   }
 
