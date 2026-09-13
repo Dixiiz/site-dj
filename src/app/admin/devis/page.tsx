@@ -11,6 +11,7 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { AdminQuotePlaylist, eventMoments } from "@/components/admin-quote-playlist";
 import { AdminRdvRequests } from "@/components/rdv-call";
 import { updateQuoteStatus } from "@/app/actions";
+import { DevisFilterBar } from "@/components/devis-filter-bar";
 
 import { Badge } from "@/components/ui/badge";
 import { formatEuros } from "@/lib/money";
@@ -106,11 +107,15 @@ export default async function DevisPage({
   const isPast = (quote: { event_date: string | null }) =>
     Boolean(quote.event_date && quote.event_date < todayIso);
 
+  // Par défaut, les soirées passées sont cachées (visibles via « archives » ou
+  // « tous ») — pour garder la liste de travail propre.
+  const showPast = tri === "passes" || tri === "tous";
+
   const filtered = (quotes ?? []).filter((quote) => {
-    // Les soirées passées restent accessibles : elles apparaissent aussi dans
-    // la liste par défaut (utile pour renvoyer une facture), et le tri
-    // « Passées (archives) » permet de ne voir qu'elles.
     if (tri === "passes" && !isPast(quote)) {
+      return false;
+    }
+    if (!showPast && isPast(quote)) {
       return false;
     }
     if (!query) return true;
@@ -156,42 +161,7 @@ export default async function DevisPage({
         </p>
       </div>
 
-      <form method="get" className="flex flex-wrap gap-2">
-        <input
-          type="search"
-          name="q"
-          defaultValue={q ?? ""}
-          placeholder="Rechercher : nom, e-mail, téléphone, lieu, date…"
-          className="w-full max-w-md rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
-        />
-        <select
-          name="tri"
-          defaultValue={tri ?? "date_proche"}
-          className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
-        >
-          <option value="date_proche">Événement : date la plus proche</option>
-          <option value="date_loin">Événement : date la plus lointaine</option>
-          <option value="recent">Devis : plus récent d&apos;abord</option>
-          <option value="ancien">Devis : plus ancien d&apos;abord</option>
-          <option value="cher">Prix : du plus cher au moins cher</option>
-          <option value="moins_cher">Prix : du moins cher au plus cher</option>
-          <option value="passes">🕰 Soirées passées (archives)</option>
-        </select>
-        <button
-          type="submit"
-          className="rounded-lg border border-accent/60 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/10"
-        >
-          Trier
-        </button>
-        {query ? (
-          <a
-            href="/admin/devis"
-            className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Réinitialiser
-          </a>
-        ) : null}
-      </form>
+      <DevisFilterBar q={q} tri={tri} />
 
       {filtered.length === 0 ? (
         <p className="text-muted-foreground">Aucun devis correspondant.</p>

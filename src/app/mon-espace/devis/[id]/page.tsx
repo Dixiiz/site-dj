@@ -1,4 +1,3 @@
-import { notFound, redirect } from "next/navigation";
 import {
   getMyQuote,
   getPlaylistTracks,
