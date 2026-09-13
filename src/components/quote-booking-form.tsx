@@ -289,7 +289,8 @@ export function QuoteBookingForm({
   const includedMinutes = pack?.baseMinutes ?? (isMariage ? 480 : 360);
 
   // Heures de fin proposées : au moins la durée minimale du pack sélectionné
-  // (2 h Set DJ, 3 h clé en main, 6 h anniversaire, 8 h mariage). Les fins après
+  // (2 h Set DJ et clé en main Standard, 3 h clé en main Premium,
+  // 6 h anniversaire, 8 h mariage). Les fins après
   // minuit sont ramenées après 20 h pour comparer avec le début.
   const allowedEndTimes = END_TIMES.filter((time) => {
     const m = toMinutes(time);

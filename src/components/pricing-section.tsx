@@ -168,14 +168,14 @@ const CATEGORIES: Category[] = [
       },
       {
         name: "Clé en main Standard",
-        price: 37000,
+        price: 28000,
         image: "/images/packs/cle.jpg",
-        baseMinutes: 180,
+        baseMinutes: 120,
         extraRateCents: 9000,
         defaultStart: "20:00",
-        defaultEnd: "23:00",
+        defaultEnd: "22:00",
         equipment: [
- "Minimum 3 h de mix (90 €/h) + installation 100 €",
+ "Minimum 2 h de mix (90 €/h) + installation 100 €",
  "Régie DJ + Sono Audiophony Modjo2000",
  "2 Lyres Beam + 2 Bars LED + 4 PAR LED",
  "Heure supplémentaire : 90 €/h",
