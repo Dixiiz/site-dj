@@ -9,6 +9,28 @@ import type { SelectedOption } from "@/lib/types";
 import { SITE_URL } from "@/lib/site-url";
 import { EMAIL_FROM, buildEmailHtml, buildEmailText } from "@/lib/emails";
 
+// ---------- Recherche du compte client (cache) ----------
+
+// listUsers({ perPage: 1000 }) rapatrie tous les comptes à chaque génération
+// de document : très lent. On met en cache email → user_id (10 min), ce qui
+// rend les générations suivantes quasi instantanées.
+const ownerUserCache = new Map<string, { id: string | null; at: number }>();
+const OWNER_CACHE_TTL = 10 * 60 * 1000;
+
+export async function findOwnerUserId(
+  supabase: ReturnType<typeof createAdminClient>,
+  email?: string | null
+): Promise<string | null> {
+  if (!email) return null;
+  const key = email.toLowerCase();
+  const cached = ownerUserCache.get(key);
+  if (cached && Date.now() - cached.at < OWNER_CACHE_TTL) return cached.id;
+  const { data } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const id = data?.users?.find((u) => u.email?.toLowerCase() === key)?.id ?? null;
+  ownerUserCache.set(key, { id, at: Date.now() });
+  return id;
+}
+
 // ---------- Session ----------
 
 async function getCurrentUser() {
@@ -410,15 +432,11 @@ export async function sendAdminMessage(formData: FormData) {
 
   // user_id du client s'il a un compte (sinon null : la conversation reste
   // rattachée au devis et le client la verra dès la création de son compte).
-  const customerEmail = quote.customer_email;
-  const { data: users } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  const ownerUser = users?.users?.find(
-    (u) => u.email?.toLowerCase() === customerEmail.toLowerCase()
-  );
+  const ownerUserId = await findOwnerUserId(supabase, quote.customer_email);
 
   await supabase.from("quote_messages").insert({
     quote_id: quoteId,
-    user_id: ownerUser?.id ?? null,
+    user_id: ownerUserId,
     sender: "admin",
     body,
   });
@@ -453,7 +471,7 @@ export async function sendAdminMessage(formData: FormData) {
         await resend.emails.send({
           from: EMAIL_FROM,
           replyTo: process.env.NOTIF_EMAIL,
-          to: customerEmail,
+          to: quote.customer_email,
           subject: "Un nouveau message vous attend — Propul'Sound DJ",
           html: buildEmailHtml(emailData),
           text: buildEmailText(emailData),
@@ -1063,11 +1081,8 @@ export async function generateDevisDocument(formData: FormData) {
       : conditions || undefined,
   });
 
-  // Propriétaire du devis (clé user_id).
-  const { data: owner } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  const ownerUser = owner?.users?.find(
-    (u) => u.email?.toLowerCase() === quote.customer_email?.toLowerCase()
-  );
+  // Propriétaire du devis (clé user_id) — cache mémoire.
+  const ownerUserId = await findOwnerUserId(supabase, quote.customer_email);
 
   const storagePath = `admin/${quoteId}/devis-${Date.now()}.pdf`;
   const { error: uploadError } = await supabase.storage
@@ -1079,7 +1094,7 @@ export async function generateDevisDocument(formData: FormData) {
 
   await supabase.from("quote_files").insert({
     quote_id: quoteId,
-    user_id: ownerUser?.id ?? null,
+    user_id: ownerUserId,
     name: `Devis ${contractNumber}.pdf`,
     storage_path: storagePath,
     mime_type: "application/pdf",
@@ -1155,11 +1170,8 @@ export async function generateContratDocument(formData: FormData) {
     return { ok: false as const, error: "Échec de la génération du contrat." };
   }
 
-  // Propriétaire du devis (clé user_id).
-  const { data: owner } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  const ownerUser = owner?.users?.find(
-    (u) => u.email?.toLowerCase() === quote.customer_email?.toLowerCase()
-  );
+  // Propriétaire du devis (clé user_id) — cache mémoire.
+  const ownerUserId = await findOwnerUserId(supabase, quote.customer_email);
 
   const storagePath = `admin/${quoteId}/contrat-${Date.now()}.pdf`;
   const { error: uploadError } = await supabase.storage
@@ -1171,7 +1183,7 @@ export async function generateContratDocument(formData: FormData) {
 
   await supabase.from("quote_files").insert({
     quote_id: quoteId,
-    user_id: ownerUser?.id ?? null,
+    user_id: ownerUserId,
     name: `Contrat ${contractNumber}.pdf`,
     storage_path: storagePath,
     mime_type: "application/pdf",
@@ -1263,22 +1275,29 @@ export async function generateFactureDocument(formData: FormData) {
     const invoiceNumber = `F-${year}-${String((factureCount ?? 0) + 1).padStart(3, "0")}`;
 
     const { buildFacturePdf } = await import("@/lib/facture-pdf");
-    let bytes: Uint8Array;
-    try {
-      const adjustments = Array.isArray(quote.invoice_adjustments)
-        ? (quote.invoice_adjustments as { label: string; amount_cents: number }[])
-        : [];
-      bytes = await buildFacturePdf(quote as never, { invoiceNumber, adjustments });
-    } catch (e) {
-      console.error("Génération facture impossible", e);
+    const adjustments = Array.isArray(quote.invoice_adjustments)
+      ? (quote.invoice_adjustments as { label: string; amount_cents: number }[])
+      : [];
+
+    // PDF et recherche du compte client en parallèle (gain de latence).
+    const [pdfResult, ownerUserId] = await Promise.all([
+      (async () => {
+        try {
+          return {
+            ok: true as const,
+            bytes: await buildFacturePdf(quote as never, { invoiceNumber, adjustments }),
+          };
+        } catch (e) {
+          console.error("Génération facture impossible", e);
+          return { ok: false as const, bytes: null };
+        }
+      })(),
+      findOwnerUserId(supabase, quote.customer_email),
+    ]);
+    if (!pdfResult.ok || !pdfResult.bytes) {
       return { ok: false as const, error: "Échec de la génération de la facture." };
     }
-
-    // Propriétaire du devis (clé user_id).
-    const { data: owner } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    const ownerUser = owner?.users?.find(
-      (u) => u.email?.toLowerCase() === quote.customer_email?.toLowerCase()
-    );
+    const bytes = pdfResult.bytes;
 
     const storagePath = `admin/${quoteId}/facture-${Date.now()}.pdf`;
     const { error: uploadError } = await supabase.storage
@@ -1291,7 +1310,7 @@ export async function generateFactureDocument(formData: FormData) {
 
     await supabase.from("quote_files").insert({
       quote_id: quoteId,
-      user_id: ownerUser?.id ?? null,
+      user_id: ownerUserId,
       name: `Facture ${invoiceNumber}.pdf`,
       storage_path: storagePath,
       mime_type: "application/pdf",
@@ -2042,20 +2061,17 @@ export async function uploadAdminDocument(formData: FormData) {
     return { ok: false as const, error: "Échec de l'envoi." };
   }
 
-  // Propriétaire du devis (pour la clé user_id).
+  // Propriétaire du devis (pour la clé user_id) — cache mémoire.
   const { data: quote } = await supabase
     .from("quotes")
     .select("customer_email, status")
     .eq("id", quoteId)
     .single();
-  const { data: owner } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  const ownerUser = owner?.users?.find(
-    (u) => u.email?.toLowerCase() === quote?.customer_email?.toLowerCase()
-  );
+  const ownerUserId = await findOwnerUserId(supabase, quote?.customer_email);
 
   await supabase.from("quote_files").insert({
     quote_id: quoteId,
-    user_id: ownerUser?.id ?? crypto.randomUUID(),
+    user_id: ownerUserId ?? crypto.randomUUID(),
     name: file.name,
     storage_path: storagePath,
     mime_type: file.type || null,
