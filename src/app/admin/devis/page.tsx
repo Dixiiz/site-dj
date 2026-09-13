@@ -102,14 +102,15 @@ export default async function DevisPage({
     initialMessagesByQuote.set(message.quote_id, list);
   }
 
+  const todayIso = new Date().toLocaleDateString("fr-CA");
+  const isPast = (quote: { event_date: string | null }) =>
+    Boolean(quote.event_date && quote.event_date < todayIso);
+
   const filtered = (quotes ?? []).filter((quote) => {
-    // Les soirées passées n'apparaissent plus par défaut : elles sont
-    // visibles uniquement via le tri « Passées (archives) ».
-    if (tri !== "passes") {
-      if (quote.event_date && quote.event_date < new Date().toLocaleDateString("fr-CA")) {
-        return false;
-      }
-    } else if (!quote.event_date || quote.event_date >= new Date().toLocaleDateString("fr-CA")) {
+    // Les soirées passées restent accessibles : elles apparaissent aussi dans
+    // la liste par défaut (utile pour renvoyer une facture), et le tri
+    // « Passées (archives) » permet de ne voir qu'elles.
+    if (tri === "passes" && !isPast(quote)) {
       return false;
     }
     if (!query) return true;
@@ -139,6 +140,9 @@ export default async function DevisPage({
       new Date(a.event_date ?? "0000-01-01").getTime(),
     cher: (a, b) => (b.total_cents ?? 0) - (a.total_cents ?? 0),
     moins_cher: (a, b) => (a.total_cents ?? 0) - (b.total_cents ?? 0),
+    passes: (a, b) =>
+      new Date(b.event_date ?? "0000-01-01").getTime() -
+      new Date(a.event_date ?? "0000-01-01").getTime(),
   };
   filtered.sort(sorters[tri ?? "date_proche"] ?? sorters.date_proche);
 
@@ -256,6 +260,11 @@ export default async function DevisPage({
                       <Badge variant="outline" className={status.className}>
                         {status.label}
                       </Badge>
+                      {isPast(quote) ? (
+                        <Badge variant="outline" className="mt-1 border-zinc-500/60 text-zinc-400">
+                          🕰 Passée
+                        </Badge>
+                      ) : null}
                     </div>
                   </div>
                   {/* Pastille nouveautés client (message, musique, modification) */}

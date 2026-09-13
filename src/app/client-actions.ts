@@ -1303,8 +1303,8 @@ export async function generateFactureDocument(formData: FormData) {
     revalidatePath("/admin/devis");
     revalidatePath(`/mon-espace/devis/${quoteId}`);
 
-    // Prévient le client que sa facture est disponible.
-    void notifyClientDocuments(quoteId, [`Facture ${invoiceNumber}`]);
+    // Pas d'e-mail automatique : l'admin décide d'envoyer la notification
+    // au client via le bouton « ✉ Envoyer au client » à côté de la facture.
 
     return { ok: true as const, message: `Facture ${invoiceNumber} générée ✓` };
   } catch (e) {
@@ -1313,6 +1313,34 @@ export async function generateFactureDocument(formData: FormData) {
       ok: false as const,
       error: e instanceof Error ? `Erreur : ${e.message}` : "Erreur inattendue.",
     };
+  }
+}
+
+// Envoie au client l'e-mail « document disponible » pour une facture déjà
+// générée (sur clic de l'admin — rien n'est envoyé automatiquement).
+export async function sendInvoiceDocument(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const fileId = String(formData.get("file_id") ?? "");
+  if (!quoteId || !fileId) return { ok: false as const, error: "Facture introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: file } = await supabase
+    .from("quote_files")
+    .select("id, name, from_admin")
+    .eq("id", fileId)
+    .eq("quote_id", quoteId)
+    .single();
+  if (!file?.from_admin) return { ok: false as const, error: "Facture introuvable." };
+
+  try {
+    await notifyClientDocuments(quoteId, [file.name]);
+    return { ok: true as const, message: `« ${file.name} » envoyée au client ✓` };
+  } catch (err) {
+    console.error("Envoi facture impossible", err);
+    return { ok: false as const, error: "Échec de l'envoi de l'e-mail." };
   }
 }
 

@@ -4,6 +4,7 @@ import {
   generateDevisDocument,
   generateDevisEtContratDocument,
   generateFactureDocument,
+  sendInvoiceDocument,
   uploadAdminDocument,
 } from "@/app/client-actions";
 import { buttonVariants } from "@/components/ui/button";
@@ -77,6 +78,25 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
       >
         ↓
       </a>
+      {/* Pour les factures : envoi manuel de l'e-mail au client (sur clic). */}
+      {file.name.startsWith("Facture ") && file.name.endsWith(".pdf") ? (
+        <form
+          action={async (formData: FormData) => {
+ "use server";
+            await sendInvoiceDocument(formData);
+          }}
+        >
+          <input type="hidden" name="quote_id" value={quoteId} />
+          <input type="hidden" name="file_id" value={file.id} />
+          <SubmitButton
+            pendingLabel="Envoi…"
+            confirm={`Envoyer « ${file.name} » au client par e-mail ?`}
+            className="rounded-lg border border-blue-500/40 px-2.5 py-1 text-xs text-blue-400 transition-colors hover:bg-blue-500/10"
+          >
+            ✉ Envoyer au client
+          </SubmitButton>
+        </form>
+      ) : null}
       <form action={deleteAdminDocument}>
         <input type="hidden" name="quote_id" value={quoteId} />
         <input type="hidden" name="file_id" value={file.id} />
