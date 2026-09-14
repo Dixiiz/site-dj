@@ -205,7 +205,7 @@ export default async function Home() {
               matériel professionnel pour illuminer et faire vibrer vos événements.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-              <Link href="/formules" className="btn-primary">
+              <Link href="/formules" className="btn-gradient">
                 Demander un devis
               </Link>
               <Link href="/disponibilites" className="btn-outline">
