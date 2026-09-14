@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PenLine } from "lucide-react";
 import { saveInvoiceAdjustments } from "@/app/client-actions";
 
 type Adj = { label: string; amount_cents: number };
@@ -46,8 +47,9 @@ export function InvoiceAdjustments({
 
   return (
     <div className="mt-3 rounded-lg border border-border p-3">
-      <p className="text-xs font-medium text-muted-foreground">
-        ✏️ Lignes personnalisées de la facture
+      <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <PenLine className="size-3.5" aria-hidden />
+        Lignes personnalisées de la facture
       </p>
       <p className="mt-1 text-[11px] text-muted-foreground/70">
         Montant positif = ajout, négatif = réduction (ex. −50 pour une remise de 50 €).

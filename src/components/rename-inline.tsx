@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Pencil } from "lucide-react";
 import { renameClientQuote } from "@/app/client-actions";
 
 // Renommage inline depuis la liste des devis.
@@ -66,7 +67,7 @@ export function RenameInline({
       }}
       className="rounded-md px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
     >
-      ✏️
+      <Pencil className="size-3.5" aria-hidden />
     </button>
   );
 }

@@ -3,6 +3,7 @@
 // survol (desktop) et en permanence, en tout petit, sur mobile.
 import type { Metadata } from "next";
 import Image from "next/image";
+import { Camera, MapPin } from "lucide-react";
 import {
   getCreditsBundle,
   getOrder,
@@ -135,13 +136,15 @@ export default async function GaleriePage() {
                 {photographer || lieu ? (
                   <div className="pointer-events-none absolute bottom-2 right-2 flex flex-col items-end gap-1 transition-all duration-300 sm:translate-y-1 sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100">
                     {photographer ? (
-                      <figcaption className="rounded-full bg-background/25 px-2.5 py-1 text-[11px] font-medium text-foreground/90">
-                        📷 {photographer}
+                      <figcaption className="flex items-center gap-1 rounded-full bg-background/25 px-2.5 py-1 text-[11px] font-medium text-foreground/90">
+                        <Camera className="size-3" aria-hidden />
+                        {photographer}
                       </figcaption>
                     ) : null}
                     {lieu ? (
-                      <figcaption className="rounded-full bg-background/25 px-2.5 py-1 text-[11px] font-medium text-foreground/90">
-                        📍 {lieu}
+                      <figcaption className="flex items-center gap-1 rounded-full bg-background/25 px-2.5 py-1 text-[11px] font-medium text-foreground/90">
+                        <MapPin className="size-3" aria-hidden />
+                        {lieu}
                       </figcaption>
                     ) : null}
                   </div>

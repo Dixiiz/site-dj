@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 
@@ -15,6 +16,7 @@ export function MediaCreditsManager({
   title,
   hint,
   placeholder,
+  icon,
   items,
   credits: initialCredits,
   saveAction,
@@ -22,6 +24,7 @@ export function MediaCreditsManager({
   title: string;
   hint: string;
   placeholder: string;
+  icon?: ReactNode;
   items: Item[];
   credits: Record<string, string[]>;
   saveAction: (formData: FormData) => Promise<{ ok: boolean; error?: string }>;
@@ -86,7 +89,10 @@ export function MediaCreditsManager({
 
   return (
     <div className="mt-4 rounded-xl border border-border bg-muted/40 p-4">
-      <h3 className="text-sm font-medium">{title}</h3>
+      <h3 className="flex items-center gap-1.5 text-sm font-medium">
+        {icon}
+        {title}
+      </h3>
       <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
 
       {/* Créer une entrée */}

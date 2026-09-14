@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { CaDetailPanel, type DetailRow } from "./ca-detail-panel";
 
@@ -15,6 +16,7 @@ type CardDef = {
   /** Libellé en accent (carte CA signé). */
   accentLabel?: boolean;
   href?: string;
+  icon?: LucideIcon;
 };
 
 type DetailData = {
@@ -78,10 +80,11 @@ export function DashboardDetail({
             className={heroClass(card)}
           >
             <p
-              className={`text-xs font-medium uppercase tracking-[0.15em] ${
+              className={`flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.15em] ${
                 card.accentLabel ? "text-accent" : "text-muted-foreground"
               }`}
             >
+              {card.icon ? <card.icon className="size-4" aria-hidden /> : null}
               {card.label}
             </p>
             <p className="mt-2 text-4xl font-semibold">{card.value}</p>

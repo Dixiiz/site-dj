@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { Camera, MapPin, PenLine } from "lucide-react";
 import { toast } from "sonner";
 
 type Item = { name: string; url: string };
@@ -95,7 +96,10 @@ export function PhotoCreditAssigner({
 
   return (
     <div className="mt-4 rounded-xl border border-border bg-muted/40 p-4">
-      <h3 className="text-sm font-medium">✏️ Attribution rapide par photo</h3>
+      <h3 className="flex items-center gap-1.5 text-sm font-medium">
+        <PenLine className="size-4 text-accent" aria-hidden />
+        Attribution rapide par photo
+      </h3>
       <p className="mt-1 text-xs text-muted-foreground">
         Cliquez sur une photo, puis choisissez (ou tapez) son photographe et
         son lieu. Les suggestions reprennent les valeurs déjà utilisées —
@@ -125,9 +129,9 @@ export function PhotoCreditAssigner({
             >
               <Image src={item.url} alt={item.name} fill sizes="80px" className="object-cover" />
               {ph || lie ? (
-                <span className="absolute bottom-0 right-0 rounded-tl-md bg-background/60 px-1 text-[9px] text-foreground/90">
-                  {ph ? `📷` : ""}
-                  {lie ? `📍` : ""}
+                <span className="absolute bottom-0 right-0 flex items-center gap-0.5 rounded-tl-md bg-background/60 px-1 py-0.5 text-foreground/90">
+                  {ph ? <Camera className="size-2.5" aria-hidden /> : null}
+                  {lie ? <MapPin className="size-2.5" aria-hidden /> : null}
                 </span>
               ) : null}
             </button>

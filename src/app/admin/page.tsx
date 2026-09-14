@@ -1,6 +1,16 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEuros } from "@/lib/money";
 import Link from "next/link";
+import {
+  BookOpen,
+  CreditCard,
+  FileText,
+  Mail,
+  MessageSquare,
+  Receipt,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import { DashboardDetail } from "@/components/dashboard-detail";
 import { ValidateEcheanceButton } from "@/components/validate-echeance-button";
 
@@ -239,15 +249,16 @@ export default async function AdminDashboard({
         cards1={[
           {
             vue: "ca-annee",
-            label: `💰 CA signé ${year} — cliquer pour le détail`,
+            label: `CA signé ${year} — cliquer pour le détail`,
             value: eur(caAnnee),
             hint: `${allConfirmed.length} événement(s) confirmé(s) cette année`,
             hero: true,
             accentLabel: true,
+            icon: TrendingUp,
           },
           {
             vue: "urssaf",
-            label: "🧾 CA encaissé ce mois — à déclarer (URSSAF, soldes seuls)",
+            label: "CA encaissé ce mois — à déclarer (URSSAF, soldes seuls)",
             value: eur(caMois),
             hint: `${encaisse.length} soirée(s) validée(s) · ${
               urssafEcheances > 0
@@ -259,6 +270,7 @@ export default async function AdminDashboard({
                 : "tout est validé ✓"
             }`,
             hero: true,
+            icon: Receipt,
           },
         ]}
         cards2={[
@@ -271,7 +283,10 @@ export default async function AdminDashboard({
         echeanciersPanel={
           <div className="animate-in fade-in slide-in-from-bottom-2 space-y-3 rounded-xl border border-border bg-card p-5 duration-300">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="font-medium">💳 Échéances en cours — à recevoir ce mois-ci</h2>
+              <h2 className="flex items-center gap-2 font-medium">
+                <CreditCard className="size-4 text-accent" aria-hidden />
+                Échéances en cours — à recevoir ce mois-ci
+              </h2>
               <span className="text-xs text-muted-foreground">Cliquez à nouveau sur la carte pour fermer</span>
             </div>
             {echeancesDuMois.length === 0 ? (
@@ -337,7 +352,10 @@ export default async function AdminDashboard({
         soldeRecusPanel={
           <div className="animate-in fade-in slide-in-from-bottom-2 space-y-3 rounded-xl border border-border bg-card p-5 duration-300">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="font-medium">🧾 Échéanciers — paiements reçus à confirmer</h2>
+              <h2 className="flex items-center gap-2 font-medium">
+                <Receipt className="size-4 text-accent" aria-hidden />
+                Échéanciers — paiements reçus à confirmer
+              </h2>
               <span className="text-xs text-muted-foreground">Cliquez à nouveau sur la carte pour fermer</span>
             </div>
             {echeancesAConfirmer.length === 0 ? (
@@ -428,14 +446,17 @@ export default async function AdminDashboard({
         {/* Devis à traiter */}
         <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-card p-5">
           <div className="flex items-center justify-between">
-            <h2 className="font-medium">📨 Devis à traiter ({devisAttente ?? 0})</h2>
+            <h2 className="flex items-center gap-2 font-medium">
+              <Mail className="size-4 text-accent" aria-hidden />
+              Devis à traiter ({devisAttente ?? 0})
+            </h2>
             <Link href="/admin/devis" className="text-xs text-accent hover:underline">
               Tous les devis →
             </Link>
           </div>
           {(devisRecents ?? []).length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">
-              Rien en attente, tout est traité 🎉
+              Rien en attente, tout est traité ✓
             </p>
           ) : (
             <ul className="mt-3 divide-y divide-border">
@@ -464,20 +485,22 @@ export default async function AdminDashboard({
       {/* Raccourcis */}
       <div className="grid gap-4 sm:grid-cols-3">
         {[
-          { href: "/admin/factures", emoji: "🧾", label: "Factures libres", extra: `${nbFactures} générée(s)` },
-          { href: "/admin/import", emoji: "📚", label: "Soirées d'avant le site" },
-          { href: "/admin/messages", emoji: "💬", label: "Messagerie clients" },
-          { href: "/admin/comptes", emoji: "👥", label: "Comptes clients" },
+          { href: "/admin/factures", icon: FileText, label: "Factures libres", extra: `${nbFactures} générée(s)` },
+          { href: "/admin/import", icon: BookOpen, label: "Soirées d'avant le site" },
+          { href: "/admin/messages", icon: MessageSquare, label: "Messagerie clients" },
+          { href: "/admin/comptes", icon: Users, label: "Comptes clients" },
         ].map((shortcut) => (
           <Link
             key={shortcut.href}
             href={shortcut.href}
             className="rounded-xl border border-border bg-card p-4 text-sm transition-colors hover:border-accent/50"
           >
-            <span className="text-xl">{shortcut.emoji}</span>{" "}
-            <span className="font-medium">{shortcut.label}</span>
+            <span className="flex items-center gap-2">
+              <shortcut.icon className="size-4 text-accent" aria-hidden />
+              <span className="font-medium">{shortcut.label}</span>
+            </span>
             {shortcut.extra ? (
-              <span className="block text-xs text-muted-foreground">{shortcut.extra}</span>
+              <span className="mt-1 block text-xs text-muted-foreground">{shortcut.extra}</span>
             ) : null}
           </Link>
         ))}

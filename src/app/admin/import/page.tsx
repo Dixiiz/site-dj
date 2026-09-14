@@ -35,7 +35,7 @@ export default async function AdminImportPage() {
       </p>
 
       <div>
-        <h1 className="text-2xl font-semibold">Soirées d&apos;avant le site 📚</h1>
+        <h1 className="text-2xl font-semibold">Soirées d&apos;avant le site</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Ajoute ici tes anciens devis papier signés : ils rejoignent ton CA,
           ton historique et le planning, au même titre que les devis du site.

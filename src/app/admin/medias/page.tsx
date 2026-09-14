@@ -15,6 +15,7 @@ import {
 } from "@/lib/site-media";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
+import { Camera, MapPin } from "lucide-react";
 import { MediaManager } from "@/components/media-manager";
 import { MediaCreditsManager } from "@/components/media-credits-manager";
 import { PhotoCreditAssigner } from "@/components/photo-credit-assigner";
@@ -22,7 +23,7 @@ import { PhotoCreditAssigner } from "@/components/photo-credit-assigner";
 const FOLDERS: { key: MediaFolder; titre: string; hint: string; accept: string; kind: "image" | "video" }[] = [
   {
     key: "galerie",
-    titre: "📷 Galerie photos",
+    titre: "Galerie photos",
     hint: "Photos du carrousel de la page d'accueil (ordre = ordre du carrousel).",
     accept: "image/jpeg,image/png,image/webp,image/avif",
     kind: "image",
@@ -216,7 +217,8 @@ export default async function AdminMediasPage() {
           {section.key === "galerie" ? (
             <>
               <MediaCreditsManager
-                title="📸 Crédits photographes"
+                icon={<Camera className="size-4 text-accent" aria-hidden />}
+                title="Crédits photographes"
                 hint="Créez un photographe, sélectionnez ses photos, enregistrez. Le nom apparaît au survol sur la page /galerie (et en permanence sur mobile)."
                 placeholder="Nom du photographe (ex. Jeanne Bastien)"
                 items={section.items}
@@ -224,7 +226,8 @@ export default async function AdminMediasPage() {
                 saveAction={makeSaveCreditsAction("galerie", "photographers")}
               />
               <MediaCreditsManager
-                title="📍 Lieux des photos"
+                icon={<MapPin className="size-4 text-accent" aria-hidden />}
+                title="Lieux des photos"
                 hint="Créez un lieu (ex. Blois, Château de Chambord) et assignez-y les photos prises à cet endroit."
                 placeholder="Lieu (ex. Blois, Château de Chambord)"
                 items={section.items}
