@@ -15,10 +15,8 @@ import {
 } from "@/lib/site-media";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
-import { Camera, MapPin } from "lucide-react";
 import { MediaManager } from "@/components/media-manager";
-import { MediaCreditsManager } from "@/components/media-credits-manager";
-import { PhotoCreditAssigner } from "@/components/photo-credit-assigner";
+import { GalerieCredits } from "@/components/galerie-credits";
 
 const FOLDERS: { key: MediaFolder; titre: string; hint: string; accept: string; kind: "image" | "video" }[] = [
   {
@@ -219,32 +217,12 @@ export default async function AdminMediasPage() {
           </div>
           {section.key === "galerie" ? (
             <>
-              <MediaCreditsManager
-                key={`ph-${JSON.stringify(galerieCredits.photographers)}`}
-                icon={<Camera className="size-4 text-accent" aria-hidden />}
-                title="Crédits photographes"
-                hint="Créez un photographe, sélectionnez ses photos, enregistrez. Le nom apparaît au survol sur la page /galerie (et en permanence sur mobile)."
-                placeholder="Nom du photographe (ex. Jeanne Bastien)"
+              <GalerieCredits
                 items={section.items}
-                credits={galerieCredits.photographers}
-                saveAction={makeSaveCreditsAction("galerie", "photographers")}
-              />
-              <MediaCreditsManager
-                key={`lieux-${JSON.stringify(galerieCredits.lieux)}`}
-                icon={<MapPin className="size-4 text-accent" aria-hidden />}
-                title="Lieux des photos"
-                hint="Créez un lieu (ex. Blois, Château de Chambord) et assignez-y les photos prises à cet endroit."
-                placeholder="Lieu (ex. Blois, Château de Chambord)"
-                items={section.items}
-                credits={galerieCredits.lieux}
-                saveAction={makeSaveCreditsAction("galerie", "lieux")}
-              />
-              <PhotoCreditAssigner
-                key={`assign-${JSON.stringify(galerieCredits.photographers)}-${JSON.stringify(galerieCredits.lieux)}`}
-                items={section.items}
-                photographers={galerieCredits.photographers}
-                lieux={galerieCredits.lieux}
-                saveAction={makeSetPhotoCreditAction("galerie")}
+                initial={galerieCredits}
+                savePhotographers={makeSaveCreditsAction("galerie", "photographers")}
+                saveLieux={makeSaveCreditsAction("galerie", "lieux")}
+                setPhoto={makeSetPhotoCreditAction("galerie")}
               />
             </>
           ) : null}

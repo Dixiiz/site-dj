@@ -20,15 +20,14 @@ export function PhotoCreditAssigner({
   items,
   photographers,
   lieux,
-  saveAction,
+  onSavePhoto,
 }: {
   items: Item[];
   photographers: CreditsMap;
   lieux: CreditsMap;
-  saveAction: (formData: FormData) => Promise<{ ok: boolean; error?: string }>;
+  /** Attribue photographe/lieu à une photo (persist serveur + état parent). */
+  onSavePhoto: (name: string, photographer: string, lieu: string) => Promise<{ ok: boolean; error?: string }>;
 }) {
-  const [photoMap, setPhotoMap] = useState<CreditsMap>(photographers);
-  const [lieuMap, setLieuMap] = useState<CreditsMap>(lieux);
   const [selected, setSelected] = useState<string | null>(null);
   const [photoPh, setPhotoPh] = useState("");
   const [photoLieu, setPhotoLieu] = useState("");
@@ -36,13 +35,13 @@ export function PhotoCreditAssigner({
   const [open, setOpen] = useState(false);
 
   const photographerOf = (name: string) => {
-    for (const [who, photos] of Object.entries(photoMap)) {
+    for (const [who, photos] of Object.entries(photographers)) {
       if (photos.includes(name)) return who;
     }
     return "";
   };
   const lieuOf = (name: string) => {
-    for (const [where, photos] of Object.entries(lieuMap)) {
+    for (const [where, photos] of Object.entries(lieux)) {
       if (photos.includes(name)) return where;
     }
     return "";
@@ -56,38 +55,12 @@ export function PhotoCreditAssigner({
 
   async function saveOne() {
     if (!selected) return;
-    const formData = new FormData();
-    formData.set("name", selected);
-    formData.set("photographer", photoPh);
-    formData.set("lieu", photoLieu);
     setPending(true);
-    const res = await saveAction(formData);
+    const res = await onSavePhoto(selected, photoPh, photoLieu);
     setPending(false);
-    if (!res.ok) {
-      toast.error(res.error ?? "Enregistrement impossible.");
-      return;
-    }
-    toast.success("Photo attribuée ✓");
-    // Mise à jour locale des maps (retire la photo partout, puis réassigne)
-    const remove = (map: CreditsMap) => {
-      const copy: CreditsMap = {};
-      for (const [key, photos] of Object.entries(map)) {
-        const rest = photos.filter((n) => n !== selected);
-        if (rest.length > 0) copy[key] = rest;
-      }
-      return copy;
-    };
-    const newPhotoMap = remove(photoMap);
-    const newLieuMap = remove(lieuMap);
-    if (photoPh.trim()) {
-      newPhotoMap[photoPh.trim()] = [...(newPhotoMap[photoPh.trim()] ?? []), selected];
-    }
-    if (photoLieu.trim()) {
-      newLieuMap[photoLieu.trim()] = [...(newLieuMap[photoLieu.trim()] ?? []), selected];
-    }
-    setPhotoMap(newPhotoMap);
-    setLieuMap(newLieuMap);
-    setSelected(null);
+    if (res.ok) toast.success("Photo attribuée ✓");
+    else toast.error(res.error ?? "Enregistrement impossible.");
+    return res;
   }
 
   const unassignedCount = items.filter(
@@ -166,7 +139,7 @@ export function PhotoCreditAssigner({
               <div>
                 <label className="text-xs text-muted-foreground">Photographe</label>
                 <div className="mt-1 flex flex-wrap gap-1.5">
-                  {Object.keys(photoMap)
+                  {Object.keys(photographers)
                     .filter((n) => n !== photoPh)
                     .slice(0, 6)
                     .map((n) => (
@@ -188,7 +161,7 @@ export function PhotoCreditAssigner({
                   className={`mt-1 ${inputClass}`}
                 />
                 <datalist id="suggestions-photographes">
-                  {Object.keys(photoMap).map((n) => (
+                  {Object.keys(photographers).map((n) => (
                     <option key={n} value={n} />
                   ))}
                 </datalist>
@@ -197,7 +170,7 @@ export function PhotoCreditAssigner({
               <div>
                 <label className="text-xs text-muted-foreground">Lieu</label>
                 <div className="mt-1 flex flex-wrap gap-1.5">
-                  {Object.keys(lieuMap)
+                  {Object.keys(lieux)
                     .filter((n) => n !== photoLieu)
                     .slice(0, 6)
                     .map((n) => (
@@ -219,7 +192,7 @@ export function PhotoCreditAssigner({
                   className={`mt-1 ${inputClass}`}
                 />
                 <datalist id="suggestions-lieux">
-                  {Object.keys(lieuMap).map((n) => (
+                  {Object.keys(lieux).map((n) => (
                     <option key={n} value={n} />
                   ))}
                 </datalist>

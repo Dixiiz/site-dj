@@ -60,19 +60,13 @@ const hasLieu = Object.keys(credits.lieux || {}).includes("Testville");
 console.log("Photographe « Test Diag Auto » dans le fichier :", hasPh);
 console.log("Lieu « Testville » dans le fichier :", hasLieu);
 
-// Revert : remets la photo sans crédit
-await page.locator('button:has-text("Enregistrer cette photo")').waitFor({ timeout: 5000 }).catch(() => {});
-const tileSel = page.locator("button.ring-accent").first();
-if ((await tileSel.count()) > 0) {
-  await tileSel.click();
-  await page.waitForTimeout(300);
-  await page.locator('input[placeholder*="Photographe"]').fill("");
-  await page.locator('input[placeholder*="Lieu"]').fill("");
-  await page.locator('button:has-text("Enregistrer cette photo")').click();
-  await page.waitForTimeout(4000);
-  const credits2 = await (await fetch(CREDITS_URL)).json();
-  console.log("Revert OK :", !Object.keys(credits2.photographers || {}).includes("Test Diag Auto"));
-}
+// Revert : l'éditeur est encore ouvert sur la même photo — on vide les champs
+await page.locator('input[placeholder*="Photographe"]').fill("");
+await page.locator('input[placeholder*="Lieu"]').fill("");
+await page.locator('button:has-text("Enregistrer cette photo")').click();
+await page.waitForTimeout(4000);
+const credits2 = await (await fetch(CREDITS_URL + "?v=" + Date.now())).json();
+console.log("Revert OK :", !Object.keys(credits2.photographers || {}).includes("Test Diag Auto"));
 
 console.log("Erreurs réseau/JS :", errors.length ? errors : "aucune");
 await browser.close();
