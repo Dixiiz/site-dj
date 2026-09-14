@@ -1,17 +1,21 @@
 import {
   deleteLocalMedia,
   deleteMedia,
+  getCredits,
   getOrder,
   importLocalToStorage,
   listLocalMedia,
   listMedia,
+  saveCredits,
   saveOrder,
+  type MediaCredits,
   type MediaFolder,
   type MediaItem,
 } from "@/lib/site-media";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { MediaManager } from "@/components/media-manager";
+import { PhotographerCredits } from "@/components/photographer-credits";
 
 const FOLDERS: { key: MediaFolder; titre: string; hint: string; accept: string; kind: "image" | "video" }[] = [
   {
@@ -116,6 +120,25 @@ function makeImportLocalAction(folder: MediaFolder) {
   };
 }
 
+function makeSaveCreditsAction(folder: MediaFolder) {
+  return async (formData: FormData) => {
+ "use server";
+    if (!(await requireAdmin())) return { ok: false as const, error: "Non autorisé." };
+    let credits: MediaCredits;
+    try {
+      credits = JSON.parse(String(formData.get("credits") ?? "{}"));
+    } catch {
+      return { ok: false as const, error: "Données invalides." };
+    }
+    const res = await saveCredits(folder, credits);
+    if (res.ok) {
+      revalidatePath("/admin/medias");
+      revalidatePath("/galerie");
+    }
+    return res;
+  };
+}
+
 async function saveOrderAction(folder: string, names: string[]) {
  "use server";
   if (!(await requireAdmin())) return { ok: false as const, error: "Non autorisé." };
@@ -128,9 +151,12 @@ async function saveOrderAction(folder: string, names: string[]) {
 }
 
 export default async function AdminMediasPage() {
-  const sections = await Promise.all(
-    FOLDERS.map(async (f) => ({ ...f, items: await mergedItems(f.key) }))
-  );
+  const [sections, galerieCredits] = await Promise.all([
+    Promise.all(
+      FOLDERS.map(async (f) => ({ ...f, items: await mergedItems(f.key) }))
+    ),
+    getCredits("galerie").catch(() => ({}) as MediaCredits),
+  ]);
 
   return (
     <main className="space-y-8">
@@ -162,6 +188,13 @@ export default async function AdminMediasPage() {
               orderAction={saveOrderAction}
             />
           </div>
+          {section.key === "galerie" ? (
+            <PhotographerCredits
+              items={section.items}
+              credits={galerieCredits}
+              saveAction={makeSaveCreditsAction("galerie")}
+            />
+          ) : null}
         </section>
       ))}
     </main>

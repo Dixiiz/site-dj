@@ -90,6 +90,42 @@ export async function saveOrder(folder: MediaFolder, names: string[]): Promise<{
   return { ok: true };
 }
 
+// ---------- Crédits photographes (stockés dans le bucket, _credits.json) ----------
+// Associe des noms de fichiers de photos à un photographe.
+// Shape : { "Jeanne Bastien": ["jeannebastien-1348.jpg", ...], ... }
+
+export type MediaCredits = Record<string, string[]>;
+
+export async function getCredits(folder: MediaFolder): Promise<MediaCredits> {
+  const supabase = createAdminClient();
+  const { data } = await supabase.storage.from(MEDIA_BUCKET).download(`${folder}/_credits.json`);
+  if (!data) return {};
+  try {
+    const parsed = JSON.parse(await data.text());
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as MediaCredits)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+export async function saveCredits(
+  folder: MediaFolder,
+  credits: MediaCredits
+): Promise<{ ok: boolean; error?: string }> {
+  await ensureMediaBucket();
+  const supabase = createAdminClient();
+  const { error } = await supabase.storage
+    .from(MEDIA_BUCKET)
+    .upload(`${folder}/_credits.json`, JSON.stringify(credits), {
+      contentType: "application/json",
+      upsert: true,
+    });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 // ---------- Fichiers locaux (public/) : liste, import, suppression ----------
 
 const LOCAL_DIRS: Record<MediaFolder, string> = {
