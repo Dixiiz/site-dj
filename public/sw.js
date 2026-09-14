@@ -9,7 +9,7 @@
  * Remarque : les modifications (actions serveur, POST) nécessitent le
  * réseau et ne sont pas mises en cache.
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const PAGES_CACHE = `admin-pages-${VERSION}`;
 const OFFLINE_CACHE = `offline-${VERSION}`;
 const OFFLINE_URL = "/hors-ligne";
