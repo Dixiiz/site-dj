@@ -55,13 +55,21 @@ export function MediaManager({
   importLocalAction: Action;
   orderAction: (folder: string, names: string[]) => Promise<{ ok: boolean; error?: string }>;
 }) {
-  const [list, setList] = useState<MediaItem[]>(items);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
   const dragIndex = useRef<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+  // Réordonnancement local (null = ordre serveur tel quel).
+  const [reordered, setReordered] = useState<MediaItem[] | null>(null);
+  // Photos présentes au chargement de la page : tout ce qui arrive ensuite
+  // (upload, import) est marqué « nouveau » et mis en surbrillance.
+  const [initialNames] = useState<Set<string>>(
+    () => new Set(items.map((i) => `${i.origin}-${i.name}`))
+  );
+
+  const list = reordered ?? items;
 
   // Envoi fichier par fichier (une requête chacun) après compression :
   // évite de dépasser la limite de taille des server actions.
@@ -89,6 +97,8 @@ export function MediaManager({
         : `${ok} envoyé(s), ${failed} en échec (réessaie les fichiers restants).`
     );
     if (fileRef.current) fileRef.current.value = "";
+    // Repart de l'ordre serveur (qui inclut les nouveaux fichiers).
+    setReordered(null);
     setBusy(false);
     // Rafraîchit la liste serveur (revalidatePath déjà fait côté action).
     startTransition(() => {});
@@ -107,7 +117,7 @@ export function MediaManager({
     const next = [...list];
     const [item] = next.splice(from, 1);
     next.splice(to, 0, item);
-    setList(next);
+    setReordered(next);
     void persistOrder(next);
   };
 
@@ -151,7 +161,9 @@ export function MediaManager({
 
       {/* Grille avec glisser-déposer */}
       <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {list.map((item, i) => (
+        {list.map((item, i) => {
+          const isNew = !initialNames.has(`${item.origin}-${item.name}`);
+          return (
           <li
             key={`${item.origin}-${item.name}`}
             draggable
@@ -173,7 +185,7 @@ export function MediaManager({
             }}
             className={`group relative cursor-grab overflow-hidden rounded-lg border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
               dragOver === i ? "border-accent scale-[1.02]" : "border-border"
-            }`}
+            } ${isNew ? "ring-2 ring-emerald-400/80" : ""}`}
           >
             {/* Flèches de réordre : indispensables sur mobile (pas de glisser au doigt) */}
             <div className="absolute inset-x-0 bottom-6 z-10 flex justify-center gap-1 opacity-70 md:opacity-0 md:transition-opacity md:group-hover:opacity-100">
@@ -211,6 +223,11 @@ export function MediaManager({
             >
               {item.origin === "local" ? "local" : "en ligne"}
             </span>
+            {isNew ? (
+              <span className="absolute left-1.5 top-6 rounded bg-emerald-500/80 px-1.5 py-0.5 text-[9px] font-medium text-white">
+                nouveau
+              </span>
+            ) : null}
             <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
               {item.origin === "local" ? (
                 <form action={importLocalAction}>
@@ -238,7 +255,8 @@ export function MediaManager({
             </div>
             <p className="truncate bg-black/50 px-2 py-1 text-[10px] text-white/80">{item.name}</p>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </div>
   );
