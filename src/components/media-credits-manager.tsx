@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import Image from "next/image";
+import { ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 type Item = { name: string; url: string };
@@ -34,6 +35,7 @@ export function MediaCreditsManager({
   const [assigning, setAssigning] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const assigned = new Set(Object.values(credits).flat());
   const unassigned = items.filter((i) => !assigned.has(i.name));
@@ -89,10 +91,25 @@ export function MediaCreditsManager({
 
   return (
     <div className="mt-4 rounded-xl border border-border bg-muted/40 p-4">
-      <h3 className="flex items-center gap-1.5 text-sm font-medium">
-        {icon}
-        {title}
-      </h3>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
+        <span className="flex items-center gap-1.5 text-sm font-medium">
+          {icon}
+          {title}
+        </span>
+        <ChevronDown
+          className={`size-4 shrink-0 text-muted-foreground transition-transform duration-300 ${
+            open ? "rotate-180" : ""
+          }`}
+          aria-hidden
+        />
+      </button>
+      {open ? (
+        <>
       <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
 
       {/* Créer une entrée */}
@@ -227,6 +244,8 @@ export function MediaCreditsManager({
       >
         {pending ? "Enregistrement…" : "Enregistrer les crédits"}
       </button>
+        </>
+      ) : null}
     </div>
   );
 }

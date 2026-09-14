@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Camera, MapPin, PenLine } from "lucide-react";
+import { Camera, ChevronDown, MapPin, PenLine } from "lucide-react";
 import { toast } from "sonner";
 
 type Item = { name: string; url: string };
@@ -33,6 +33,7 @@ export function PhotoCreditAssigner({
   const [photoPh, setPhotoPh] = useState("");
   const [photoLieu, setPhotoLieu] = useState("");
   const [pending, setPending] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const photographerOf = (name: string) => {
     for (const [who, photos] of Object.entries(photoMap)) {
@@ -96,10 +97,25 @@ export function PhotoCreditAssigner({
 
   return (
     <div className="mt-4 rounded-xl border border-border bg-muted/40 p-4">
-      <h3 className="flex items-center gap-1.5 text-sm font-medium">
-        <PenLine className="size-4 text-accent" aria-hidden />
-        Attribution rapide par photo
-      </h3>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
+        <span className="flex items-center gap-1.5 text-sm font-medium">
+          <PenLine className="size-4 text-accent" aria-hidden />
+          Attribution rapide par photo
+        </span>
+        <ChevronDown
+          className={`size-4 shrink-0 text-muted-foreground transition-transform duration-300 ${
+            open ? "rotate-180" : ""
+          }`}
+          aria-hidden
+        />
+      </button>
+      {open ? (
+        <>
       <p className="mt-1 text-xs text-muted-foreground">
         Cliquez sur une photo, puis choisissez (ou tapez) son photographe et
         son lieu. Les suggestions reprennent les valeurs déjà utilisées —
@@ -231,6 +247,8 @@ export function PhotoCreditAssigner({
             </div>
           </div>
         </div>
+      ) : null}
+        </>
       ) : null}
     </div>
   );
