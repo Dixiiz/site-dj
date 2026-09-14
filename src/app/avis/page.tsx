@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
 import { FadeIn } from "@/components/fade-in";
 import { fetchGoogleReviews, Stars } from "@/components/google-reviews";
+import { avisMariages, mariagesStats } from "@/data/avis-mariages";
 
 export const metadata: Metadata = {
   title: "Avis clients — Propul'Sound DJ",
@@ -133,6 +134,81 @@ export default async function AvisPage() {
             </FadeIn>
           )}
         </div>
+
+        {/* Avis Mariages.net */}
+        <FadeIn delay={0.14} className="mt-12">
+          <div className="rounded-xl border border-border bg-card/60 p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-medium tracking-tight">Avis Mariages.net</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {mariagesStats.rating.toFixed(1)} sur 5 — {mariagesStats.count} avis ·{" "}
+                  {mariagesStats.recommendedPercent} % des couples recommandent nos services
+                </p>
+              </div>
+              <a
+                href={mariagesStats.profileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/10"
+              >
+                Voir le profil
+              </a>
+            </div>
+
+            {/* Décomposition des notes */}
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {mariagesStats.breakdown.map((b) => (
+                <div key={b.label} className="flex items-center gap-2 text-xs">
+                  <span className="w-36 shrink-0 text-muted-foreground">{b.label}</span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-accent"
+                      style={{ width: `${(b.rating / 5) * 100}%` }}
+                    />
+                  </div>
+                  <span className="w-7 text-right font-medium">{b.rating.toFixed(1)}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Avis détaillés collés depuis le profil */}
+            {avisMariages.length > 0 ? (
+              <div className="mt-5 space-y-4">
+                {avisMariages.map((a, i) => (
+                  <FadeIn key={`${a.author}-${i}`} delay={Math.min(i, 6) * 0.04}>
+                    <figure className="rounded-lg border border-border bg-background/60 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-medium">{a.author}</span>
+                        <div className="flex items-center gap-3">
+                          <Stars rating={a.rating} />
+                          <span className="text-xs text-muted-foreground">{a.date}</span>
+                        </div>
+                      </div>
+                      <blockquote className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                        {a.text}
+                      </blockquote>
+                    </figure>
+                  </FadeIn>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 rounded-lg border border-border bg-muted/50 p-3 text-xs text-muted-foreground">
+                Les avis détaillés de Mariages.net seront ajoutés ici — en
+                attendant, lis-les directement sur{" "}
+                <a
+                  href={mariagesStats.profileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-accent underline-offset-2 hover:underline"
+                >
+                  notre profil Mariages.net
+                </a>
+                .
+              </p>
+            )}
+          </div>
+        </FadeIn>
 
         <FadeIn delay={0.15} className="mt-10">
           <div className="rounded-xl border border-border bg-muted/50 p-5 text-center text-sm text-muted-foreground">
