@@ -220,6 +220,7 @@ export default async function AdminMediasPage() {
           {section.key === "galerie" ? (
             <>
               <MediaCreditsManager
+                key={`ph-${JSON.stringify(galerieCredits.photographers)}`}
                 icon={<Camera className="size-4 text-accent" aria-hidden />}
                 title="Crédits photographes"
                 hint="Créez un photographe, sélectionnez ses photos, enregistrez. Le nom apparaît au survol sur la page /galerie (et en permanence sur mobile)."
@@ -229,6 +230,7 @@ export default async function AdminMediasPage() {
                 saveAction={makeSaveCreditsAction("galerie", "photographers")}
               />
               <MediaCreditsManager
+                key={`lieux-${JSON.stringify(galerieCredits.lieux)}`}
                 icon={<MapPin className="size-4 text-accent" aria-hidden />}
                 title="Lieux des photos"
                 hint="Créez un lieu (ex. Blois, Château de Chambord) et assignez-y les photos prises à cet endroit."
@@ -238,6 +240,7 @@ export default async function AdminMediasPage() {
                 saveAction={makeSaveCreditsAction("galerie", "lieux")}
               />
               <PhotoCreditAssigner
+                key={`assign-${JSON.stringify(galerieCredits.photographers)}-${JSON.stringify(galerieCredits.lieux)}`}
                 items={section.items}
                 photographers={galerieCredits.photographers}
                 lieux={galerieCredits.lieux}
