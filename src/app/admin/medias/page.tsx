@@ -82,11 +82,14 @@ function makeUploadAction(folder: MediaFolder) {
   return async (formData: FormData) => {
  "use server";
     if (!(await requireAdmin())) return;
-    const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
-    const { uploadMedia } = await import("@/lib/site-media");
-    for (const file of files) await uploadMedia(folder, file);
+    const file = formData.get("file");
+    if (file instanceof File && file.size > 0) {
+      const { uploadMedia } = await import("@/lib/site-media");
+      await uploadMedia(folder, file);
+    }
     revalidatePath("/admin/medias");
     revalidatePath("/");
+    revalidatePath("/galerie");
   };
 }
 

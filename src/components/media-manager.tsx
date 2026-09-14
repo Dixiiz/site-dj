@@ -1,10 +1,36 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import type { MediaItem } from "@/lib/site-media";
 import { SubmitButton } from "@/components/submit-button";
 
 type Action = (formData: FormData) => void | Promise<void>;
+
+// Compresse une image dans le navigateur avant l'envoi : max ~2400px,
+// JPEG qualité 85 %. Indispensable car les server actions Vercel sont
+// limitées à ~4,5 Mo par requête et les photos d'origine font souvent 10 Mo+.
+async function compressImage(file: File, maxDim = 2400, quality = 0.85): Promise<File> {
+  if (!file.type.startsWith("image/") || file.type === "image/gif") return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+    if (scale >= 1 && file.size < 2_000_000) return file;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", quality)
+    );
+    if (!blob || blob.size >= file.size) return file;
+    const base = file.name.replace(/\.[^.]+$/, "");
+    return new File([blob], `${base}.jpg`, { type: "image/jpeg" });
+  } catch {
+    return file;
+  }
+}
 
 // Gestionnaire de médias : upload, suppression, import des fichiers locaux
 // et réordonnancement par glisser-déposer (ordre envoyé au serveur).
@@ -32,8 +58,41 @@ export function MediaManager({
   const [list, setList] = useState<MediaItem[]>(items);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [, startTransition] = useTransition();
+  const fileRef = useRef<HTMLInputElement>(null);
   const dragIndex = useRef<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+
+  // Envoi fichier par fichier (une requête chacun) après compression :
+  // évite de dépasser la limite de taille des server actions.
+  async function handleUpload() {
+    const files = [...(fileRef.current?.files ?? [])].filter((f) => f.size > 0);
+    if (files.length === 0) return;
+    setBusy(true);
+    let ok = 0;
+    let failed = 0;
+    for (let i = 0; i < files.length; i++) {
+      setMsg(`Envoi ${i + 1}/${files.length} — ${files[i].name}…`);
+      try {
+        const file = accept.startsWith("image") ? await compressImage(files[i]) : files[i];
+        const formData = new FormData();
+        formData.set("file", file);
+        await uploadAction(formData);
+        ok++;
+      } catch {
+        failed++;
+      }
+    }
+    setMsg(
+      failed === 0
+        ? `${ok} fichier(s) envoyé(s) ✓`
+        : `${ok} envoyé(s), ${failed} en échec (réessaie les fichiers restants).`
+    );
+    if (fileRef.current) fileRef.current.value = "";
+    setBusy(false);
+    // Rafraîchit la liste serveur (revalidatePath déjà fait côté action).
+    startTransition(() => {});
+  }
 
   const persistOrder = async (ordered: MediaItem[]) => {
     setBusy(true);
@@ -54,23 +113,33 @@ export function MediaManager({
 
   return (
     <div>
-      {/* Upload */}
-      <form action={uploadAction} className="flex flex-wrap items-center gap-2">
+      {/* Upload : compression navigateur + envoi un fichier par requête */}
+      <div className="flex flex-wrap items-center gap-2">
         <input
+          ref={fileRef}
           type="file"
-          name="files"
           multiple
           accept={accept}
+          disabled={busy}
           className="text-xs text-muted-foreground file:mr-2 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-xs file:text-foreground"
         />
-        <SubmitButton
-          pendingLabel="Envoi…"
-          className="rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
+        <button
+          type="button"
+          onClick={handleUpload}
+          disabled={busy}
+          className={`rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 ${
+            busy ? "animate-pulse cursor-wait opacity-90" : ""
+          }`}
         >
-          ⬆ Envoyer
-        </SubmitButton>
+          {busy ? "Envoi…" : "Envoyer"}
+        </button>
         {busy ? <span className="text-xs text-muted-foreground">…</span> : null}
-      </form>
+      </div>
+
+      <p className="mt-2 text-[11px] text-muted-foreground/70">
+        Les images sont compressées automatiquement (max 2400 px, JPEG 85 %)
+        avant l&apos;envoi — tu peux en sélectionner plusieurs d&apos;un coup.
+      </p>
 
       <p className="mt-2 text-[11px] text-muted-foreground/70">
         Glisse-dépose les vignettes pour changer l&apos;ordre d&apos;affichage sur le site.
