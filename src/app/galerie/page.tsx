@@ -4,6 +4,8 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Camera, MapPin } from "lucide-react";
+import Link from "next/link";
+import { SiteHeader } from "@/components/site-header";
 import {
   getCreditsBundle,
   getOrder,
@@ -95,12 +97,24 @@ export default async function GaleriePage() {
   };
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-10">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <p className="text-center text-sm uppercase tracking-[0.2em] text-accent">Galerie</p>
+    <>
+      <SiteHeader />
+      <main className="mx-auto w-full max-w-5xl px-4 py-8">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        {/* Retour : fonctionne même si la page a été ouverte directement */}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-accent"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M19 12H5M11 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Retour à l&apos;accueil
+        </Link>
+        <p className="mt-4 text-center text-sm uppercase tracking-[0.2em] text-accent">Galerie</p>
       <h1 className="mt-2 text-center text-2xl font-medium tracking-tight sm:text-3xl">
         Nos dernières prestations
       </h1>
@@ -154,6 +168,7 @@ export default async function GaleriePage() {
           })}
         </div>
       )}
-    </main>
+      </main>
+    </>
   );
 }
