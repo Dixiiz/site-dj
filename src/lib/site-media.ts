@@ -139,6 +139,41 @@ export async function saveCreditsSection(
   await ensureMediaBucket();
   const bundle = await getCreditsBundle(folder);
   bundle[section] = credits;
+  return uploadCreditsBundle(folder, bundle);
+}
+
+// Attribue photographe et/ou lieu à UNE photo : retire la photo de toutes
+// les entrées existantes puis l'ajoute aux nouvelles (créées si besoin).
+export async function setPhotoCredit(
+  folder: MediaFolder,
+  name: string,
+  photographer: string,
+  lieu: string
+): Promise<{ ok: boolean; error?: string }> {
+  await ensureMediaBucket();
+  const bundle = await getCreditsBundle(folder);
+
+  const removeFrom = (map: MediaCredits) => {
+    for (const key of Object.keys(map)) {
+      map[key] = (map[key] ?? []).filter((n) => n !== name);
+      if (map[key].length === 0) delete map[key];
+    }
+  };
+  removeFrom(bundle.photographers);
+  removeFrom(bundle.lieux);
+
+  const p = photographer.trim();
+  if (p) (bundle.photographers[p] ||= []).push(name);
+  const l = lieu.trim();
+  if (l) (bundle.lieux[l] ||= []).push(name);
+
+  return uploadCreditsBundle(folder, bundle);
+}
+
+async function uploadCreditsBundle(
+  folder: MediaFolder,
+  bundle: MediaCreditsBundle
+): Promise<{ ok: boolean; error?: string }> {
   const supabase = createAdminClient();
   const { error } = await supabase.storage
     .from(MEDIA_BUCKET)

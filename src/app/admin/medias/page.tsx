@@ -8,6 +8,7 @@ import {
   listMedia,
   saveCreditsSection,
   saveOrder,
+  setPhotoCredit,
   type MediaCredits,
   type MediaFolder,
   type MediaItem,
@@ -16,6 +17,7 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { MediaManager } from "@/components/media-manager";
 import { MediaCreditsManager } from "@/components/media-credits-manager";
+import { PhotoCreditAssigner } from "@/components/photo-credit-assigner";
 
 const FOLDERS: { key: MediaFolder; titre: string; hint: string; accept: string; kind: "image" | "video" }[] = [
   {
@@ -139,6 +141,26 @@ function makeSaveCreditsAction(folder: MediaFolder, section: "photographers" | "
   };
 }
 
+function makeSetPhotoCreditAction(folder: MediaFolder) {
+  return async (formData: FormData) => {
+ "use server";
+    if (!(await requireAdmin())) return { ok: false as const, error: "Non autorisé." };
+    const name = String(formData.get("name") ?? "").trim();
+    if (!name) return { ok: false as const, error: "Photo introuvable." };
+    const res = await setPhotoCredit(
+      folder,
+      name,
+      String(formData.get("photographer") ?? ""),
+      String(formData.get("lieu") ?? "")
+    );
+    if (res.ok) {
+      revalidatePath("/admin/medias");
+      revalidatePath("/galerie");
+    }
+    return res;
+  };
+}
+
 async function saveOrderAction(folder: string, names: string[]) {
  "use server";
   if (!(await requireAdmin())) return { ok: false as const, error: "Non autorisé." };
@@ -208,6 +230,12 @@ export default async function AdminMediasPage() {
                 items={section.items}
                 credits={galerieCredits.lieux}
                 saveAction={makeSaveCreditsAction("galerie", "lieux")}
+              />
+              <PhotoCreditAssigner
+                items={section.items}
+                photographers={galerieCredits.photographers}
+                lieux={galerieCredits.lieux}
+                saveAction={makeSetPhotoCreditAction("galerie")}
               />
             </>
           ) : null}
