@@ -7,15 +7,21 @@ import { toast } from "sonner";
 type Item = { name: string; url: string };
 
 /**
- * Gestion des crédits photographes : créer un photographe, lui assigner
- * ses photos (cases à cocher), retirer des photos ou supprimer.
- * Toutes les modifications sont locales jusqu'à « Enregistrer ».
+ * Gestion des crédits média (photographes ou lieux) : créer une entrée,
+ * lui assigner des photos (cases à cocher), retirer des photos ou
+ * supprimer. Toutes les modifications sont locales jusqu'à « Enregistrer ».
  */
-export function PhotographerCredits({
+export function MediaCreditsManager({
+  title,
+  hint,
+  placeholder,
   items,
   credits: initialCredits,
   saveAction,
 }: {
+  title: string;
+  hint: string;
+  placeholder: string;
   items: Item[];
   credits: Record<string, string[]>;
   saveAction: (formData: FormData) => Promise<{ ok: boolean; error?: string }>;
@@ -72,7 +78,7 @@ export function PhotographerCredits({
     setPending(true);
     const res = await saveAction(formData);
     setPending(false);
-    if (res.ok) toast.success("Crédits photographes enregistrés ✓");
+    if (res.ok) toast.success("Crédits enregistrés ✓");
     else toast.error(res.error ?? "Enregistrement impossible.");
   }
 
@@ -80,19 +86,16 @@ export function PhotographerCredits({
 
   return (
     <div className="mt-4 rounded-xl border border-border bg-muted/40 p-4">
-      <h3 className="text-sm font-medium">📸 Crédits photographes</h3>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Créez un photographe, sélectionnez ses photos, enregistrez. Le nom
-        apparaît au survol sur la page /galerie (et en permanence sur mobile).
-      </p>
+      <h3 className="text-sm font-medium">{title}</h3>
+      <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
 
-      {/* Créer un photographe */}
+      {/* Créer une entrée */}
       <div className="mt-3 flex gap-2">
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && addPhotographer()}
-          placeholder="Nom du photographe (ex. Jeanne Bastien)"
+          placeholder={placeholder}
           className="w-full max-w-xs rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm outline-none focus:border-accent"
         />
         <button

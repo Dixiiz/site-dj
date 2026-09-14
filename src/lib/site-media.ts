@@ -90,35 +90,59 @@ export async function saveOrder(folder: MediaFolder, names: string[]): Promise<{
   return { ok: true };
 }
 
-// ---------- Crédits photographes (stockés dans le bucket, _credits.json) ----------
-// Associe des noms de fichiers de photos à un photographe.
-// Shape : { "Jeanne Bastien": ["jeannebastien-1348.jpg", ...], ... }
+// ---------- Crédits média (stockés dans le bucket, _credits.json) ----------
+// Associe des noms de fichiers à un photographe et/ou à un lieu.
+// Shape : { photographers: { "Jeanne Bastien": [fichiers...] }, lieux: { "Blois": [...] } }
+// (compat : ancien fichier plat { "Jeanne Bastien": [...] } = photographes)
 
 export type MediaCredits = Record<string, string[]>;
 
-export async function getCredits(folder: MediaFolder): Promise<MediaCredits> {
+export type MediaCreditsBundle = {
+  photographers: MediaCredits;
+  lieux: MediaCredits;
+};
+
+export async function getCreditsBundle(folder: MediaFolder): Promise<MediaCreditsBundle> {
   const supabase = createAdminClient();
   const { data } = await supabase.storage.from(MEDIA_BUCKET).download(`${folder}/_credits.json`);
-  if (!data) return {};
+  if (!data) return { photographers: {}, lieux: {} };
   try {
     const parsed = JSON.parse(await data.text());
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as MediaCredits)
-      : {};
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      !Array.isArray(parsed) &&
+      (parsed.photographers || parsed.lieux)
+    ) {
+      return {
+        photographers: parsed.photographers ?? {},
+        lieux: parsed.lieux ?? {},
+      };
+    }
+    // Ancien format : mapping plat photographe → photos.
+    return {
+      photographers: parsed && typeof parsed === "object" ? parsed : {},
+      lieux: {},
+    };
   } catch {
-    return {};
+    return { photographers: {}, lieux: {} };
   }
 }
 
-export async function saveCredits(
+// Enregistre une seule section (photographers ou lieux) en fusionnant avec
+// le bundle existant — évite qu'un enregistrement écrase l'autre.
+export async function saveCreditsSection(
   folder: MediaFolder,
+  section: "photographers" | "lieux",
   credits: MediaCredits
 ): Promise<{ ok: boolean; error?: string }> {
   await ensureMediaBucket();
+  const bundle = await getCreditsBundle(folder);
+  bundle[section] = credits;
   const supabase = createAdminClient();
   const { error } = await supabase.storage
     .from(MEDIA_BUCKET)
-    .upload(`${folder}/_credits.json`, JSON.stringify(credits), {
+    .upload(`${folder}/_credits.json`, JSON.stringify(bundle), {
       contentType: "application/json",
       upsert: true,
     });

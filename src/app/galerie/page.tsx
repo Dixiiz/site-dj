@@ -4,13 +4,14 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import {
-  getCredits,
+  getCreditsBundle,
   getOrder,
   listLocalMedia,
   listMedia,
-  type MediaCredits,
+  type MediaCreditsBundle,
   type MediaItem,
 } from "@/lib/site-media";
+import { SITE_URL } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "Galerie — photos de prestations",
@@ -43,17 +44,61 @@ async function mergedPhotos(): Promise<MediaItem[]> {
 export default async function GaleriePage() {
   const [photos, credits] = await Promise.all([
     mergedPhotos(),
-    getCredits("galerie").catch(() => ({}) as MediaCredits),
+    getCreditsBundle("galerie").catch(() => ({
+      photographers: {},
+      lieux: {},
+    }) as MediaCreditsBundle),
   ]);
 
-  // photo name → photographe
+  // photo name → photographe / lieu
   const photoToPhotographer = new Map<string, string>();
-  for (const [photographer, names] of Object.entries(credits)) {
+  for (const [photographer, names] of Object.entries(credits.photographers)) {
     for (const name of names) photoToPhotographer.set(name, photographer);
   }
+  const photoToLieu = new Map<string, string>();
+  for (const [lieu, names] of Object.entries(credits.lieux)) {
+    for (const name of names) photoToLieu.set(name, lieu);
+  }
+
+  // Données structurées (SEO) : galerie + créateur et lieu de chaque photo.
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ImageGallery",
+    name: "Galerie — Propul'Sound DJ",
+    description:
+      "Photos des mariages, anniversaires et soirées animés par Propul'Sound DJ.",
+    url: `${SITE_URL}/galerie`,
+    associatedMedia: photos.map((photo) => ({
+      "@type": "ImageObject",
+      contentUrl: photo.url.startsWith("http")
+        ? photo.url
+        : `${SITE_URL}${photo.url}`,
+      name: `Prestation Propul'Sound DJ${photoToLieu.get(photo.name) ? ` — ${photoToLieu.get(photo.name)}` : ""}`,
+      ...(photoToPhotographer.get(photo.name)
+        ? {
+            creator: {
+              "@type": "Person",
+              name: photoToPhotographer.get(photo.name),
+            },
+          }
+        : {}),
+      ...(photoToLieu.get(photo.name)
+        ? {
+            contentLocation: {
+              "@type": "Place",
+              name: photoToLieu.get(photo.name),
+            },
+          }
+        : {}),
+    })),
+  };
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <p className="text-center text-sm uppercase tracking-[0.2em] text-accent">Galerie</p>
       <h1 className="mt-2 text-center text-2xl font-medium tracking-tight sm:text-3xl">
         Nos dernières prestations
@@ -71,6 +116,10 @@ export default async function GaleriePage() {
         <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
           {photos.map((photo) => {
             const photographer = photoToPhotographer.get(photo.name);
+            const lieu = photoToLieu.get(photo.name);
+            const altParts = ["Prestation Propul'Sound DJ"];
+            if (photographer) altParts.push(`photo ${photographer}`);
+            if (lieu) altParts.push(lieu);
             return (
               <figure
                 key={photo.name}
@@ -78,17 +127,24 @@ export default async function GaleriePage() {
               >
                 <Image
                   src={photo.url}
-                  alt={`Prestation Propul'Sound DJ${photographer ? ` — photo ${photographer}` : ""}`}
+                  alt={altParts.join(", ")}
                   fill
                   sizes="(max-width: 640px) 50vw, 33vw"
                   className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                 />
-                {photographer ? (
-                  <figcaption
-                    className="absolute bottom-2 right-2 rounded-full bg-background/70 px-2.5 py-1 text-[11px] font-medium text-foreground backdrop-blur-sm transition-all duration-300 sm:translate-y-1 sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100"
-                  >
-                    📷 {photographer}
-                  </figcaption>
+                {photographer || lieu ? (
+                  <div className="pointer-events-none absolute bottom-2 right-2 flex flex-col items-end gap-1 transition-all duration-300 sm:translate-y-1 sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100">
+                    {photographer ? (
+                      <figcaption className="rounded-full bg-background/40 px-2.5 py-1 text-[11px] font-medium text-foreground backdrop-blur-sm">
+                        📷 {photographer}
+                      </figcaption>
+                    ) : null}
+                    {lieu ? (
+                      <figcaption className="rounded-full bg-background/40 px-2.5 py-1 text-[11px] font-medium text-foreground backdrop-blur-sm">
+                        📍 {lieu}
+                      </figcaption>
+                    ) : null}
+                  </div>
                 ) : null}
               </figure>
             );

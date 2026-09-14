@@ -1,12 +1,12 @@
 import {
   deleteLocalMedia,
   deleteMedia,
-  getCredits,
+  getCreditsBundle,
   getOrder,
   importLocalToStorage,
   listLocalMedia,
   listMedia,
-  saveCredits,
+  saveCreditsSection,
   saveOrder,
   type MediaCredits,
   type MediaFolder,
@@ -15,7 +15,7 @@ import {
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { MediaManager } from "@/components/media-manager";
-import { PhotographerCredits } from "@/components/photographer-credits";
+import { MediaCreditsManager } from "@/components/media-credits-manager";
 
 const FOLDERS: { key: MediaFolder; titre: string; hint: string; accept: string; kind: "image" | "video" }[] = [
   {
@@ -120,7 +120,7 @@ function makeImportLocalAction(folder: MediaFolder) {
   };
 }
 
-function makeSaveCreditsAction(folder: MediaFolder) {
+function makeSaveCreditsAction(folder: MediaFolder, section: "photographers" | "lieux") {
   return async (formData: FormData) => {
  "use server";
     if (!(await requireAdmin())) return { ok: false as const, error: "Non autorisé." };
@@ -130,7 +130,7 @@ function makeSaveCreditsAction(folder: MediaFolder) {
     } catch {
       return { ok: false as const, error: "Données invalides." };
     }
-    const res = await saveCredits(folder, credits);
+    const res = await saveCreditsSection(folder, section, credits);
     if (res.ok) {
       revalidatePath("/admin/medias");
       revalidatePath("/galerie");
@@ -155,7 +155,10 @@ export default async function AdminMediasPage() {
     Promise.all(
       FOLDERS.map(async (f) => ({ ...f, items: await mergedItems(f.key) }))
     ),
-    getCredits("galerie").catch(() => ({}) as MediaCredits),
+    getCreditsBundle("galerie").catch(() => ({
+      photographers: {} as MediaCredits,
+      lieux: {} as MediaCredits,
+    })),
   ]);
 
   return (
@@ -189,11 +192,24 @@ export default async function AdminMediasPage() {
             />
           </div>
           {section.key === "galerie" ? (
-            <PhotographerCredits
-              items={section.items}
-              credits={galerieCredits}
-              saveAction={makeSaveCreditsAction("galerie")}
-            />
+            <>
+              <MediaCreditsManager
+                title="📸 Crédits photographes"
+                hint="Créez un photographe, sélectionnez ses photos, enregistrez. Le nom apparaît au survol sur la page /galerie (et en permanence sur mobile)."
+                placeholder="Nom du photographe (ex. Jeanne Bastien)"
+                items={section.items}
+                credits={galerieCredits.photographers}
+                saveAction={makeSaveCreditsAction("galerie", "photographers")}
+              />
+              <MediaCreditsManager
+                title="📍 Lieux des photos"
+                hint="Créez un lieu (ex. Blois, Château de Chambord) et assignez-y les photos prises à cet endroit."
+                placeholder="Lieu (ex. Blois, Château de Chambord)"
+                items={section.items}
+                credits={galerieCredits.lieux}
+                saveAction={makeSaveCreditsAction("galerie", "lieux")}
+              />
+            </>
           ) : null}
         </section>
       ))}
