@@ -135,12 +135,12 @@ export default async function GaleriePage() {
                 {photographer || lieu ? (
                   <div className="pointer-events-none absolute bottom-2 right-2 flex flex-col items-end gap-1 transition-all duration-300 sm:translate-y-1 sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100">
                     {photographer ? (
-                      <figcaption className="rounded-full bg-background/40 px-2.5 py-1 text-[11px] font-medium text-foreground backdrop-blur-sm">
+                      <figcaption className="rounded-full bg-background/25 px-2.5 py-1 text-[11px] font-medium text-foreground/90">
                         📷 {photographer}
                       </figcaption>
                     ) : null}
                     {lieu ? (
-                      <figcaption className="rounded-full bg-background/40 px-2.5 py-1 text-[11px] font-medium text-foreground backdrop-blur-sm">
+                      <figcaption className="rounded-full bg-background/25 px-2.5 py-1 text-[11px] font-medium text-foreground/90">
                         📍 {lieu}
                       </figcaption>
                     ) : null}
