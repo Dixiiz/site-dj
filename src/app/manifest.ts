@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
 
-// Manifeste PWA : permet « Ajouter à l'écran d'accueil » avec une vraie icône
-// Propul'Sound sur iOS/Android, et un léger bonus SEO mobile.
+// Manifeste PWA : permet « Ajouter à l'écran d'accueil » (mobile) ou
+// « Installer l'application » (Chrome/Edge sur PC) avec une vraie icône
+// Propul'Sound, un rendu plein écran (standalone) et des raccourcis vers
+// les pages d'administration les plus utilisées.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Propul'Sound DJ — DJ & animations événementielles",
@@ -19,10 +21,44 @@ export default function manifest(): MetadataRoute.Manifest {
         type: "image/png",
       },
       {
-        src: "/logo-512.png",
+        src: "/pwa-icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/pwa-icon-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
+      },
+      {
+        src: "/pwa-icon-maskable-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
+      },
+    ],
+    shortcuts: [
+      {
+        name: "Administration",
+        short_name: "Admin",
+        url: "/admin",
+      },
+      {
+        name: "Planning",
+        short_name: "Planning",
+        url: "/admin/planning",
+      },
+      {
+        name: "Messages",
+        short_name: "Messages",
+        url: "/admin/messages",
+      },
+      {
+        name: "Devis",
+        short_name: "Devis",
+        url: "/admin/devis",
       },
     ],
   };

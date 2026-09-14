@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Fjalla_One } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Providers } from "@/components/providers";
@@ -16,6 +16,12 @@ const fjallaOne = Fjalla_One({
   subsets: ["latin"],
   weight: "400",
 });
+
+export const viewport: Viewport = {
+  // Couleur de la barre d'état / du cadre de la fenêtre quand le site est
+  // installé comme application (PWA) sur mobile ou PC.
+  themeColor: "#101a2c",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

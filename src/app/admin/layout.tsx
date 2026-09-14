@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { logoutAdmin } from "@/app/actions";
+import { AdminNav } from "@/components/admin-nav";
 import { AdminLoginForm } from "@/components/admin-login-form";
-import { SubmitButton } from "@/components/submit-button";
-import { buttonVariants } from "@/components/ui/button";
+import { OfflineIndicator } from "@/components/offline-indicator";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { isAdmin } from "@/lib/admin-auth";
 
 export default async function AdminLayout({
@@ -23,47 +23,23 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-full">
-      <header className="border-b border-border">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <p className="font-medium">
-            <Link href="/admin" className="transition-colors hover:text-accent">
-              Tableau de bord
+      {/* En-tête sticky : la navigation reste accessible même en défilant */}
+      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4">
+          <p className="truncate font-medium tracking-tight">
+            <Link
+              href="/admin"
+              className="transition-colors hover:text-accent"
+            >
+              Admin — Propul&apos;Sound
             </Link>
           </p>
-          <nav className="flex items-center gap-3 text-sm">
-            <Link href="/admin" className="font-medium text-foreground">
-              🏠 Accueil
-            </Link>
-            <Link href="/admin/devis" className="text-muted-foreground hover:text-foreground">
-              Devis
-            </Link>
-            <Link href="/admin/factures" className="text-muted-foreground hover:text-foreground">
-              Factures
-            </Link>
-            <Link href="/admin/planning" className="text-muted-foreground hover:text-foreground">
-              Planning
-            </Link>
-            <Link href="/admin/medias" className="text-muted-foreground hover:text-foreground">
-              Médias
-            </Link>
-            <Link href="/admin/comptes" className="text-muted-foreground hover:text-foreground">
-              Comptes
-            </Link>
-            <Link href="/" className="text-muted-foreground hover:text-foreground">
-              Site
-            </Link>
-            <form action={logoutAdmin}>
-              <SubmitButton
-                pendingLabel="…"
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                Déconnexion
-              </SubmitButton>
-            </form>
-          </nav>
+          <AdminNav />
         </div>
       </header>
-      <div className="mx-auto max-w-6xl px-4 py-8">{children}</div>
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 md:py-8">{children}</div>
+      <OfflineIndicator />
+      <ServiceWorkerRegister />
     </div>
   );
 }
