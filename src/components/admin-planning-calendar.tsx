@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toggleBlockedDate } from "@/app/actions";
 
 const MONTHS = [
@@ -36,6 +36,21 @@ export function AdminPlanningCalendar({
   const booked = new Set(bookedDates);
   const years = [thisYear, thisYear + 1, thisYear + 2, thisYear + 3, thisYear + 4];
   const todayIso = new Date().toISOString().slice(0, 10);
+  const currentMonth = new Date().getMonth();
+
+  // À l'ouverture, positionne la vue directement sur le mois en cours.
+  useEffect(() => {
+    document
+      .getElementById(`month-${currentMonth}`)
+      ?.scrollIntoView({ block: "start" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const scrollToToday = () => {
+    document
+      .getElementById(`month-${currentMonth}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const toggle = (date: string) => {
     const fd = new FormData();
@@ -65,11 +80,24 @@ export function AdminPlanningCalendar({
         <span className="ml-auto text-xs text-muted-foreground">
           {pending ? "Mise à jour…" : "Cliquez sur un jour pour bloquer / débloquer la date."}
         </span>
+        <button
+          type="button"
+          onClick={scrollToToday}
+          className="rounded-full border border-accent/40 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/10"
+        >
+          Aujourd&apos;hui
+        </button>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {MONTHS.map((name, m) => (
-          <div key={name} className="rounded-xl border border-border bg-muted/50 p-4">
+          <div
+            key={name}
+            id={`month-${m}`}
+            className={`scroll-mt-20 rounded-xl border border-border bg-muted/50 p-4 ${
+              m === currentMonth ? "border-accent/50" : ""
+            }`}
+          >
             <p className="mb-2 text-sm font-medium">{name}</p>
             <div className="grid grid-cols-7 gap-1 text-center text-[11px] text-muted-foreground">
               {DAYS.map((d, i) => (
@@ -81,6 +109,7 @@ export function AdminPlanningCalendar({
                 if (day === null) return <span key={`empty-${m}-${i}`} />;
                 const d = iso(year, m, day);
                 const isPast = d < todayIso;
+                const isToday = d === todayIso;
                 const isBooked = booked.has(d);
                 const isBlocked = blocked.has(d);
                 const disabled = isPast || isBooked || pending;
@@ -98,6 +127,8 @@ export function AdminPlanningCalendar({
                           : "Libre — cliquer pour bloquer"
                     }
                     className={`aspect-square rounded-md transition-colors ${
+                      isToday ? "ring-1 ring-accent font-bold" : ""
+                    } ${
                       isPast
                         ? "cursor-not-allowed text-muted-foreground/30"
                         : isBooked

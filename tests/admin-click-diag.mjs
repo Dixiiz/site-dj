@@ -91,5 +91,26 @@ if ((await raccourci.count()) > 0) {
   console.log("Raccourci /admin/messages introuvable sur cette page");
 }
 
-console.log("Erreurs JS :", errors.length ? errors : "aucune");
+// 4. Détection de débordement horizontal
+await page.goto(base + "/admin", { waitUntil: "networkidle" });
+await page.waitForTimeout(1500);
+const overflow = await page.evaluate(() => {
+  const vw = document.documentElement.clientWidth;
+  const bad = [];
+  for (const el of document.querySelectorAll("body *")) {
+    const r = el.getBoundingClientRect();
+    if (r.width > vw + 1 || r.right > vw + 1 || r.left < -1) {
+      bad.push(
+        `${el.tagName.toLowerCase()}.${String(el.className).split(" ").slice(0, 3).join(".")} → left=${Math.round(r.left)} right=${Math.round(r.right)} w=${Math.round(r.width)}`,
+      );
+      if (bad.length > 12) break;
+    }
+  }
+  return {
+    viewport: vw,
+    scrollWidth: document.documentElement.scrollWidth,
+    bad,
+  };
+});
+console.log("Débordements /admin :", JSON.stringify(overflow, null, 2));
 await browser.close();

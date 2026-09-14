@@ -417,7 +417,7 @@ export default async function AdminDashboard({
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Prochaines dates */}
-        <section className="rounded-xl border border-border bg-card p-5">
+        <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-card p-5">
           <div className="flex items-center justify-between">
             <h2 className="font-medium">📅 Prochaines dates</h2>
             <Link href="/admin/planning" className="text-xs text-accent hover:underline">
@@ -464,7 +464,7 @@ export default async function AdminDashboard({
         </section>
 
         {/* Devis à traiter */}
-        <section className="rounded-xl border border-border bg-card p-5">
+        <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-card p-5">
           <div className="flex items-center justify-between">
             <h2 className="font-medium">📨 Devis à traiter ({devisAttente ?? 0})</h2>
             <Link href="/admin/devis" className="text-xs text-accent hover:underline">
