@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEuros } from "@/lib/money";
 import Link from "next/link";
 import { CaDetailPanel } from "@/components/ca-detail-panel";
+import { ScrollOnMount } from "@/components/scroll-on-mount";
 import { ValidateEcheanceButton } from "@/components/validate-echeance-button";
 
 export const dynamic = "force-dynamic";
@@ -296,6 +297,7 @@ export default async function AdminDashboard({
 
       {/* DÉTAIL : échéanciers en cours (animé, fermable) */}
       {vue === "echeanciers" ? (
+        <ScrollOnMount>
         <div className="animate-in fade-in slide-in-from-bottom-2 space-y-3 rounded-xl border border-border bg-card p-5 duration-300">
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-medium">💳 Échéances en cours — à recevoir ce mois-ci</h2>
@@ -363,10 +365,12 @@ export default async function AdminDashboard({
             </ul>
           )}
         </div>
+        </ScrollOnMount>
       ) : null}
 
       {/* DÉTAIL : soldes + échéances reçues à confirmer (animé, fermable) */}
       {vue === "solde" ? (
+        <ScrollOnMount>
         <div className="animate-in fade-in slide-in-from-bottom-2 space-y-3 rounded-xl border border-border bg-card p-5 duration-300">
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-medium">🧾 Échéanciers — paiements reçus à confirmer</h2>
@@ -406,6 +410,7 @@ export default async function AdminDashboard({
             </ul>
           )}
         </div>
+        </ScrollOnMount>
       ) : null}
 
       {/* DÉTAIL : soirées composant le chiffre cliqué (animé, fermable) */}

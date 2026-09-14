@@ -52,19 +52,29 @@ export function CaDetailPanel({
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
-    function onDown(e: PointerEvent) {
+    // Positionne la vue sur le panneau (il est rendu sous les cartes).
+    ref.current?.scrollIntoView({ block: "start" });
+
+    // Fermeture au clic en dehors du panneau — PAS au pointerdown : sur
+    // mobile, un simple scroll commence par un pointerdown et fermait le
+    // panneau avant même d'avoir pu le lire. Un clic réel ne se déclenche
+    // que si le doigt n'a pas bougé. Petit délai de grâce pour ignorer
+    // le tap qui a ouvert le panneau.
+    const openedAt = Date.now();
+    function onClick(e: MouseEvent) {
+      if (Date.now() - openedAt < 500) return;
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
-    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("click", onClick);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("click", onClick);
       document.removeEventListener("keydown", onKey);
     };
-     
+
   }, []);
 
   // Ferme la section : revient au tableau de bord sans ?vue=…
@@ -98,7 +108,7 @@ export function CaDetailPanel({
       initial={{ opacity: 0, y: 18, scale: 0.985 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="rounded-xl border border-accent/40 bg-accent/5 p-4 shadow-lg sm:p-5"
+      className="scroll-mt-20 rounded-xl border border-accent/40 bg-accent/5 p-4 shadow-lg sm:p-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-medium">{titre}</h2>
