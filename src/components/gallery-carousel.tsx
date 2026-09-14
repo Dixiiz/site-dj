@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FadeIn } from "@/components/fade-in";
 
@@ -56,15 +57,20 @@ export function GalleryCarousel({ photos }: { photos: string[] }) {
         <FadeIn delay={0.1} className="mt-8 sm:mt-10">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {photos.map((src) => (
-              <div key={src} className="relative aspect-square overflow-hidden rounded-2xl">
+              <Link
+                key={src}
+                href="/galerie"
+                aria-label="Voir la galerie complète"
+                className="group relative aspect-square overflow-hidden rounded-2xl"
+              >
                 <Image
                   src={src}
                   alt="Prestation Propul'Sound DJ"
                   fill
                   sizes="(max-width: 640px) 100vw, 33vw"
-                  className="object-cover"
+                  className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                 />
-              </div>
+              </Link>
             ))}
           </div>
         </FadeIn>
@@ -99,7 +105,11 @@ export function GalleryCarousel({ photos }: { photos: string[] }) {
           >
             {extended.map((src, i) => (
               <div key={`${src}-${i}`} className="w-full shrink-0 sm:w-1/3">
-                <div className="relative aspect-square border-r border-border">
+                <Link
+                  href="/galerie"
+                  aria-label="Voir la galerie complète"
+                  className="relative block aspect-square border-r border-border"
+                >
                   <Image
                     src={src}
                     alt="Prestation Propul'Sound DJ"
@@ -108,10 +118,23 @@ export function GalleryCarousel({ photos }: { photos: string[] }) {
                     className="object-cover"
                     priority={i < visible}
                   />
-                </div>
+                </Link>
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Lien vers la galerie complète */}
+        <div className="mt-4 text-center">
+          <Link
+            href="/galerie"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-accent"
+          >
+            Voir toute la galerie
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
         </div>
 
         {/* Zones tactiles invisibles : toucher le côté gauche/droit pour naviguer,

@@ -60,7 +60,7 @@ export default async function GaleriePage() {
       </h1>
       <p className="mx-auto mt-3 max-w-md text-center text-sm text-muted-foreground">
         Merci aux photographes qui ont saisi ces instants — leur nom apparaît
-        sur chaque photo.
+        au survol de chaque photo (en permanence sur mobile).
       </p>
 
       {photos.length === 0 ? (
