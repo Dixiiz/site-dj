@@ -1,10 +1,17 @@
 import type { ReactNode } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminNav } from "@/components/admin-nav";
 import { AdminLoginForm } from "@/components/admin-login-form";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { isAdmin } from "@/lib/admin-auth";
+
+// Manifeste PWA propre à l'admin : l'app installée depuis /admin s'ouvre
+// directement sur le tableau de bord admin (et non sur le site public).
+export const metadata: Metadata = {
+  manifest: "/admin/manifest.webmanifest",
+};
 
 export default async function AdminLayout({
   children,
