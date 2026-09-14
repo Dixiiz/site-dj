@@ -147,11 +147,13 @@ export default async function AdminDashboard({
 
   // CA URSSAF du mois : soirées du mois TERMINÉES dont le solde a été
   // validé. Au 1er du mois, la carte repart de 0 €.
+  // Seul le SOLDE compte : l'acompte a déjà été déclaré le mois où il a
+  // été reçu (il ne doit pas être déclaré deux fois).
   const ceMoisJouees = allConfirmed.filter(
     (q) => (q.event_date ?? "").startsWith(monthPrefix) && (q.event_date ?? "") <= todayIso
   );
   const encaisse = ceMoisJouees.filter((q) => soldeValide(q));
-  const caMoisQuotes = encaisse.reduce((sum, q) => sum + montant(q), 0);
+  const caMoisQuotes = encaisse.reduce((sum, q) => sum + soldeDe(q), 0);
   const attenteValidation = ceMoisJouees.filter((q) => !soldeValide(q));
   // Le CA URSSAF du mois inclut aussi les échéances d'échéancier confirmées
   // (attribuées au mois de leur date limite).
@@ -192,8 +194,9 @@ export default async function AdminDashboard({
       rows: allConfirmed.filter((q) => (q.event_date ?? "").startsWith(String(year))),
     },
     urssaf: {
-      titre: `CA ${monthPrefix} (URSSAF) — soirées encaissées et validées`,
+      titre: `CA ${monthPrefix} (URSSAF) — soldes encaissés et validés`,
       rows: encaisse,
+      solde: true,
     },
     solde: {
       titre: "Soldes à valider — soirées terminées, solde non confirmé",
@@ -249,7 +252,7 @@ export default async function AdminDashboard({
           className="rounded-2xl border border-border bg-card p-6 transition-colors hover:border-accent/50"
         >
           <p className="text-xs font-medium tracking-[0.15em] text-muted-foreground uppercase">
-            🧾 CA encaissé ce mois — à déclarer (URSSAF)
+            🧾 CA encaissé ce mois — à déclarer (URSSAF, soldes seuls)
           </p>
           <p className="mt-2 text-4xl font-semibold">{eur(caMois)}</p>
           <p className="mt-2 text-sm text-muted-foreground">
