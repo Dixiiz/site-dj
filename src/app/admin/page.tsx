@@ -1,8 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEuros } from "@/lib/money";
 import Link from "next/link";
-import { CaDetailPanel } from "@/components/ca-detail-panel";
-import { ScrollOnMount } from "@/components/scroll-on-mount";
+import { DashboardDetail } from "@/components/dashboard-detail";
 import { ValidateEcheanceButton } from "@/components/validate-echeance-button";
 
 export const dynamic = "force-dynamic";
@@ -185,28 +184,7 @@ export default async function AdminDashboard({
   });
   /* SUITE-RENDU */
 
-  // Vue de détail sélectionnée via une carte cliquable.
-  const detailConfig: Record<
-    string,
-    { titre: string; rows: typeof upcoming; solde?: boolean }
-  > = {
-    "ca-annee": {
-      titre: `CA signé ${year} — détail des événements`,
-      rows: allConfirmed.filter((q) => (q.event_date ?? "").startsWith(String(year))),
-    },
-    urssaf: {
-      titre: `CA ${monthPrefix} (URSSAF) — soldes encaissés et validés`,
-      rows: encaisse,
-      solde: true,
-    },
-    solde: {
-      titre: "Soldes à valider — soirées terminées, solde non confirmé",
-      rows: aValiderToutes,
-      solde: true,
-    },
-    "ca-avenir": { titre: "CA à venir — soirées restantes", rows: upcoming },
-  };
-  const detailVue = vue ? detailConfig[vue] : undefined;
+  // Données des cartes et panneaux de détail (rendu instantané côté client).
   const mapDetailRow = (q: (typeof upcoming)[number]) => ({
     id: q.id,
     customerName: q.customer_name,
@@ -217,6 +195,28 @@ export default async function AdminDashboard({
     notes: String(q.notes ?? ""),
     status: q.status ?? "",
   });
+  const details = {
+    "ca-annee": {
+      titre: `CA signé ${year} — détail des événements`,
+      rows: allConfirmed
+        .filter((q) => (q.event_date ?? "").startsWith(String(year)))
+        .map(mapDetailRow),
+    },
+    urssaf: {
+      titre: `CA ${monthPrefix} (URSSAF) — soldes encaissés et validés`,
+      rows: encaisse.map(mapDetailRow),
+      solde: true,
+    },
+    solde: {
+      titre: "Soldes à valider — soirées terminées, solde non confirmé",
+      rows: aValiderToutes.map(mapDetailRow),
+      solde: true,
+    },
+    "ca-avenir": {
+      titre: "CA à venir — soirées restantes",
+      rows: upcoming.map(mapDetailRow),
+    },
+  };
 
   return (
     <main className="mx-auto w-full max-w-5xl space-y-8 px-4 py-8">
@@ -234,90 +234,119 @@ export default async function AdminDashboard({
           </Link>
         </div>
 
-      {/* BLOC 1 : les 2 chiffres qui comptent */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Link
-          href="/admin?vue=ca-annee"
-          className="rounded-2xl border border-accent/40 bg-gradient-to-br from-accent/15 to-accent/5 p-6 transition-colors hover:border-accent"
-        >
-          <p className="text-xs font-medium tracking-[0.15em] text-accent uppercase">
-            💰 CA signé {year} — cliquer pour le détail
-          </p>
-          <p className="mt-2 text-4xl font-semibold">{eur(caAnnee)}</p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {allConfirmed.length} événement(s) confirmé(s) cette année
-          </p>
-        </Link>
-        <Link
-          href="/admin?vue=urssaf"
-          className="rounded-2xl border border-border bg-card p-6 transition-colors hover:border-accent/50"
-        >
-          <p className="text-xs font-medium tracking-[0.15em] text-muted-foreground uppercase">
-            🧾 CA encaissé ce mois — à déclarer (URSSAF, soldes seuls)
-          </p>
-          <p className="mt-2 text-4xl font-semibold">{eur(caMois)}</p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {encaisse.length} soirée(s) validée(s) ·{" "}
-            {urssafEcheances > 0
-              ? `${echeancesValidees.filter((e) => e.dueDate.startsWith(monthPrefix)).length} échéance(s) d'échéancier · `
-              : ""}
-            {attenteValidation.length > 0
-              ? `${attenteValidation.length} solde(s) en attente de validation`
-              : "tout est validé ✓"}
-          </p>
-        </Link>
-      </div>
-
-      {/* BLOC 2 : détails (cliquables → détail) */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
+      <DashboardDetail
+        initialVue={vue}
+        cards1={[
+          {
+            vue: "ca-annee",
+            label: `💰 CA signé ${year} — cliquer pour le détail`,
+            value: eur(caAnnee),
+            hint: `${allConfirmed.length} événement(s) confirmé(s) cette année`,
+            hero: true,
+            accentLabel: true,
+          },
+          {
+            vue: "urssaf",
+            label: "🧾 CA encaissé ce mois — à déclarer (URSSAF, soldes seuls)",
+            value: eur(caMois),
+            hint: `${encaisse.length} soirée(s) validée(s) · ${
+              urssafEcheances > 0
+                ? `${echeancesValidees.filter((e) => e.dueDate.startsWith(monthPrefix)).length} échéance(s) d'échéancier · `
+                : ""
+            }${
+              attenteValidation.length > 0
+                ? `${attenteValidation.length} solde(s) en attente de validation`
+                : "tout est validé ✓"
+            }`,
+            hero: true,
+          },
+        ]}
+        cards2={[
           { vue: "echeanciers", label: "Échéances en cours", value: String(echeancesDuMois.length), hint: "échéance(s) à recevoir ce mois-ci — clic pour le détail" },
           { vue: "solde", label: "Soldes à valider", value: eur(soldeAValiderToutes + echeancesAConfirmer.reduce((s, e) => s + e.amountCents, 0)), hint: `${aValiderToutes.length} solde(s) + ${echeancesAConfirmer.length} échéance(s) reçue(s) — valider pour compter dans l'URSSAF` },
           { vue: "ca-avenir", label: "CA à venir (déjà signé)", value: eur(caAVenir), hint: `${upcoming.length} soirée(s) confirmée(s) restante(s)` },
-          { vue: null, label: "Devis en attente", value: String(devisAttente ?? 0), hint: "à relancer ou traiter", href: "/admin/devis" },
-        ].map((card) => {
-          const inner = (
-            <>
-              <p className="text-sm font-medium text-muted-foreground">{card.label}</p>
-              <p className="mt-1.5 text-xl font-semibold">{card.value}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{card.hint}</p>
-            </>
-          );
-          return card.href ? (
-            <Link key={card.label} href={card.href} className="rounded-xl border border-border bg-card p-5 transition-colors hover:border-accent/50">
-              {inner}
-            </Link>
-          ) : (
-            <Link key={card.label} href={`/admin?vue=${card.vue}`} className="rounded-xl border border-border bg-card p-5 transition-colors hover:border-accent/50">
-              {inner}
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* DÉTAIL : échéanciers en cours (animé, fermable) */}
-      {vue === "echeanciers" ? (
-        <ScrollOnMount>
-        <div className="animate-in fade-in slide-in-from-bottom-2 space-y-3 rounded-xl border border-border bg-card p-5 duration-300">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="font-medium">💳 Échéances en cours — à recevoir ce mois-ci</h2>
-            <Link href="/admin" className="text-xs text-accent hover:underline">
-              ✕ Fermer
-            </Link>
+          { vue: "devis", href: "/admin/devis", label: "Devis en attente", value: String(devisAttente ?? 0), hint: "à relancer ou traiter" },
+        ]}
+        details={details}
+        echeanciersPanel={
+          <div className="animate-in fade-in slide-in-from-bottom-2 space-y-3 rounded-xl border border-border bg-card p-5 duration-300">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-medium">💳 Échéances en cours — à recevoir ce mois-ci</h2>
+              <span className="text-xs text-muted-foreground">Cliquez à nouveau sur la carte pour fermer</span>
+            </div>
+            {echeancesDuMois.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Aucune échéance impayée ce mois-ci ✓
+              </p>
+            ) : (
+              <ul className="divide-y divide-border rounded-lg border border-border">
+                {echeancesDuMois.map((e) => {
+                  const prog = progressionParDevis.get(e.quoteId);
+                  const pct =
+                    prog && prog.total > 0
+                      ? Math.round((prog.payees / prog.total) * 100)
+                      : 0;
+                  return (
+                    <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+                      <div className="min-w-0">
+                        <Link
+                          href={`/admin/devis?focus=${e.quoteId}`}
+                          className="font-medium transition-colors hover:text-accent hover:underline"
+                          title="Ouvrir ce devis dans la liste"
+                        >
+                          {e.client}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">
+                          Échéance {e.numero}/{e.totalEcheances} — avant le{" "}
+                          {new Date(`${e.dueDate}T12:00:00`).toLocaleDateString("fr-FR", {
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </p>
+                      </div>
+                      <span className="font-medium">{eur(e.amountCents)}</span>
+                      {prog && prog.total > 0 && (
+                        <div className="w-full">
+                          <div
+                            className="h-1.5 overflow-hidden rounded-full bg-muted"
+                            role="progressbar"
+                            aria-valuenow={pct}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label={`Échéancier de ${e.client} : ${prog.payees} échéances réglées sur ${prog.total}`}
+                          >
+                            <div
+                              className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-emerald-500" : "bg-accent"}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <p className="mt-1 text-[11px] text-muted-foreground">
+                            {prog.payees}/{prog.total} échéance{prog.total > 1 ? "s" : ""} réglée
+                            {prog.payees > 1 ? "s" : ""} · {eur(prog.payeCents)} sur {eur(prog.totalCents)}
+                          </p>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
-          {echeancesDuMois.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Aucune échéance impayée ce mois-ci ✓
-            </p>
-          ) : (
-            <ul className="divide-y divide-border rounded-lg border border-border">
-              {echeancesDuMois.map((e) => {
-                const prog = progressionParDevis.get(e.quoteId);
-                const pct =
-                  prog && prog.total > 0
-                    ? Math.round((prog.payees / prog.total) * 100)
-                    : 0;
-                return (
+        }
+        soldeRecusPanel={
+          <div className="animate-in fade-in slide-in-from-bottom-2 space-y-3 rounded-xl border border-border bg-card p-5 duration-300">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-medium">🧾 Échéanciers — paiements reçus à confirmer</h2>
+              <span className="text-xs text-muted-foreground">Cliquez à nouveau sur la carte pour fermer</span>
+            </div>
+            {echeancesAConfirmer.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Aucun paiement d&apos;échéancier en attente de confirmation ✓
+              </p>
+            ) : (
+              <ul className="divide-y divide-border rounded-lg border border-border">
+                {echeancesAConfirmer.map((e) => (
                   <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
                     <div className="min-w-0">
                       <Link
@@ -328,99 +357,24 @@ export default async function AdminDashboard({
                         {e.client}
                       </Link>
                       <p className="text-xs text-muted-foreground">
-                        Échéance {e.numero}/{e.totalEcheances} — avant le{" "}
-                        {new Date(`${e.dueDate}T12:00:00`).toLocaleDateString("fr-FR", {
-                          weekday: "short",
-                          day: "numeric",
-                          month: "short",
-                        })}
+                        Échéance {e.numero}/{e.totalEcheances} — reçue le{" "}
+                        {e.paidAt
+                          ? new Date(e.paidAt).toLocaleDateString("fr-FR")
+                          : new Date(`${e.dueDate}T12:00:00`).toLocaleDateString("fr-FR")}
                       </p>
                     </div>
-                    <span className="font-medium">{eur(e.amountCents)}</span>
-                    {/* Barre de progression de l'échéancier (réglement vs total) */}
-                    {prog && prog.total > 0 && (
-                      <div className="w-full">
-                        <div
-                          className="h-1.5 overflow-hidden rounded-full bg-muted"
-                          role="progressbar"
-                          aria-valuenow={pct}
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                          aria-label={`Échéancier de ${e.client} : ${prog.payees} échéances réglées sur ${prog.total}`}
-                        >
-                          <div
-                            className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-emerald-500" : "bg-accent"}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <p className="mt-1 text-[11px] text-muted-foreground">
-                          {prog.payees}/{prog.total} échéance{prog.total > 1 ? "s" : ""} réglée
-                          {prog.payees > 1 ? "s" : ""} · {eur(prog.payeCents)} sur {eur(prog.totalCents)}
-                        </p>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-3">
+                      <span className="font-medium">{eur(e.amountCents)}</span>
+                      <ValidateEcheanceButton id={e.id} />
+                    </div>
                   </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-        </ScrollOnMount>
-      ) : null}
-
-      {/* DÉTAIL : soldes + échéances reçues à confirmer (animé, fermable) */}
-      {vue === "solde" ? (
-        <ScrollOnMount>
-        <div className="animate-in fade-in slide-in-from-bottom-2 space-y-3 rounded-xl border border-border bg-card p-5 duration-300">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="font-medium">🧾 Échéanciers — paiements reçus à confirmer</h2>
-            <Link href="/admin" className="text-xs text-accent hover:underline">
-              ✕ Fermer
-            </Link>
+                ))}
+              </ul>
+            )}
           </div>
-          {echeancesAConfirmer.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Aucun paiement d&apos;échéancier en attente de confirmation ✓
-            </p>
-          ) : (
-            <ul className="divide-y divide-border rounded-lg border border-border">
-              {echeancesAConfirmer.map((e) => (
-                <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
-                  <div className="min-w-0">
-                    <Link
-                      href={`/admin/devis?focus=${e.quoteId}`}
-                      className="font-medium transition-colors hover:text-accent hover:underline"
-                      title="Ouvrir ce devis dans la liste"
-                    >
-                      {e.client}
-                    </Link>
-                    <p className="text-xs text-muted-foreground">
-                      Échéance {e.numero}/{e.totalEcheances} — reçue le{" "}
-                      {e.paidAt
-                        ? new Date(e.paidAt).toLocaleDateString("fr-FR")
-                        : new Date(`${e.dueDate}T12:00:00`).toLocaleDateString("fr-FR")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium">{eur(e.amountCents)}</span>
-                    <ValidateEcheanceButton id={e.id} />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        </ScrollOnMount>
-      ) : null}
+        }
+      />
 
-      {/* DÉTAIL : soirées composant le chiffre cliqué (animé, fermable) */}
-      {vue && detailVue ? (
-        <CaDetailPanel
-          titre={detailVue.titre}
-          rows={detailVue.rows.map(mapDetailRow)}
-          solde={detailVue.solde}
-        />
-      ) : null}
       {/* SUITE-LISTES */}
 
       <div className="grid gap-6 lg:grid-cols-2">

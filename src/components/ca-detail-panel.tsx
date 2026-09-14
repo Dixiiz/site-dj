@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { deleteQuote } from "@/app/actions";
 import Link from "next/link";
 import { ManagedQuoteRow } from "./managed-quote-row";
+import { ManagedQuoteEditForm } from "./managed-quote-edit-form";
 import { ValidateSoldeButton } from "./validate-solde-button";
 import { formatEuros } from "@/lib/money";
 
@@ -43,13 +44,16 @@ export function CaDetailPanel({
   titre,
   rows,
   solde = false,
+  onClose: onCloseProp,
 }: {
   titre: string;
   rows: DetailRow[];
   solde?: boolean;
+  onClose?: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pending, startTransition] = useTransition();
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     // Positionne la vue sur le panneau (il est rendu sous les cartes).
@@ -74,11 +78,16 @@ export function CaDetailPanel({
       document.removeEventListener("click", onClick);
       document.removeEventListener("keydown", onKey);
     };
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Ferme la section : revient au tableau de bord sans ?vue=…
+  // Ferme la section : via callback (ouverture instantanée côté client) ou,
+  // à défaut, retour au tableau de bord sans ?vue=…
   function onClose() {
+    if (onCloseProp) {
+      onCloseProp();
+      return;
+    }
     window.history.replaceState(null, "", "/admin");
     window.location.reload();
   }
@@ -161,11 +170,11 @@ export function CaDetailPanel({
                     </p>
                     <p className="text-xs text-muted-foreground">{formatEuros(affiche)}</p>
                   </div>
-                  {solde ? (
+                  {solde && !soldeValide(row.notes) ? (
                     <ValidateSoldeButton
                       id={row.id}
                       customerName={row.customerName}
-                      validated={soldeValide(row.notes)}
+                      validated={false}
                     />
                   ) : null}
                   {managed ? (
@@ -179,16 +188,40 @@ export function CaDetailPanel({
                       acompteCents={acompteDe(row.notes)}
                     />
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => onDeleteSiteQuote(row)}
-                      disabled={pending}
-                      className="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs text-red-400 transition-colors hover:bg-red-500/10"
-                    >
-                      {pending ? "…" : "Supprimer"}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingId((cur) => (cur === row.id ? null : row.id))
+                        }
+                        className="shrink-0 rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/10"
+                      >
+                        Modifier
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteSiteQuote(row)}
+                        disabled={pending}
+                        className="shrink-0 rounded-lg border border-red-500/40 px-3 py-1.5 text-xs text-red-400 transition-colors hover:bg-red-500/10"
+                      >
+                        {pending ? "…" : "Supprimer"}
+                      </button>
+                    </>
                   )}
                 </div>
+                {editingId === row.id ? (
+                  <div className="w-full rounded-lg border border-border bg-background/60 p-3">
+                    <ManagedQuoteEditForm
+                      id={row.id}
+                      eventDate={row.eventDate}
+                      formulaName={row.formulaName}
+                      eventLocation={row.eventLocation}
+                      totalCents={row.totalCents}
+                      acompteCents={acompteDe(row.notes)}
+                      onDone={() => setEditingId(null)}
+                    />
+                  </div>
+                ) : null}
               </li>
             );
           })}

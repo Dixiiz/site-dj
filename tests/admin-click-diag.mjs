@@ -57,38 +57,36 @@ console.log("Diag :", JSON.stringify(diag, null, 2));
 const cardCount = await page.locator("main a").count();
 console.log("Nombre de liens dans <main> :", cardCount);
 
-const firstCard = page.locator('main a[href*="vue="]').first();
-console.log("Première carte vue= trouvée :", (await firstCard.count()) > 0);
-const box = await firstCard.boundingBox();
-console.log("Bounding box carte :", JSON.stringify(box));
+const cardBtnPre = page.locator("main button", { hasText: "CA SIGNÉ" }).first();
+console.log("Carte CA SIGNÉ trouvée (avant test) :", (await cardBtnPre.count()) > 0);
 
-const hit = await page.evaluate(({ x, y }) => {
-  const el = document.elementFromPoint(x, y);
-  const chain = [];
-  let cur = el;
-  while (cur && chain.length < 5) {
-    chain.push(
-      `${cur.tagName.toLowerCase()}${cur.className && typeof cur.className === "string" ? "." + cur.className.split(" ").slice(0, 3).join(".") : ""}`,
-    );
-    cur = cur.parentElement;
-  }
-  return { hit: el?.tagName, chain };
-}, { x: box.x + box.width / 2, y: box.y + box.height / 2 });
-console.log("elementFromPoint au centre de la carte :", JSON.stringify(hit));
+// 2. Tente un vrai clic sur la carte « CA signé » (désormais un <button>)
+// et vérifie que le panneau s'ouvre instantanément (sans changer d'URL).
+const cardBtn = page.locator("main button", { hasText: "CA SIGNÉ" }).first();
+console.log("Carte CA SIGNÉ trouvée :", (await cardBtn.count()) > 0);
+const urlBefore = page.url();
+await cardBtn.click();
+await page.waitForTimeout(800);
+console.log("URL inchangée après clic :", page.url() === urlBefore, "→", page.url());
+const panelVisible = await page
+  .locator("text=détail des événements")
+  .first()
+  .isVisible()
+  .catch(() => false);
+console.log("Panneau CA visible :", panelVisible);
 
-// 2. Tente un vrai clic et regarde si l'URL change.
-await firstCard.click();
-await page.waitForTimeout(2500);
-console.log("URL après clic :", page.url());
-
-// 3. Clic sur un raccourci
-const raccourci = page.locator('main a[href="/admin/messages"]').first();
-if ((await raccourci.count()) > 0) {
-  await raccourci.click();
-  await page.waitForTimeout(2500);
-  console.log("URL après clic raccourci messages :", page.url());
-} else {
-  console.log("Raccourci /admin/messages introuvable sur cette page");
+// 3. Bouton Modifier (devis du site) dans le panneau
+const modifier = page.locator('main button:has-text("Modifier")').first();
+console.log("Bouton Modifier présent :", (await modifier.count()) > 0);
+if ((await modifier.count()) > 0) {
+  await modifier.click({ force: true }).catch((e) => console.log("Clic forcé issu de l'animation :", e.message.slice(0, 60)));
+  await page.waitForTimeout(500);
+  const formVisible = await page
+    .locator('main form input[name="acompte"]')
+    .first()
+    .isVisible()
+    .catch(() => false);
+  console.log("Formulaire de modification visible :", formVisible);
 }
 
 // 4. Détection de débordement horizontal
