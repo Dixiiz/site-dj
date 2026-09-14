@@ -170,19 +170,19 @@ export function PhotographerCredits({
                   </p>
                 ) : (
                   <>
-                    <div className="mt-2 grid max-h-64 grid-cols-4 gap-2 overflow-y-auto sm:grid-cols-6">
+                    <div className="mt-2 flex max-h-64 flex-wrap gap-2 overflow-y-auto">
                       {unassigned.map((item) => (
                         <button
                           key={item.name}
                           type="button"
                           onClick={() => toggleSelect(item.name)}
-                          className={`relative aspect-square overflow-hidden rounded-lg ring-2 transition-all ${
+                          className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-lg ring-2 transition-all ${
                             selected.includes(item.name)
                               ? "ring-accent"
                               : "ring-transparent hover:ring-accent/40"
                           }`}
                         >
-                          <Image src={item.url} alt={item.name} fill sizes="100px" className="object-cover" />
+                          <Image src={item.url} alt={item.name} fill sizes="80px" className="object-cover" />
                           {selected.includes(item.name) ? (
                             <span className="absolute inset-0 flex items-center justify-center bg-accent/30 text-lg">✓</span>
                           ) : null}
