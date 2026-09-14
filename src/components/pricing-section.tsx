@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { CreditCard } from "lucide-react";
 import { FadeIn } from "@/components/fade-in";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -559,9 +560,12 @@ export function PricingSection() {
                 </span>
               ))}
             </p>
-            <p className="mt-3 text-sm text-muted-foreground">
-              💳 Payable en plusieurs fois (2 à 10×) — estimez vos échéances en
-              direct dans le récapitulatif du devis ci-dessous.
+            <p className="mt-3 flex items-start gap-1.5 text-sm text-muted-foreground">
+              <CreditCard className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <span>
+                Payable en plusieurs fois (2 à 10×) — estimez vos échéances en
+                direct dans le récapitulatif du devis ci-dessous.
+              </span>
             </p>
           </div>
         </div>

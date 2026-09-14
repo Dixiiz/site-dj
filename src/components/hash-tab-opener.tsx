@@ -1,5 +1,7 @@
 "use client";
 
+import { CreditCard } from "lucide-react";
+
 // Carte de renvoi de l'onglet Ma soirée vers le panneau Paiement.
 // Utilise un événement personnalisé (pas de hash) : 100 % fiable en
 // navigation client — l'onglet s'active immédiatement au clic.
@@ -18,7 +20,11 @@ export default function OpenPaiementCard({ quoteId }: { quoteId: string }) {
       className="flex w-full items-center justify-between gap-4 rounded-xl border border-accent/30 bg-accent/5 p-4 text-left text-sm transition-colors hover:border-accent"
     >
       <span>
-        <strong>💳 Paiements</strong> — acompte, carte ou virement,
+        <strong className="inline-flex items-center gap-1.5">
+          <CreditCard className="size-4" aria-hidden />
+          Paiements
+        </strong>{" "}
+        — acompte, carte ou virement,
         échéancier : tout est centralisé dans l&apos;onglet Paiement.
       </span>
       <span className="shrink-0 text-accent">Ouvrir →</span>

@@ -3,6 +3,7 @@
 import { useSyncExternalStore, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { CreditCard, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { fr as frLocale } from "date-fns/locale";
 import { fr } from "react-day-picker/locale";
@@ -553,7 +554,10 @@ export function QuoteBookingForm({
                             )
                           }
                         >
-                          <span>📍 {suggestion.label}</span>
+                          <span className="flex items-center gap-1.5">
+                            <MapPin className="size-3.5 shrink-0 text-accent" aria-hidden />
+                            {suggestion.label}
+                          </span>
                           {suggestion.subtitle ? (
                             <span className="block text-xs text-muted-foreground">
                               {suggestion.subtitle}
@@ -907,7 +911,10 @@ function RecapInstallments({ total }: { total: number }) {
   return (
     <div className="pt-1 text-xs">
       <div className="flex flex-wrap items-center gap-1">
-        <span className="mr-1 text-muted-foreground">💳 Étaler :</span>
+        <span className="mr-1 flex items-center gap-1 text-muted-foreground">
+          <CreditCard className="size-3.5" aria-hidden />
+          Étaler :
+        </span>
         {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
           const ok = dispo.includes(n);
           return (

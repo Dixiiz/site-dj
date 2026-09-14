@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { CreditCard } from "lucide-react";
 import {
   creerEcheancier,
   annulerEcheancier,
@@ -201,7 +202,10 @@ export default function PaymentPanel({
                     pendingLabel="Redirection…"
                     className="rounded-md bg-[#21619A] px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-[#1a4d7a]"
                   >
-                    💳 Payer l&apos;acompte par carte
+                    <span className="flex items-center justify-center gap-1.5">
+                      <CreditCard className="size-4" aria-hidden />
+                      Payer l&apos;acompte par carte
+                    </span>
                   </SubmitButton>
                 </form>
                 <p className="mt-3 text-xs text-muted-foreground">
