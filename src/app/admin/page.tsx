@@ -254,7 +254,7 @@ export default async function AdminDashboard({
             hint: `${allConfirmed.length} événement(s) confirmé(s) cette année`,
             hero: true,
             accentLabel: true,
-            icon: TrendingUp,
+            icon: <TrendingUp className="size-4" aria-hidden />,
           },
           {
             vue: "urssaf",
@@ -270,7 +270,7 @@ export default async function AdminDashboard({
                 : "tout est validé ✓"
             }`,
             hero: true,
-            icon: Receipt,
+            icon: <Receipt className="size-4" aria-hidden />,
           },
         ]}
         cards2={[

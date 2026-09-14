@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { CaDetailPanel, type DetailRow } from "./ca-detail-panel";
 
@@ -16,7 +15,8 @@ type CardDef = {
   /** Libellé en accent (carte CA signé). */
   accentLabel?: boolean;
   href?: string;
-  icon?: LucideIcon;
+  /** Icône déjà rendue (élément JSX) — ne pas passer un composant brut. */
+  icon?: ReactNode;
 };
 
 type DetailData = {
@@ -84,7 +84,7 @@ export function DashboardDetail({
                 card.accentLabel ? "text-accent" : "text-muted-foreground"
               }`}
             >
-              {card.icon ? <card.icon className="size-4" aria-hidden /> : null}
+              {card.icon}
               {card.label}
             </p>
             <p className="mt-2 text-4xl font-semibold">{card.value}</p>
