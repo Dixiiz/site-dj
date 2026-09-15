@@ -42,6 +42,6 @@ export const config = {
   matcher: [
     // L'admin utilise son propre cookie de session (dj_admin) : pas besoin de
     // rafraîchir la session Supabase sur ces routes (ni de la subir).
-    "/((?!admin(/|$)|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp4)$).*)",
+    "/((?!admin(?:/|$)|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp4)$).*)",
   ],
 };
