@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getQuoteAdminBundle } from "@/app/client-actions";
 import { AdminQuotePlaylist, eventMoments } from "@/components/admin-quote-playlist";
 import { AdminRdvRequests } from "@/components/rdv-call";
@@ -23,8 +23,10 @@ export function AdminQuoteLazyFolder({
 }) {
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
-  const [tookMs, setTookMs] = useState<number | null>(null);
+  const [fetchMs, setFetchMs] = useState<number | null>(null);
+  const [doneMs, setDoneMs] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
+  const t0Ref = useRef<number>(0);
   const [bundle, setBundle] = useState<{
     tracks: {
       id: string; moment: string; title: string; artist: string | null; kind: string; preview_url: string | null; artwork_url: string | null;
@@ -51,15 +53,13 @@ export function AdminQuoteLazyFolder({
     if (!open || loaded) return;
     let cancelled = false;
     setLoaded(true);
-    setElapsed(0);
-    const t0 = Date.now();
+    t0Ref.current = Date.now();
     getQuoteAdminBundle(quoteId)
       .then((res) => {
         if (cancelled) return;
-        setTookMs(Date.now() - t0);
-        console.log(
-          `[dossier] chargé en ${Date.now() - t0}ms (côté client, transport inclus)`
-        );
+        const ms = Date.now() - t0Ref.current;
+        setFetchMs(ms);
+        console.log(`[dossier] requête: ${ms}ms (transport inclus)`);
         if (res.ok)
           setBundle({
             tracks: res.tracks ?? [],
@@ -76,12 +76,18 @@ export function AdminQuoteLazyFolder({
     };
   }, [open, loaded, quoteId]);
 
-  // Compteur à l'écran pendant le chargement (diagnostic lenteur).
+  // Compteur à l'écran pendant le chargement (diagnostic lenteur) : tourne
+  // tant que le squelette est affiché (requête en cours OU rendu bloqué).
   useEffect(() => {
-    if (!open || loaded) return;
+    if (!open || bundle || error) return;
     const id = setInterval(() => setElapsed((s) => s + 1), 1000);
     return () => clearInterval(id);
-  }, [open, loaded]);
+  }, [open, bundle, error]);
+
+  // Mesure du temps d'affichage : ce effet tourne une fois le contenu rendu.
+  useEffect(() => {
+    if (bundle && doneMs === null) setDoneMs(Date.now() - t0Ref.current);
+  }, [bundle, doneMs]);
 
   // Rechargement léger du bundle toutes les 15 s tant que le devis est ouvert
   // (nouveau message, nouveau fichier, document généré…).
@@ -111,10 +117,10 @@ export function AdminQuoteLazyFolder({
           </div>
         ) : (
           <div className="space-y-6 border-t border-border px-4 pb-5 pt-4">
-            {tookMs !== null && tookMs > 2500 ? (
-              <p className="rounded-lg border border-orange-500/40 bg-orange-500/10 px-3 py-1.5 text-xs text-orange-300">
-                ⚠️ Dossier chargé en {(tookMs / 1000).toFixed(1)}s — signale ce
-                chiffre à Maxime (diagnostic temporaire).
+            {fetchMs !== null && doneMs !== null ? (
+              <p className="text-[11px] text-muted-foreground">
+                🧪 Diagnostic temporaire — requête : {fetchMs} ms · affichage
+                complet : {(doneMs / 1000).toFixed(1)} s
               </p>
             ) : null}
             <AdminQuoteConversation quoteId={quoteId} initialMessages={initialMessages} />
