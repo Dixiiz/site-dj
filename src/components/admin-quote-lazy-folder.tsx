@@ -89,6 +89,27 @@ export function AdminQuoteLazyFolder({
     if (bundle && doneMs === null) setDoneMs(Date.now() - t0Ref.current);
   }, [bundle, doneMs]);
 
+  // Rendu PROGRESSIF : au lieu de dessiner tout le dossier d'un coup
+  // (messagerie + playlist + fichiers + documents = très coûteux sur Safari,
+  // qui gèle plusieurs secondes), on monte les blocs par vagues en laissant
+  // le navigateur peindre entre chaque. L'ouverture devient immédiate.
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    if (!bundle) {
+      setStage(0);
+      return;
+    }
+    let s = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const next = () => {
+      s += 1;
+      setStage(s);
+      if (s < 3) timer = setTimeout(next, 60);
+    };
+    timer = setTimeout(next, 50);
+    return () => clearTimeout(timer);
+  }, [bundle]);
+
   // Rechargement léger du bundle toutes les 15 s tant que le devis est ouvert
   // (nouveau message, nouveau fichier, document généré…).
   useEffect(() => {
@@ -123,23 +144,53 @@ export function AdminQuoteLazyFolder({
                 complet : {(doneMs / 1000).toFixed(1)} s
               </p>
             ) : null}
-            <AdminQuoteConversation quoteId={quoteId} initialMessages={initialMessages} />
-            <AdminQuotePlaylist
-              quoteId={quoteId}
-              moments={eventMoments(formulaName)}
-              initialTracks={bundle.tracks}
-              initialFiles={bundle.files}
-            />
-            <AdminQuoteFilesLite files={bundle.files} />
-            <AdminQuoteDocuments
-              quoteId={quoteId}
-              files={bundle.files}
-              adjustments={adjustments}
-            />
-            <AdminRdvRequests quoteId={quoteId} requests={bundle.rdvs} />
+            {/* Vague 1 : messagerie */}
+            {stage >= 1 ? (
+              <AdminQuoteConversation quoteId={quoteId} initialMessages={initialMessages} />
+            ) : (
+              <SectionSkeleton label="Messagerie…" />
+            )}
+            {/* Vague 2 : playlist + fichiers du client */}
+            {stage >= 2 ? (
+              <>
+                <AdminQuotePlaylist
+                  quoteId={quoteId}
+                  moments={eventMoments(formulaName)}
+                  initialTracks={bundle.tracks}
+                  initialFiles={bundle.files}
+                />
+                <AdminQuoteFilesLite files={bundle.files} />
+              </>
+            ) : (
+              <SectionSkeleton label="Musiques & fichiers…" />
+            )}
+            {/* Vague 3 : documents + RDV */}
+            {stage >= 3 ? (
+              <>
+                <AdminQuoteDocuments
+                  quoteId={quoteId}
+                  files={bundle.files}
+                  adjustments={adjustments}
+                />
+                <AdminRdvRequests quoteId={quoteId} requests={bundle.rdvs} />
+              </>
+            ) : (
+              <SectionSkeleton label="Documents…" />
+            )}
           </div>
         )
       ) : null}
+    </div>
+  );
+}
+
+// Squelette d'un bloc pendant le rendu progressif.
+function SectionSkeleton({ label }: { label: string }) {
+  return (
+    <div className="space-y-2 rounded-xl border border-border p-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <div className="h-3 w-1/3 animate-pulse rounded bg-border" />
+      <div className="h-3 w-2/3 animate-pulse rounded bg-border" />
     </div>
   );
 }
