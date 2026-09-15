@@ -939,9 +939,11 @@ export async function resolveQuoteOptions(formData: FormData) {
 // seule action groupée : appelée uniquement à l'ouverture du devis (les blocs
 // sont montés paresseusement), au lieu de 4-5 requêtes par devis affiché.
 export async function getQuoteAdminBundle(quoteId: string) {
+  const t0 = Date.now();
   const { isAdmin } = await import("@/lib/admin-auth");
   if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
   if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+  const tAuth = Date.now();
 
   const supabase = createAdminClient();
   const [tracks, files, rdvs] = await Promise.all([
@@ -961,6 +963,12 @@ export async function getQuoteAdminBundle(quoteId: string) {
       .eq("quote_id", quoteId)
       .order("created_at", { ascending: true }),
   ]);
+  const tDb = Date.now();
+
+  // Chronométrage (visible dans les logs Vercel) : auth / base / total.
+  console.log(
+    `[bundle] auth=${tAuth - t0}ms db=${tDb - tAuth}ms total=${tDb - t0}ms`
+  );
 
   return {
     ok: true as const,
