@@ -61,13 +61,13 @@ function eventKind(formulaName: string): string {
 export default async function DevisPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; tri?: string; focus?: string; cree?: string }>;
 }) {
   // Filet de sécurité : si le Cron Vercel n'a pas tourné, on traite les
   // e-mails planifiés (relance J+10, avis post-soirée) à l'ouverture de l'admin.
   sendScheduledEmails().catch((e) => console.error("[email-jobs]", e));
 
-  const { q, tri, focus } = await searchParams as { q?: string; tri?: string; focus?: string };
+  const { q, tri, focus, cree } = await searchParams as { q?: string; tri?: string; focus?: string; cree?: string };
   const query = (q ?? "").trim().toLowerCase();
   const supabase = createAdminClient();
   const { data: quotes } = await supabase
@@ -154,14 +154,28 @@ export default async function DevisPage({
   return (
     <div className="space-y-6">
       <AutoRefresh />
-      <div>
-        <h1 className="text-2xl font-medium">Devis reçus</h1>
-        <p className="text-sm text-muted-foreground">
-          Cliquez sur un devis pour voir tous les détails et changer son statut.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-medium">Devis reçus</h1>
+          <p className="text-sm text-muted-foreground">
+            Cliquez sur un devis pour voir tous les détails et changer son statut.
+          </p>
+        </div>
+        <a
+          href="/admin/devis/nouveau"
+          className="shrink-0 rounded-lg border border-accent/50 bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent/20"
+        >
+          ➕ Nouveau devis sur mesure
+        </a>
       </div>
 
       <DevisFilterBar q={q} tri={tri} />
+
+      {cree ? (
+        <p className="rounded-lg border border-green-500/40 bg-green-500/10 px-3 py-2 text-sm text-green-400">
+          Devis sur mesure créé ✓ Il apparaît dans la liste ci-dessous (pensez à le qualifier si besoin).
+        </p>
+      ) : null}
 
       {filtered.length === 0 ? (
         <p className="text-muted-foreground">Aucun devis correspondant.</p>

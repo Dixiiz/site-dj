@@ -130,7 +130,9 @@ export function AdminQuoteEdit({
 
   return (
     <form
-      action={updateQuoteAdmin}
+      action={async (formData: FormData) => {
+        await updateQuoteAdmin(formData);
+      }}
       className="w-full space-y-3 rounded-xl border border-accent/40 bg-primary/5 p-4"
     >
       <input type="hidden" name="id" value={quote.id} />

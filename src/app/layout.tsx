@@ -3,6 +3,7 @@ import { Inter, Fjalla_One } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Providers } from "@/components/providers";
 import { WhatsAppButton } from "@/components/whatsapp-button";
+import { RecoveryHashHandler } from "@/components/recovery-hash-handler";
 import { SITE_URL, SITE_NAME } from "@/lib/site-url";
 import "./globals.css";
 
@@ -71,6 +72,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body className="min-h-full flex flex-col overflow-x-hidden bg-background text-foreground">
         <Providers>{children}</Providers>
+        {/* Établit la session quand un lien d'activation / de récupération
+            revient avec des tokens dans le fragment d'URL (#) */}
+        <RecoveryHashHandler />
         <WhatsAppButton />
         {/* Analytics (actif en production uniquement — le composant gère le dev lui-même) */}
         <Analytics />

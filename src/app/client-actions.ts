@@ -167,18 +167,86 @@ export async function requestPasswordReset(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   if (!email) return { ok: false as const, error: "E-mail requis." };
 
-  const supabase = await createAuthClient();
   const h = await headers();
   const host = h.get("host") ?? "localhost:3000";
   const proto = host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${proto}://${host}/connexion/reinitialiser`,
+  const redirectTo = `${proto}://${host}/connexion/reinitialiser`;
+
+  // Même approche que l'inscription : le mailleur par défaut de Supabase est
+  // peu fiable (limite horaire, spams fréquents) — les liens de récupération
+  // expirent (1 h) avant même d'être ouverts. On génère le lien via l'API
+  // admin et on l'envoie nous-mêmes via Resend (délivrabilité maîtrisée).
+  const admin = createAdminClient();
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: "recovery",
+    email,
+    options: { redirectTo },
   });
-  if (error) return { ok: false as const, error: error.message };
+
+  // Adresse inconnue : on ne révèle pas l'existence du compte, même réponse
+  // qu'un envoi réussi.
+  if (error || !data) {
+    const inconnu = /not found|unable to find|user not/i.test(error?.message ?? "");
+    if (inconnu) {
+      return {
+        ok: true as const,
+        message:
+          "E-mail envoyé ! Vérifiez votre boîte mail (et vos spams) pour définir un nouveau mot de passe.",
+      };
+    }
+    console.error("[requestPasswordReset] generateLink:", error);
+    return { ok: false as const, error: "Réinitialisation impossible pour le moment. Réessayez dans un instant." };
+  }
+
+  const actionLink = data.properties?.action_link ?? null;
+  if (!actionLink) {
+    return { ok: false as const, error: "Lien de réinitialisation indisponible. Réessayez dans un instant." };
+  }
+
+  const { Resend } = await import("resend");
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error("[requestPasswordReset] RESEND_API_KEY manquante : e-mail non envoyé.");
+    return {
+      ok: false as const,
+      error: "Envoi d'e-mail momentanément indisponible. Réessayez ou contactez-nous.",
+    };
+  }
+  const resend = new Resend(apiKey);
+  const { error: sendError } = await resend.emails.send({
+    from: EMAIL_FROM,
+    to: email,
+    subject: "🔑 Nouveau mot de passe — Propul'Sound DJ",
+    html: buildEmailHtml({
+      title: "Nouveau mot de passe",
+      emoji: "🔑",
+      intro: `Bonjour,<br/><br/>Vous avez demandé la réinitialisation du mot de passe de votre espace client Propul'Sound DJ. Cliquez sur le bouton ci-dessous pour en choisir un nouveau. <strong>Ce lien est valable 1 heure.</strong>`,
+      sections: [
+        {
+          title: "Ensuite",
+          lines: [
+            "Choisissez un nouveau mot de passe (6 caractères minimum).",
+            "Vous serez immédiatement connecté à votre espace client.",
+          ],
+        },
+      ],
+      button: { label: "Choisir un nouveau mot de passe", href: actionLink },
+      footer:
+        "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail — votre mot de passe reste inchangé. — Maxime",
+    }),
+    text: buildEmailText({
+      intro: "Vous avez demandé la réinitialisation de votre mot de passe. Ce lien est valable 1 heure.",
+      button: { label: "Choisir un nouveau mot de passe", href: actionLink },
+    }),
+  });
+  if (sendError) {
+    console.error("[requestPasswordReset] Echec envoi:", sendError);
+    return { ok: false as const, error: "L'envoi de l'e-mail a échoué. Réessayez dans un instant." };
+  }
   return {
     ok: true as const,
     message:
- "E-mail envoyé ! Vérifiez votre boîte mail (et vos spams) pour définir un nouveau mot de passe.",
+      "E-mail envoyé ! Vérifiez votre boîte mail (et vos spams) — le lien est valable 1 heure, cliquez-le rapidement.",
   };
 }
 
@@ -399,6 +467,8 @@ export async function sendQuoteMessage(formData: FormData) {
 // ---------- Côté admin ----------
 
 export async function getAdminThreads() {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return [];
   const supabase = createAdminClient();
   const { data: messages } = await supabase
     .from("quote_messages")
@@ -418,6 +488,8 @@ export async function getAdminThreads() {
 }
 
 export async function sendAdminMessage(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return;
   const quoteId = String(formData.get("quote_id") ?? "");
   const body = String(formData.get("body") ?? "").trim();
   if (!quoteId || !body) return;
@@ -511,6 +583,8 @@ export async function getPlaylistTracks(quoteId: string) {
 
 // Playlist partagée : visible aussi côté admin.
 export async function getAdminPlaylist() {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return [];
   const supabase = createAdminClient();
   const { data } = await supabase
     .from("playlist_tracks")
@@ -1362,14 +1436,20 @@ export async function sendInvoiceDocument(formData: FormData) {
     .single();
   if (!quote?.customer_email) return { ok: false as const, error: "Client sans e-mail." };
 
-  // Lien de téléchargement signé (30 jours) : le client peut ouvrir et
-  // enregistrer la facture directement depuis le mail, sans compte.
+  // Le client reçoit la facture SANS compte : PDF joint à l'e-mail + lien de
+  // téléchargement signé (30 jours) en secours.
   let downloadUrl: string | undefined;
+  let attachment: { filename: string; content: string } | undefined;
   if (file.storage_path) {
-    const { data: signed } = await supabase.storage
-      .from("client-files")
-      .createSignedUrl(file.storage_path, 60 * 60 * 24 * 30);
+    const [{ data: signed }, { data: blob }] = await Promise.all([
+      supabase.storage.from("client-files").createSignedUrl(file.storage_path, 60 * 60 * 24 * 30),
+      supabase.storage.from("client-files").download(file.storage_path),
+    ]);
     downloadUrl = signed?.signedUrl;
+    if (blob) {
+      const buf = Buffer.from(await blob.arrayBuffer());
+      attachment = { filename: file.name, content: buf.toString("base64") };
+    }
   }
 
   // L'e-mail part en tâche de fond (après la réponse) : le bouton répond
@@ -1378,6 +1458,7 @@ export async function sendInvoiceDocument(formData: FormData) {
     notifyClientDocuments(quoteId, [file.name], {
       downloadUrl,
       downloadFileName: file.name,
+      attachment,
     })
   );
 
@@ -1504,7 +1585,14 @@ export async function declareAcompteSent(formData: FormData) {
 async function notifyClientDocuments(
   quoteId: string,
   docNames: string[],
-  opts: { aSigner?: boolean; downloadUrl?: string; downloadFileName?: string } = {}
+  opts: {
+    aSigner?: boolean;
+    downloadUrl?: string;
+    downloadFileName?: string;
+    // PDF joint directement à l'e-mail : le client récupère son document
+    // sans compte (factures notamment).
+    attachment?: { filename: string; content: string };
+  } = {}
 ) {
   if (docNames.length === 0) return;
   try {
@@ -1519,12 +1607,15 @@ async function notifyClientDocuments(
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) return;
     const single = docNames.length === 1;
+    const accesDirect = Boolean(opts.downloadUrl || opts.attachment);
     const emailData = {
       title: opts.aSigner
         ? single ? "Un document attend votre signature" : "Des documents attendent votre signature"
         : single ? "Un document est disponible" : "Des documents sont disponibles",
       emoji: opts.aSigner ? "" : "",
-      intro: `Bonjour ${quote.customer_name ?? ""},<br/><br/>${single ? "Le document" : "Les documents"} <strong style="color:#21619A;">« ${docNames.map((n) => n.replace(/</g, "&lt;")).join(" », « ")} »</strong> ${single ? "vient" : "viennent"} d'être déposé${single ? "" : "s"} dans votre espace client${opts.aSigner ? ` et ${single ? "attend" : "attendent"} votre <strong>signature</strong>` : ""}.`,
+      intro: accesDirect
+        ? `Bonjour ${quote.customer_name ?? ""},<br/><br/>${single ? "Le document" : "Les documents"} <strong style="color:#21619A;">« ${docNames.map((n) => n.replace(/</g, "&lt;")).join(" », « ")} »</strong> ${single ? "est" : "sont"} en pièce jointe de cet e-mail${opts.downloadUrl ? " et téléchargeable${single ? \"\" : \"s\"} aussi via le bouton ci-dessous" : ""}. <strong>Aucun compte n'est nécessaire</strong> pour le récupérer.`
+        : `Bonjour ${quote.customer_name ?? ""},<br/><br/>${single ? "Le document" : "Les documents"} <strong style="color:#21619A;">« ${docNames.map((n) => n.replace(/</g, "&lt;")).join(" », « ")} »</strong> ${single ? "vient" : "viennent"} d'être déposé${single ? "" : "s"} dans votre espace client${opts.aSigner ? ` et ${single ? "attend" : "attendent"} votre <strong>signature</strong>` : ""}.`,
       sections: opts.aSigner
         ? [
             {
@@ -1535,17 +1626,26 @@ async function notifyClientDocuments(
               ],
             },
           ]
-        : [
-            {
-              title: "Rappel",
-              lines: [
-                "Vous pouvez les consulter et les télécharger à tout moment depuis votre espace.",
-                opts.downloadUrl
-                  ? `Pour retrouver tous vos documents : <a href="${SITE_URL}/connexion" style="color:#21619A;">votre espace client</a>.`
-                  : "",
-              ].filter(Boolean),
-            },
-          ],
+        : accesDirect
+          ? [
+              {
+                title: "Bon à savoir",
+                lines: [
+                  `Le PDF est <strong>joint à cet e-mail</strong> — enregistrez-le où vous voulez.`,
+                  ...(opts.downloadUrl
+                    ? [`Le bouton ci-dessous fonctionne aussi (lien valable 30 jours).`]
+                    : []),
+                ],
+              },
+            ]
+          : [
+              {
+                title: "Rappel",
+                lines: [
+                  "Vous pouvez les consulter et les télécharger à tout moment depuis votre espace.",
+                ],
+              },
+            ],
       button: opts.downloadUrl
         ? {
             label: `Télécharger ${opts.downloadFileName ?? "le document"}`,
@@ -1566,6 +1666,7 @@ async function notifyClientDocuments(
         : `${docNames.join(" + ")} ${single ? "est" : "sont"} disponible${single ? "" : "s"} — Propul'Sound DJ`,
       html: buildEmailHtml(emailData),
       text: buildEmailText(emailData),
+      ...(opts.attachment ? { attachments: [opts.attachment] } : {}),
     });
   } catch (err) {
     console.error("[documents] Echec e-mail client:", err);

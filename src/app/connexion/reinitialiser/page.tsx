@@ -12,7 +12,11 @@ export default async function ReinitialiserPage({
 }: {
   searchParams: Promise<{ code?: string }>;
 }) {
-  // Le lien e-mail contient un code PKCE : on l'échange contre une session.
+  // Deux formats de lien possibles :
+  //  - ?code=… : flux PKCE classique, échangé côté serveur ci-dessous ;
+  //  - #access_token=… : liens admin (envoyés via Resend), gérés côté
+  //    navigateur par le RecoveryHashHandler global (layout racine), qui
+  //    établit la session puis redirige ici (type=recovery).
   const { code } = await searchParams;
   if (code) {
     const supabase = await createAuthClient();

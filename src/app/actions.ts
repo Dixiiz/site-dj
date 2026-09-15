@@ -372,6 +372,33 @@ export async function submitQuoteAndBooking(formData: FormData) {
 
   const supabase = createAdminClient();
 
+  // Date déjà réservée (acompte en attente ou devis confirmé) ou bloquée par
+  // l'admin ? Même règle que getUnavailableDates : on refuse côté serveur,
+  // l'affichage des disponibilités n'est qu'une indication.
+  const { data: conflit } = await supabase
+    .from("quotes")
+    .select("id")
+    .in("status", ["attente_acompte", "confirme"])
+    .eq("event_date", event_date)
+    .limit(1);
+  if ((conflit ?? []).length > 0) {
+    return {
+      ok: false as const,
+      error: `Oups, le ${new Date(`${event_date}T12:00:00`).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} vient d'être (ou est déjà) réservé. Choisissez une autre date ou contactez-nous : nous trouverons une solution.`,
+    };
+  }
+  const { data: bloquee } = await supabase
+    .from("blocked_dates")
+    .select("date")
+    .eq("date", event_date)
+    .limit(1);
+  if ((bloquee ?? []).length > 0) {
+    return {
+      ok: false as const,
+      error: `Le ${new Date(`${event_date}T12:00:00`).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} n'est pas disponible. Choisissez une autre date ou contactez-nous.`,
+    };
+  }
+
   const { data: formula, error: formulaError } = await supabase
     .from("formulas")
     .select("*")
@@ -621,6 +648,7 @@ export async function loginAdmin(formData: FormData) {
 }
 
 export async function updateQuoteAdmin(formData: FormData) {
+  if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
 
@@ -683,6 +711,101 @@ export async function updateQuoteAdmin(formData: FormData) {
   revalidatePath("/admin/devis");
   revalidatePath("/disponibilites");
   redirect(`/admin/devis?modifie=1`);
+}
+
+// Création d'un devis sur mesure côté admin : client, date, pack, options,
+// montants libres. Total recalculé serveur (même logique que l'édition).
+export async function createCustomQuote(formData: FormData) {
+  if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
+
+  const supabase = createAdminClient();
+
+  const customer_name = String(formData.get("customer_name") ?? "").trim();
+  const customer_email = String(formData.get("customer_email") ?? "").trim();
+  const event_date = String(formData.get("event_date") ?? "").trim();
+  const formula_name =
+    String(formData.get("formula_name_hidden") ?? "").trim() ||
+    String(formData.get("formula_name") ?? "").trim() ||
+    "Pack sur mesure";
+  if (!customer_name || !customer_email || !event_date) {
+    return {
+      ok: false as const,
+      error: "Nom du client, e-mail et date de l'événement sont obligatoires.",
+    };
+  }
+
+  const status = String(formData.get("status") ?? "contacte").trim();
+  const allowedStatus = ["nouveau", "contacte", "attente_signature", "attente_acompte", "confirme", "refuse", "annule"];
+  if (!allowedStatus.includes(status)) {
+    return { ok: false as const, error: "Statut invalide." };
+  }
+
+  // Options cochées : "Nom (quantité)" -> sélection avec prix du catalogue FX
+  // (même convention que updateQuoteAdmin).
+  const checkedNames = String(formData.get("checked_options") ?? "")
+    .split("||")
+    .map((n) => n.trim())
+    .filter(Boolean);
+  const co2Qty = Math.min(2, Math.max(1, Number(formData.get("co2_qty") ?? 1)));
+  const selected: SelectedOption[] = checkedNames.map((name, index) => {
+    const fx = ADMIN_FX_OPTIONS.find((f) => f.name === name);
+    const qty = /CO2/i.test(name) ? co2Qty : 1;
+    return {
+      id: `admin-${index}`,
+      name: qty > 1 ? `${name} × ${qty}` : name,
+      price_cents: fx ? fx.price * qty : 0,
+      qty,
+    };
+  });
+
+  const toCents = (value: FormDataEntryValue | null) => {
+    const n = Number.parseFloat(String(value ?? "").replace(",", "."));
+    return Number.isFinite(n) ? Math.round(n * 100) : 0;
+  };
+
+  const packPriceCents = toCents(formData.get("formula_price"));
+  const travelFeeCents = toCents(formData.get("travel_fee"));
+  const extraFeeCents = toCents(formData.get("extra_fee"));
+  const total_cents =
+    packPriceCents +
+    selected.reduce((sum, o) => sum + o.price_cents, 0) +
+    travelFeeCents +
+    extraFeeCents;
+
+  const start_time = String(formData.get("start_time") ?? "").trim() || null;
+  const end_time = String(formData.get("end_time") ?? "").trim() || null;
+
+  const { error } = await supabase.from("quotes").insert({
+    customer_name,
+    customer_email,
+    customer_phone: String(formData.get("customer_phone") ?? "").trim() || null,
+    event_type: String(formData.get("event_type") ?? "").trim() || null,
+    event_location: String(formData.get("event_location") ?? "").trim() || null,
+    event_date,
+    start_time,
+    end_time,
+    notes: String(formData.get("notes") ?? "").trim() || null,
+    formula_name,
+    formula_price_cents: packPriceCents,
+    travel_distance_km:
+      Number.parseFloat(String(formData.get("travel_distance_km") ?? "")) || null,
+    travel_fee_cents: travelFeeCents,
+    extra_fee_cents: extraFeeCents,
+    extra_fee_label: String(formData.get("extra_fee_label") ?? "").trim() || null,
+    total_cents,
+    status,
+    selected_options: selected,
+  });
+
+  if (error) {
+    console.error("Création devis sur mesure impossible", error);
+    return { ok: false as const, error: "Enregistrement impossible." };
+  }
+
+  revalidatePath("/admin/devis");
+  revalidatePath("/admin");
+  revalidatePath("/disponibilites");
+  redirect(`/admin/devis?cree=1`);
 }
 
 // Estimation admin : distance réelle + frais de déplacement + péage estimé
