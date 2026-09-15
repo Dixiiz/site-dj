@@ -51,7 +51,7 @@ export function ReviewReceivedButton({
       type="button"
       onClick={() => run(false)}
       disabled={pending}
-      className={`shrink-0 rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-accent/50 hover:text-accent ${
+      className={`shrink-0 rounded-full border border-accent/40 px-3 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent/10 ${
         pending ? "animate-pulse cursor-wait opacity-90" : ""
       }`}
       title="Le client a laissé son avis — bloque la relance automatique"
