@@ -69,7 +69,7 @@ export default async function DevisPage({
 
   // Les 3 requêtes partent en parallèle (au lieu d'être enchaînées) : le
   // temps de chargement de la page devient celui de la plus lente des trois.
-  const [quotesRes, schedulesRes, messagesRes] = await Promise.all([
+  const [quotesRes, schedulesRes, messagesRes, tracksRes, filesRes, rdvsRes] = await Promise.all([
     supabase
       .from("quotes")
       .select("*")
@@ -83,6 +83,18 @@ export default async function DevisPage({
       .from("quote_messages")
       .select("id, quote_id, sender, body, created_at")
       .order("created_at", { ascending: true }),
+    supabase
+      .from("playlist_tracks")
+      .select("id, quote_id, moment, title, artist, kind, preview_url, artwork_url")
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("quote_files")
+      .select("id, quote_id, name, mime_type, size_bytes, moment, doc_kind, from_admin, signed_name")
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("rdv_requests")
+      .select("id, quote_id, proposed_at, availability, status")
+      .order("created_at", { ascending: true }),
   ]);
   const quotes = quotesRes.data;
 
@@ -92,6 +104,30 @@ export default async function DevisPage({
     const list = schedulesByQuote.get(row.quote_id) ?? [];
     list.push({ numero: row.numero, total: row.total, amount_cents: row.amount_cents, due_date: row.due_date, status: row.status });
     schedulesByQuote.set(row.quote_id, list);
+  }
+
+  // Musiques / fichiers / RDV groupés par devis : passés en props aux dossiers,
+  // ouvrir un devis n'effectue AUCUNE requête (contenu déjà dans la page).
+  type TrackRow = { id: string; moment: string; title: string; artist: string | null; kind: string; preview_url: string | null; artwork_url: string | null };
+  type FileRowLite = { id: string; name: string; mime_type: string | null; size_bytes: number | null; moment: string | null; doc_kind: string; from_admin: boolean; signed_name: string | null };
+  type RdvRowLite = { id: string; proposed_at: string | null; availability: string | null; status: string };
+  const tracksByQuote = new Map<string, TrackRow[]>();
+  const filesByQuote = new Map<string, FileRowLite[]>();
+  const rdvsByQuote = new Map<string, RdvRowLite[]>();
+  for (const t of (tracksRes.data ?? []) as (TrackRow & { quote_id: string })[]) {
+    const list = tracksByQuote.get(t.quote_id) ?? [];
+    list.push(t);
+    tracksByQuote.set(t.quote_id, list);
+  }
+  for (const f of (filesRes.data ?? []) as (FileRowLite & { quote_id: string })[]) {
+    const list = filesByQuote.get(f.quote_id) ?? [];
+    list.push(f);
+    filesByQuote.set(f.quote_id, list);
+  }
+  for (const r of (rdvsRes.data ?? []) as (RdvRowLite & { quote_id: string })[]) {
+    const list = rdvsByQuote.get(r.quote_id) ?? [];
+    list.push(r);
+    rdvsByQuote.set(r.quote_id, list);
   }
 
   // Messages regroupés par devis (conversation initiale ; ensuite rafraîchie en direct).
@@ -460,7 +496,8 @@ export default async function DevisPage({
                   schedule={schedulesByQuote.get(quote.id)}
                 />
                 {/* Dossier complet (conversation, musiques, fichiers,
-                    documents) : chargé uniquement à l'ouverture du devis. */}
+                    documents) : données déjà présentes dans la page (requêtes
+                    groupées) — ouvrir un devis n'effectue aucune requête. */}
                 <AdminQuoteLazyFolder
                   quoteId={quote.id}
                   formulaName={quote.formula_name}
@@ -477,6 +514,9 @@ export default async function DevisPage({
                       created_at: string;
                     }[]
                   }
+                  initialTracks={tracksByQuote.get(quote.id) ?? []}
+                  initialFiles={filesByQuote.get(quote.id) ?? []}
+                  initialRdvs={rdvsByQuote.get(quote.id) ?? []}
                 />
               </details>
             );
