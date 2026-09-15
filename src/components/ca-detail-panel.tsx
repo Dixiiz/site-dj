@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ManagedQuoteRow } from "./managed-quote-row";
 import { ManagedQuoteEditForm } from "./managed-quote-edit-form";
 import { ValidateSoldeButton } from "./validate-solde-button";
+import { ReviewReceivedButton } from "./review-received-button";
 import { formatEuros } from "@/lib/money";
 
 export type DetailRow = {
@@ -175,6 +176,13 @@ export function CaDetailPanel({
                       id={row.id}
                       customerName={row.customerName}
                       validated={false}
+                    />
+                  ) : null}
+                  {solde ? (
+                    <ReviewReceivedButton
+                      id={row.id}
+                      customerName={row.customerName}
+                      validated={row.notes.includes("[[avis-ok]]")}
                     />
                   ) : null}
                   {managed ? (

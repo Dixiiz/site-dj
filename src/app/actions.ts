@@ -1306,6 +1306,48 @@ export async function importPastQuote(formData: FormData) {
   return { ok: true as const, message: `Soirée « ${formula_name} » du ${event_date} ajoutée ✓` };
 }
 
+// Marque l'avis post-soirée comme reçu (ou l'annule) : pose le marqueur
+// [[avis-ok]] dans les notes, qui bloque la relance automatique d'avis du
+// cron. Même convention de marqueurs que le reste du suivi.
+export async function marquerAvisRecu(formData: FormData) {
+  if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
+  const id = String(formData.get("id") ?? "").trim();
+  const annuler = String(formData.get("annuler") ?? "") === "1";
+  if (!id) return { ok: false as const, error: "Soirée introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("customer_name, notes")
+    .eq("id", id)
+    .single();
+  if (!quote) return { ok: false as const, error: "Soirée introuvable." };
+
+  const notes = String(quote.notes ?? "");
+  const newNotes = annuler
+    ? notes
+        .split("\n")
+        .filter((line) => line !== "[[avis-ok]]")
+        .join("\n")
+    : notes.includes("[[avis-ok]]")
+      ? notes
+      : `[[avis-ok]]${notes ? `\n${notes}` : ""}`;
+
+  const { error } = await supabase
+    .from("quotes")
+    .update({ notes: newNotes || null })
+    .eq("id", id);
+  if (error) return { ok: false as const, error: "Enregistrement impossible." };
+  revalidatePath("/admin");
+  revalidatePath("/admin/devis");
+  return {
+    ok: true as const,
+    message: annuler
+      ? `Avis retiré pour « ${quote.customer_name} » (relance possible)`
+      : `Avis validé pour « ${quote.customer_name} » — plus de relance ✓`,
+  };
+}
+
 // Confirme (ou annule) une échéance d'échéancier pour le CA URSSAF du mois
 // de sa date limite. Marque valide_urssaf sur la ligne payment_schedule.
 export async function validerEcheanceUrssaf(formData: FormData) {
