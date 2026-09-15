@@ -23,6 +23,8 @@ export function AdminQuoteLazyFolder({
 }) {
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
+  const [tookMs, setTookMs] = useState<number | null>(null);
+  const [elapsed, setElapsed] = useState(0);
   const [bundle, setBundle] = useState<{
     tracks: {
       id: string; moment: string; title: string; artist: string | null; kind: string; preview_url: string | null; artwork_url: string | null;
@@ -49,9 +51,15 @@ export function AdminQuoteLazyFolder({
     if (!open || loaded) return;
     let cancelled = false;
     setLoaded(true);
+    setElapsed(0);
+    const t0 = Date.now();
     getQuoteAdminBundle(quoteId)
       .then((res) => {
         if (cancelled) return;
+        setTookMs(Date.now() - t0);
+        console.log(
+          `[dossier] chargé en ${Date.now() - t0}ms (côté client, transport inclus)`
+        );
         if (res.ok)
           setBundle({
             tracks: res.tracks ?? [],
@@ -67,6 +75,13 @@ export function AdminQuoteLazyFolder({
       cancelled = true;
     };
   }, [open, loaded, quoteId]);
+
+  // Compteur à l'écran pendant le chargement (diagnostic lenteur).
+  useEffect(() => {
+    if (!open || loaded) return;
+    const id = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [open, loaded]);
 
   // Rechargement léger du bundle toutes les 15 s tant que le devis est ouvert
   // (nouveau message, nouveau fichier, document généré…).
@@ -92,9 +107,16 @@ export function AdminQuoteLazyFolder({
             <div className="h-4 w-40 animate-pulse rounded bg-border" />
             <div className="h-4 w-full animate-pulse rounded bg-border" />
             <div className="h-4 w-2/3 animate-pulse rounded bg-border" />
+            <p className="text-xs">⏱ Chargement du dossier… {elapsed}s</p>
           </div>
         ) : (
           <div className="space-y-6 border-t border-border px-4 pb-5 pt-4">
+            {tookMs !== null && tookMs > 2500 ? (
+              <p className="rounded-lg border border-orange-500/40 bg-orange-500/10 px-3 py-1.5 text-xs text-orange-300">
+                ⚠️ Dossier chargé en {(tookMs / 1000).toFixed(1)}s — signale ce
+                chiffre à Maxime (diagnostic temporaire).
+              </p>
+            ) : null}
             <AdminQuoteConversation quoteId={quoteId} initialMessages={initialMessages} />
             <AdminQuotePlaylist
               quoteId={quoteId}
