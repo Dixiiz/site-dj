@@ -1,4 +1,5 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+"use client";
+
 import { adminRdvDecision } from "@/app/client-actions";
 import { RdvAvailabilityForm } from "@/components/rdv-form";
 import { SubmitButton } from "@/components/submit-button";
@@ -65,15 +66,16 @@ export function RdvCallSection({
 }
 
 // Côté ADMIN : disponibilités proposées, avec choix de la date exacte.
-export async function AdminRdvRequests({ quoteId }: { quoteId: string }) {
-  const supabase = createAdminClient();
-  const { data: requests } = await supabase
-    .from("rdv_requests")
-    .select("id, proposed_at, availability, status")
-    .eq("quote_id", quoteId)
-    .order("created_at", { ascending: true });
-
-  const rows = (requests ?? []) as RdvRow[];
+// Alimenté par le bundle (plus de requête propre) ; monté uniquement à
+// l'ouverture du devis.
+export function AdminRdvRequests({
+  quoteId,
+  requests,
+}: {
+  quoteId: string;
+  requests: RdvRow[];
+}) {
+  const rows = requests ?? [];
   if (rows.length === 0) return null;
 
   return (
@@ -91,9 +93,8 @@ export async function AdminRdvRequests({ quoteId }: { quoteId: string }) {
               <p className="mt-1 text-xs text-zinc-400">Refusé</p>
             ) : (
               <form
-                action={async (formData: FormData) => {
-                  "use server";
-                  await adminRdvDecision(formData);
+                action={async (fd: FormData) => {
+                  await adminRdvDecision(fd);
                 }}
                 className="mt-2 flex flex-wrap items-center gap-2"
               >

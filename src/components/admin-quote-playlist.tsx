@@ -1,5 +1,3 @@
-import { createAdminClient } from "@/lib/supabase/admin";
-
 type Track = {
   id: string;
   moment: string;
@@ -16,6 +14,7 @@ type FileRow = {
   mime_type: string | null;
   size_bytes: number | null;
   moment: string | null;
+  doc_kind: string;
 };
 
 const DANCE = "Soirée / Piste de danse";
@@ -98,29 +97,21 @@ export function eventMoments(formulaName: string | null | undefined): string[] {
 }
 
 // Playlist du devis : même présentation en 2 colonnes que le client.
-export async function AdminQuotePlaylist({
+// Alimentée par le bundle déjà chargé (AdminQuoteLazyFolder) : plus aucune
+// requête propre — les données viennent en props.
+export function AdminQuotePlaylist({
   quoteId,
   moments,
+  initialTracks,
+  initialFiles,
 }: {
   quoteId: string;
   moments: string[];
+  initialTracks: Track[];
+  initialFiles: FileRow[];
 }) {
-  const supabase = createAdminClient();
-  const [{ data: tracks }, { data: files }] = await Promise.all([
-    supabase
-      .from("playlist_tracks")
-      .select("id, moment, title, artist, kind, preview_url, artwork_url")
-      .eq("quote_id", quoteId)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("quote_files")
-      .select("id, name, mime_type, size_bytes, moment, doc_kind")
-      .eq("quote_id", quoteId)
-      .order("created_at", { ascending: true }),
-  ]);
-
-  const all = tracks ?? [];
-  const allFiles = files ?? [];
+  const all = initialTracks ?? [];
+  const allFiles = initialFiles ?? [];
   const dance = all.filter((t) => t.moment === DANCE && t.kind === "souhait");
   const wishes = all.filter((t) => t.kind === "souhait");
   const danceBlacklist = all.filter(

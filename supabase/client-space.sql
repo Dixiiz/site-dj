@@ -60,6 +60,11 @@ alter table playlist_tracks add column if not exists artwork_url text;
 alter table quotes add column if not exists pending_options jsonb;
 alter table quotes add column if not exists has_unread_updates boolean not null default false;
 
+-- Détails de devis demandés par le client (lieu, date, horaires, pack) en
+-- attente de validation admin. JSON : { event_location, event_date,
+-- start_time, end_time, formula_name, formula_price_cents, message }.
+alter table quotes add column if not exists pending_details jsonb;
+
 -- Fichiers envoyés par les clients (MP3, MP4, documents…)
 create table if not exists quote_files (
   id uuid primary key default gen_random_uuid(),

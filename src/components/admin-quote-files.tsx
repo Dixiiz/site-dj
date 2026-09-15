@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+"use client";
 
 function sizeLabel(bytes: number | null) {
   if (!bytes) return "";
@@ -7,25 +7,31 @@ function sizeLabel(bytes: number | null) {
 }
 
 // Fichiers envoyés par le client, téléchargeables depuis le détail du devis.
-export async function AdminQuoteFiles({ quoteId }: { quoteId: string }) {
-  const supabase = createAdminClient();
-  const { data: files } = await supabase
-    .from("quote_files")
-    .select("id, name, mime_type, size_bytes, moment")
-    .eq("quote_id", quoteId)
-    .eq("from_admin", false)
-    .order("created_at", { ascending: true });
+// Alimenté par le bundle déjà chargé : plus aucune requête propre.
+export function AdminQuoteFiles({
+  files,
+}: {
+  files: {
+    id: string;
+    name: string;
+    mime_type: string | null;
+    size_bytes: number | null;
+    moment: string | null;
+    from_admin: boolean;
+  }[];
+}) {
+  const clientFiles = (files ?? []).filter((f) => f.from_admin === false);
 
   return (
     <div className="space-y-1.5">
       <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Fichiers du client
       </h3>
-      {!files || files.length === 0 ? (
+      {clientFiles.length === 0 ? (
         <p className="text-sm text-muted-foreground">Aucun fichier envoyé.</p>
       ) : (
         <ul className="space-y-2">
-          {files.map((file) => (
+          {clientFiles.map((file) => (
             <li
               key={file.id}
               className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm sm:gap-3"

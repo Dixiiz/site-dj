@@ -6,6 +6,7 @@ import {
 } from "@/components/admin-quote-playlist";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 
 function timeLabel(iso: string) {
@@ -35,9 +36,39 @@ export default async function AdminMessagesPage() {
       new Date(a[1][a[1].length - 1].created_at).getTime()
   );
 
+  // Musiques + fichiers de tous les dossiers en 2 requêtes groupées (au lieu
+  // de 2 requêtes par thread).
+  const supabase = createAdminClient();
+  const tracksByQuote = new Map<string, { id: string; moment: string; title: string; artist: string | null; kind: string; preview_url: string | null; artwork_url: string | null }[]>();
+  const filesByQuote = new Map<string, { id: string; name: string; mime_type: string | null; size_bytes: number | null; moment: string | null; doc_kind: string }[]>();
+  if (orderedThreads.length > 0) {
+    const [tracksRes, filesRes] = await Promise.all([
+      supabase
+        .from("playlist_tracks")
+        .select("id, quote_id, moment, title, artist, kind, preview_url, artwork_url")
+        .in("quote_id", [...threads.keys()])
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("quote_files")
+        .select("id, quote_id, name, mime_type, size_bytes, moment, doc_kind")
+        .in("quote_id", [...threads.keys()])
+        .order("created_at", { ascending: true }),
+    ]);
+    for (const t of tracksRes.data ?? []) {
+      const list = tracksByQuote.get(t.quote_id) ?? [];
+      list.push(t);
+      tracksByQuote.set(t.quote_id, list);
+    }
+    for (const f of filesRes.data ?? []) {
+      const list = filesByQuote.get(f.quote_id) ?? [];
+      list.push(f);
+      filesByQuote.set(f.quote_id, list);
+    }
+  }
+
   return (
     <main>
-      <AutoRefresh />
+      <AutoRefresh intervalMs={30000} />
       <h1 className="text-2xl font-medium">Messagerie clients</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Les messages envoyés depuis l&apos;espace client, et vos réponses.
@@ -105,6 +136,8 @@ export default async function AdminMessagesPage() {
                   <AdminQuotePlaylist
                     quoteId={quoteId}
                     moments={eventMoments(quoteInfo?.formula_name)}
+                    initialTracks={tracksByQuote.get(quoteId) ?? []}
+                    initialFiles={filesByQuote.get(quoteId) ?? []}
                   />
                 </details>
 

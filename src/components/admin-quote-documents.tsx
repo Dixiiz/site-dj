@@ -1,3 +1,5 @@
+"use client";
+
 import {
   deleteAdminDocument,
   generateContratDocument,
@@ -9,7 +11,6 @@ import {
 } from "@/app/client-actions";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { InvoiceAdjustments } from "@/components/admin-invoice-adjustments";
 import { SubmitButton } from "@/components/submit-button";
 
@@ -19,6 +20,7 @@ type FileRow = {
   mime_type: string | null;
   size_bytes: number | null;
   doc_kind: string;
+  from_admin: boolean;
   signed_name: string | null;
 };
 
@@ -29,26 +31,22 @@ function sizeLabel(bytes: number | null) {
 }
 
 // Documents admin : « à signer » (devis, contrat…) et documents simples.
-export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
-  const supabase = createAdminClient();
-  const { data: files } = await supabase
-    .from("quote_files")
-    .select("id, name, mime_type, size_bytes, doc_kind, signed_name")
-    .eq("quote_id", quoteId)
-    .eq("from_admin", true)
-    .order("created_at", { ascending: true });
+// Alimenté par le bundle déjà chargé (plus de requêtes propres) ; les actions
+// serveur sont utilisées directement comme action de formulaire.
+export function AdminQuoteDocuments({
+  quoteId,
+  files,
+  adjustments,
+}: {
+  quoteId: string;
+  files: FileRow[];
+  adjustments: { label: string; amount_cents: number }[];
+}) {
+  const allFiles = files ?? [];
 
-  const { data: quoteRow } = await supabase
-    .from("quotes")
-    .select("invoice_adjustments")
-    .eq("id", quoteId)
-    .single();
-  const adjustments = Array.isArray(quoteRow?.invoice_adjustments)
-    ? (quoteRow!.invoice_adjustments as { label: string; amount_cents: number }[])
-    : [];
-
-  const toSign = (files ?? []).filter((f) => f.doc_kind === "a_signer");
-  const info = (files ?? []).filter((f) => f.doc_kind !== "a_signer");
+  const adminFiles = allFiles.filter((f) => f.from_admin === true);
+  const toSign = adminFiles.filter((f) => f.doc_kind === "a_signer");
+  const info = adminFiles.filter((f) => f.doc_kind !== "a_signer");
 
   const row = (file: FileRow, showSign: boolean) => (
     <li
@@ -80,12 +78,7 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
       </a>
       {/* Pour les factures : envoi manuel de l'e-mail au client (sur clic). */}
       {file.name.startsWith("Facture ") && file.name.endsWith(".pdf") ? (
-        <form
-          action={async (formData: FormData) => {
- "use server";
-            await sendInvoiceDocument(formData);
-          }}
-        >
+        <form action={async (fd: FormData) => { await sendInvoiceDocument(fd); }}>
           <input type="hidden" name="quote_id" value={quoteId} />
           <input type="hidden" name="file_id" value={file.id} />
           <SubmitButton
@@ -118,12 +111,7 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-medium text-orange-400">Documents à signer</h3>
           <div className="flex flex-wrap items-start gap-2">
-          <form
-            action={async (formData: FormData) => {
- "use server";
-              await generateDevisDocument(formData);
-            }}
-          >
+          <form action={async (fd: FormData) => { await generateDevisDocument(fd); }}>
             <input type="hidden" name="quote_id" value={quoteId} />
             {/* Personnalisation du devis (facultatif) */}
             <details className="mb-2 text-left">
@@ -190,21 +178,13 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
             {/* Génère les DEUX documents d'un coup : un seul e-mail au client */}
             <SubmitButton
               pendingLabel="Génération du devis + contrat…"
-              formAction={async (formData: FormData) => {
- "use server";
-                await generateDevisEtContratDocument(formData);
-              }}
+              formAction={async (fd: FormData) => { await generateDevisEtContratDocument(fd); }}
               className="rounded-lg border border-cyan-500/50 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:border-cyan-400 hover:bg-cyan-400/25 hover:text-cyan-100"
             >
               📝 Générer devis + contrat
             </SubmitButton>
           </form>
-          <form
-            action={async (formData: FormData) => {
- "use server";
-              await generateContratDocument(formData);
-            }}
-          >
+          <form action={async (fd: FormData) => { await generateContratDocument(fd); }}>
             <input type="hidden" name="quote_id" value={quoteId} />
             <SubmitButton
               pendingLabel="Génération du contrat…"
@@ -231,13 +211,7 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
       {/* Documents simples */}
       <div className="rounded-xl border border-border p-4">
         <h3 className="font-medium text-muted-foreground">📎 Documents simples</h3>
-        <form
-          action={async (formData: FormData) => {
- "use server";
-            await generateFactureDocument(formData);
-          }}
-          className="mt-2"
-        >
+        <form action={async (fd: FormData) => { await generateFactureDocument(fd); }} className="mt-2">
           <input type="hidden" name="quote_id" value={quoteId} />
           <SubmitButton
             pendingLabel="Génération de la facture…"
@@ -252,13 +226,7 @@ export async function AdminQuoteDocuments({ quoteId }: { quoteId: string }) {
         ) : (
           <p className="mt-3 text-xs text-muted-foreground">Aucun document simple.</p>
         )}
-        <form
-          action={async (formData: FormData) => {
- "use server";
-            await uploadAdminDocument(formData);
-          }}
-          className="mt-3 flex flex-wrap items-center gap-2"
-        >
+        <form action={async (fd: FormData) => { await uploadAdminDocument(fd); }} className="mt-3 flex flex-wrap items-center gap-2">
           <input type="hidden" name="quote_id" value={quoteId} />
           <input type="hidden" name="doc_kind" value="info" />
           <Input

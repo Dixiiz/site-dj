@@ -674,7 +674,6 @@ export async function updateQuoteAdmin(formData: FormData) {
   if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
   const id = String(formData.get("id") ?? "").trim();
   if (!id) return;
-
   const supabase = createAdminClient();
 
   // Options cochées : "Nom (quantité)" -> sélection avec prix du catalogue FX

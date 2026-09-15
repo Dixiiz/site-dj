@@ -16,6 +16,7 @@ import { TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { eventMoments } from "@/components/admin-quote-playlist";
 import { DiversFiles } from "@/components/client-files";
 import { ClientOptionsEditor } from "@/components/client-options-editor";
+import { ClientDetailsEditor } from "@/components/client-details-editor";
 import { ClientPlaylistEditor } from "@/components/client-playlist-editor";
 import { ClientQuoteMessages } from "@/components/client-quote-messages";
 import { PACK_IMAGES } from "@/components/pricing-section";
@@ -26,6 +27,7 @@ import { verifyStripeAcompte } from "@/app/client-actions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEuros } from "@/lib/money";
 import type { SelectedOption } from "@/lib/types";
+import type { PendingQuoteDetails } from "@/app/client-actions";
 
 function optionsEditable(status: string | null) {
   return status !== "confirme" && status !== "refuse" && status !== "annule";
@@ -127,7 +129,8 @@ export default async function ClientQuotePage({
 
   const selectedOptions = (quote.selected_options ?? []) as SelectedOption[];
   const pendingOptions = (quote.pending_options ?? null) as SelectedOption[] | null;
-  const editable = optionsEditable(quote.status) && !pendingOptions;
+  const pendingDetails = (quote.pending_details ?? null) as PendingQuoteDetails | null;
+  const editable = optionsEditable(quote.status) && !pendingOptions && !pendingDetails;
   const confirmed = quote.status === "confirme";
   // Créneaux de RDV téléphonique proposés par le client.
   // (La table rdv_requests doit exister — SQL fourni ; repli silencieux sinon.)
@@ -165,7 +168,7 @@ export default async function ClientQuotePage({
 
   return (
     <main className="space-y-10">
-      <AutoRefresh />
+      <AutoRefresh intervalMs={45000} />
       <HashHighlight />
       <TimelinePanel quoteId={id} initial={timeline} />
       <div className="flex flex-wrap items-center gap-4">
@@ -326,6 +329,28 @@ export default async function ClientQuotePage({
           }
           disabled={!editable}
           notice={pendingOptions ? "pending" : editable ? "review" : undefined}
+        />
+      </section>
+
+      {/* Lieu / date / horaires / pack : demandes soumises à validation */}
+      <section className="rounded-xl border border-border bg-muted/50 p-5">
+        <h2 className="font-medium">Lieu, date, horaires &amp; pack</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Besoin de déplacer la soirée, changer d&apos;horaire ou de pack ?
+          Faites votre demande ici : nous la validons puis générons un nouveau
+          devis à signer.
+        </p>
+        <ClientDetailsEditor
+          quoteId={id}
+          disabled={!optionsEditable(quote.status)}
+          pending={pendingDetails}
+          current={{
+            event_location: quote.event_location ?? null,
+            event_date: quote.event_date ?? null,
+            start_time: quote.start_time ?? null,
+            end_time: quote.end_time ?? null,
+            formula_name: quote.formula_name ?? "",
+          }}
         />
       </section>
 

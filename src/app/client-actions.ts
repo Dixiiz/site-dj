@@ -9,6 +9,7 @@ import { createAuthClient } from "@/lib/supabase/server";
 import type { SelectedOption } from "@/lib/types";
 import { SITE_URL } from "@/lib/site-url";
 import { EMAIL_FROM, buildEmailHtml, buildEmailText } from "@/lib/emails";
+import { ADMIN_PACK_LIST } from "@/components/pricing-section";
 
 // ---------- Recherche du compte client (cache) ----------
 
@@ -20,12 +21,38 @@ const OWNER_CACHE_TTL = 10 * 60 * 1000;
 
 export async function findOwnerUserId(
   supabase: ReturnType<typeof createAdminClient>,
-  email?: string | null
+  email?: string | null,
+  // Si on connaît le devis, on récupère d'abord son user_id dans les tables
+  // existantes (quote_files, messages, playlist, échéancier) : requête
+  // instantanée, évite le listUsers({ perPage: 1000 }) qui ralentit la
+  // génération des documents à chaque cold start serverless.
+  quoteId?: string | null
 ): Promise<string | null> {
   if (!email) return null;
   const key = email.toLowerCase();
   const cached = ownerUserCache.get(key);
   if (cached && Date.now() - cached.at < OWNER_CACHE_TTL) return cached.id;
+
+  if (quoteId) {
+    for (const table of ["quote_files", "quote_messages", "playlist_tracks"] as const) {
+      try {
+        const { data } = await supabase
+          .from(table)
+          .select("user_id")
+          .eq("quote_id", quoteId)
+          .not("user_id", "is", null)
+          .limit(1)
+          .maybeSingle();
+        if (data?.user_id) {
+          ownerUserCache.set(key, { id: data.user_id, at: Date.now() });
+          return data.user_id;
+        }
+      } catch {
+        // Table absente : on continue.
+      }
+    }
+  }
+
   const { data } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
   const id = data?.users?.find((u) => u.email?.toLowerCase() === key)?.id ?? null;
   ownerUserCache.set(key, { id, at: Date.now() });
@@ -511,7 +538,7 @@ export async function sendAdminMessage(formData: FormData) {
 
   // user_id du client s'il a un compte (sinon null : la conversation reste
   // rattachée au devis et le client la verra dès la création de son compte).
-  const ownerUserId = await findOwnerUserId(supabase, quote.customer_email);
+  const ownerUserId = await findOwnerUserId(supabase, quote.customer_email, quoteId);
 
   await supabase.from("quote_messages").insert({
     quote_id: quoteId,
@@ -908,6 +935,244 @@ export async function resolveQuoteOptions(formData: FormData) {
   return { ok: true as const };
 }
 
+// Dossier complet d'un devis pour l'admin (playlist, fichiers, RDV) en une
+// seule action groupée : appelée uniquement à l'ouverture du devis (les blocs
+// sont montés paresseusement), au lieu de 4-5 requêtes par devis affiché.
+export async function getQuoteAdminBundle(quoteId: string) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  const supabase = createAdminClient();
+  const [tracks, files, rdvs] = await Promise.all([
+    supabase
+      .from("playlist_tracks")
+      .select("id, moment, title, artist, kind, preview_url, artwork_url")
+      .eq("quote_id", quoteId)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("quote_files")
+      .select("id, name, mime_type, size_bytes, moment, doc_kind, from_admin, signed_name")
+      .eq("quote_id", quoteId)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("rdv_requests")
+      .select("id, proposed_at, availability, status")
+      .eq("quote_id", quoteId)
+      .order("created_at", { ascending: true }),
+  ]);
+
+  return {
+    ok: true as const,
+    tracks: tracks.data ?? [],
+    files: files.data ?? [],
+    rdvs: rdvs.data ?? [],
+  };
+}
+
+// ---------- Modification du devis par le client (lieu, date, horaires, pack) ----------
+
+export type PendingQuoteDetails = {
+  event_location?: string | null;
+  event_date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  formula_name?: string | null;
+  formula_price_cents?: number | null;
+  message?: string | null;
+};
+
+// Le client demande une modification du devis (lieu, date, horaires, pack).
+// Comme pour les options : rien n'est appliqué avant validation admin.
+export async function updateQuoteDetails(formData: FormData) {
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  const { quote } = await getOwnedQuote(quoteId);
+  if (!quote) return { ok: false as const, error: "Devis introuvable." };
+  if (!optionsEditable(quote.status)) {
+    return {
+      ok: false as const,
+      error: "Ce devis est confirmé : contactez-nous via la messagerie.",
+    };
+  }
+  if (quote.pending_options || quote.pending_details) {
+    return {
+      ok: false as const,
+      error: "Une modification est déjà en attente de validation.",
+    };
+  }
+
+  const pack = ADMIN_PACK_LIST.find(
+    (p) => p.name === String(formData.get("formula_name") ?? "").trim()
+  );
+
+  const details: PendingQuoteDetails = {
+    event_location: String(formData.get("event_location") ?? "").trim() || null,
+    event_date: String(formData.get("event_date") ?? "").trim() || null,
+    start_time: String(formData.get("start_time") ?? "").trim() || null,
+    end_time: String(formData.get("end_time") ?? "").trim() || null,
+    formula_name: pack?.name ?? null,
+    formula_price_cents: pack ? pack.price : null,
+    message: String(formData.get("message") ?? "").trim() || null,
+  };
+
+  if (!details.event_location && !details.event_date && !details.start_time && !details.end_time && !details.formula_name) {
+    return { ok: false as const, error: "Indiquez au moins un changement." };
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("quotes")
+    .update({ pending_details: details, has_unread_updates: true })
+    .eq("id", quoteId);
+
+  if (error) {
+    console.error("Demande de modification impossible", error);
+    return {
+      ok: false as const,
+      error: "Enregistrement impossible — la migration SQL (pending_details) est-elle exécutée ?",
+    };
+  }
+
+  // Notification admin : push + e-mail (best effort).
+  try {
+    const { notifyAdminPush } = await import("@/lib/push");
+    void notifyAdminPush({
+      title: "Demande de modification de devis",
+      body: `${quote.customer_name} a demandé une modification (lieu, horaires ou pack).`,
+      url: "/admin/devis",
+    });
+    const { Resend } = await import("resend");
+    const apiKey = process.env.RESEND_API_KEY;
+    const to = process.env.NOTIF_EMAIL;
+    if (apiKey && to) {
+      const { EMAIL_FROM: fromAddr } = await import("@/lib/emails");
+      const resend = new Resend(apiKey);
+      await resend.emails.send({
+        from: fromAddr,
+        replyTo: quote.customer_email,
+        to,
+        subject: "✏️ Demande de modification de devis — à valider",
+        html: `<p><strong>${quote.customer_name}</strong> (${quote.customer_email}) a demandé une modification de son devis :</p><ul>${[
+          details.event_location ? `<li>Lieu : ${details.event_location}</li>` : "",
+          details.event_date ? `<li>Date : ${details.event_date}</li>` : "",
+          details.start_time || details.end_time ? `<li>Horaires : ${details.start_time ?? "?"} - ${details.end_time ?? "?"}</li>` : "",
+          details.formula_name ? `<li>Pack : ${details.formula_name}</li>` : "",
+          details.message ? `<li>Message : ${details.message}</li>` : "",
+        ].filter(Boolean).join("")}</ul><p><a href="${SITE_URL}/admin/devis">Valider ou refuser dans l'admin</a></p>`,
+      });
+    }
+  } catch {
+    // best effort
+  }
+
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  return { ok: true as const, message: "Demande envoyée ! Nous vous confirmons dès que possible." };
+}
+
+// Validation admin d'une demande de modification de devis (lieu, date,
+// horaires, pack). À l'acceptation : application + régénération silencieuse
+// du devis et du contrat PDF (à signer) — l'admin envoie ensuite l'e-mail au
+// client via le bouton « Envoyer les documents au client ».
+export async function resolveQuoteDetails(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const approve = String(formData.get("approve") ?? "") === "true";
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("*")
+    .eq("id", quoteId)
+    .single();
+  if (!quote?.pending_details) return { ok: false as const, error: "Rien à valider." };
+
+  if (approve) {
+    const d = quote.pending_details as PendingQuoteDetails;
+    const updates: Record<string, unknown> = {
+      pending_details: null,
+      has_unread_updates: false,
+    };
+    if (d.event_location) updates.event_location = d.event_location;
+    if (d.event_date) updates.event_date = d.event_date;
+    if (d.start_time) updates.start_time = d.start_time;
+    if (d.end_time) updates.end_time = d.end_time;
+    if (d.formula_name) {
+      const newPrice = Number(d.formula_price_cents ?? 0);
+      updates.formula_name = d.formula_name;
+      updates.formula_price_cents = newPrice;
+      // Recalcul du total : on remplace le prix de l'ancien pack par le neuf
+      // (options, déplacement et suppléments restent inchangés — ajustables
+      // ensuite via l'édition admin si besoin, ex : heures supp).
+      const oldPrice = Number(quote.formula_price_cents ?? 0);
+      updates.total_cents = Math.max(0, (quote.total_cents ?? 0) - oldPrice + newPrice);
+    }
+    const { error } = await supabase
+      .from("quotes")
+      .update(updates)
+      .eq("id", quoteId);
+    if (error) return { ok: false as const, error: "Erreur lors de l'application." };
+
+    // Nouveau devis + contrat PDF à signer (génération silencieuse : l'e-mail
+    // part via le bouton « Envoyer les documents au client », à votre main).
+    const fd = new FormData();
+    fd.set("quote_id", quoteId);
+    fd.set("silent", "1");
+    const gen = await generateDevisEtContratDocument(fd);
+    if (gen.ok === false) {
+      return {
+        ok: false as const,
+        error: `Modifications appliquées, mais génération des PDF impossible : ${gen.error}`,
+      };
+    }
+  } else {
+    await supabase
+      .from("quotes")
+      .update({ pending_details: null, has_unread_updates: false })
+      .eq("id", quoteId);
+  }
+
+  revalidatePath("/admin/devis");
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  return {
+    ok: true as const,
+    message: approve
+      ? "Modifications appliquées + nouveau devis/contrat générés ✓ Pensez à envoyer l'e-mail au client."
+      : "Demande refusée — le devis reste inchangé ✓",
+  };
+}
+
+// L'admin envoie (de son propre chef) l'e-mail « documents à signer » pour un
+// devis modifié : liste les PDF à signer non signés du devis.
+export async function notifyDevisReady(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: files } = await supabase
+    .from("quote_files")
+    .select("name")
+    .eq("quote_id", quoteId)
+    .eq("doc_kind", "a_signer")
+    .is("signed_at", null);
+  const names = (files ?? [])
+    .filter((f) => /^Devis |^Contrat /.test(f.name))
+    .map((f) => f.name.replace(/\.pdf$/, ""));
+  if (names.length === 0) {
+    return { ok: false as const, error: "Aucun document à signer en attente (générez d'abord le devis)." };
+  }
+
+  await notifyClientDocuments(quoteId, names, { aSigner: true });
+  revalidatePath("/admin/devis");
+  return { ok: true as const, message: `E-mail envoyé au client ✓ (${names.join(" + ")})` };
+}
+
 // L'admin a pris connaissance des nouveautés du devis.
 export async function markQuoteSeen(formData: FormData) {
   const { isAdmin } = await import("@/lib/admin-auth");
@@ -1163,7 +1428,7 @@ export async function generateDevisDocument(formData: FormData) {
   });
 
   // Propriétaire du devis (clé user_id) — cache mémoire.
-  const ownerUserId = await findOwnerUserId(supabase, quote.customer_email);
+  const ownerUserId = await findOwnerUserId(supabase, quote.customer_email, quoteId);
 
   const storagePath = `admin/${quoteId}/devis-${Date.now()}.pdf`;
   const { error: uploadError } = await supabase.storage
@@ -1252,7 +1517,7 @@ export async function generateContratDocument(formData: FormData) {
   }
 
   // Propriétaire du devis (clé user_id) — cache mémoire.
-  const ownerUserId = await findOwnerUserId(supabase, quote.customer_email);
+  const ownerUserId = await findOwnerUserId(supabase, quote.customer_email, quoteId);
 
   const storagePath = `admin/${quoteId}/contrat-${Date.now()}.pdf`;
   const { error: uploadError } = await supabase.storage
@@ -1373,7 +1638,7 @@ export async function generateFactureDocument(formData: FormData) {
           return { ok: false as const, bytes: null };
         }
       })(),
-      findOwnerUserId(supabase, quote.customer_email),
+      findOwnerUserId(supabase, quote.customer_email, quoteId),
     ]);
     if (!pdfResult.ok || !pdfResult.bytes) {
       return { ok: false as const, error: "Échec de la génération de la facture." };
@@ -1666,7 +1931,7 @@ async function notifyClientDocuments(
             href: opts.downloadUrl,
           }
         : {
-            label: opts.aSigner ? "Signer maintenant" : "Voir les documents",
+            label: opts.aSigner ? "Consulter les documents" : "Voir les documents",
             href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}#documents`)}`,
           },
     };
@@ -2216,7 +2481,7 @@ export async function uploadAdminDocument(formData: FormData) {
     .select("customer_email, status")
     .eq("id", quoteId)
     .single();
-  const ownerUserId = await findOwnerUserId(supabase, quote?.customer_email);
+  const ownerUserId = await findOwnerUserId(supabase, quote?.customer_email, quoteId);
 
   await supabase.from("quote_files").insert({
     quote_id: quoteId,

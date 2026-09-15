@@ -1,17 +1,13 @@
 import { deleteQuote } from "@/app/actions";
-import { markQuoteSeen, resolveQuoteOptions } from "@/app/client-actions";
+import { markQuoteSeen, resolveQuoteOptions, resolveQuoteDetails, notifyDevisReady } from "@/app/client-actions";
 import { QuickStatusForm } from "@/components/quick-status-form";
 import { confirmAcompteReceived } from "@/app/client-actions";
 import { SubmitButton } from "@/components/submit-button";
-import { AdminQuoteConversation } from "@/components/admin-quote-conversation";
-import { AdminQuoteDetails } from "@/components/admin-quote-details";
-import { AdminQuoteDocuments } from "@/components/admin-quote-documents";
-import { AdminQuoteFiles } from "@/components/admin-quote-files";
 import { AutoRefresh } from "@/components/auto-refresh";
-import { AdminQuotePlaylist, eventMoments } from "@/components/admin-quote-playlist";
-import { AdminRdvRequests } from "@/components/rdv-call";
+import { AdminQuoteDetails } from "@/components/admin-quote-details";
 import { updateQuoteStatus } from "@/app/actions";
 import { DevisFilterBar } from "@/components/devis-filter-bar";
+import { AdminQuoteLazyFolder } from "@/components/admin-quote-lazy-folder";
 
 import { Badge } from "@/components/ui/badge";
 import { formatEuros } from "@/lib/money";
@@ -61,13 +57,13 @@ function eventKind(formulaName: string): string {
 export default async function DevisPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; tri?: string; focus?: string; cree?: string }>;
+  searchParams: Promise<{ q?: string; tri?: string; focus?: string; cree?: string; revise?: string; erreur_revise?: string }>;
 }) {
   // Filet de sécurité : si le Cron Vercel n'a pas tourné, on traite les
   // e-mails planifiés (relance J+10, avis post-soirée) à l'ouverture de l'admin.
   sendScheduledEmails().catch((e) => console.error("[email-jobs]", e));
 
-  const { q, tri, focus, cree } = await searchParams as { q?: string; tri?: string; focus?: string; cree?: string };
+  const { q, tri, focus, cree, revise, erreur_revise } = await searchParams as { q?: string; tri?: string; focus?: string; cree?: string; revise?: string; erreur_revise?: string };
   const query = (q ?? "").trim().toLowerCase();
   const supabase = createAdminClient();
   const { data: quotes } = await supabase
@@ -153,7 +149,7 @@ export default async function DevisPage({
 
   return (
     <div className="space-y-6">
-      <AutoRefresh />
+      <AutoRefresh intervalMs={30000} />
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-medium">Devis reçus</h1>
@@ -291,7 +287,9 @@ export default async function DevisPage({
                     <span className="text-yellow-400">
                       {quote.pending_options
                         ? "⏳ Le client a demandé une modification d'options."
-                        : "Nouveautés client (musique ou message)."}
+                        : quote.pending_details
+                          ? "⏳ Le client a demandé une modification du devis (voir bloc dédié)."
+                          : "Nouveautés client (musique ou message)."}
                     </span>
                     {quote.has_unread_updates ? (
                       <form action={markQuoteSeen}>
@@ -358,32 +356,115 @@ export default async function DevisPage({
                     </div>
                   </div>
                 ) : null}
+                {/* Demande de modification du devis (lieu, date, horaires, pack) */}
+                {quote.pending_details ? (
+                  <div className="space-y-2 border-t border-border px-4 pt-3 text-sm">
+                    <p className="font-medium text-yellow-400">
+                      ⏳ Le client demande une modification du devis :
+                    </p>
+                    <ul className="space-y-0.5 rounded-lg border border-border bg-muted/50 p-3 text-muted-foreground">
+                      {(quote.pending_details as {
+                        event_location?: string | null;
+                        event_date?: string | null;
+                        start_time?: string | null;
+                        end_time?: string | null;
+                        formula_name?: string | null;
+                        message?: string | null;
+                      }).event_location ? (
+                        <li>Lieu : {(quote.pending_details as { event_location?: string | null }).event_location}</li>
+                      ) : null}
+                      {(quote.pending_details as { event_date?: string | null }).event_date ? (
+                        <li>Date : {(quote.pending_details as { event_date?: string | null }).event_date}</li>
+                      ) : null}
+                      {(quote.pending_details as { start_time?: string | null }).start_time ||
+                      (quote.pending_details as { end_time?: string | null }).end_time ? (
+                        <li>
+                          Horaires :{" "}
+                          {(quote.pending_details as { start_time?: string | null }).start_time ?? "?"} -{" "}
+                          {(quote.pending_details as { end_time?: string | null }).end_time ?? "?"}
+                        </li>
+                      ) : null}
+                      {(quote.pending_details as { formula_name?: string | null }).formula_name ? (
+                        <li>Pack : {(quote.pending_details as { formula_name?: string | null }).formula_name}</li>
+                      ) : null}
+                      {(quote.pending_details as { message?: string | null }).message ? (
+                        <li>Message : {(quote.pending_details as { message?: string | null }).message}</li>
+                      ) : null}
+                    </ul>
+                    <div className="flex flex-wrap gap-2">
+                      <form
+                        action={async (formData) => {
+ "use server";
+                          await resolveQuoteDetails(formData);
+                        }}
+                      >
+                        <input type="hidden" name="quote_id" value={quote.id} />
+                        <input type="hidden" name="approve" value="true" />
+                        <SubmitButton
+                          pendingLabel="Application…"
+                          confirm="Accepter ces modifications ? Le devis sera mis à jour, le total recalculé (si pack changé), et un nouveau devis + contrat PDF à signer seront générés automatiquement."
+                          className="rounded-lg bg-green-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-500"
+                        >
+                          ✓ Accepter et appliquer (+ nouveau devis PDF)
+                        </SubmitButton>
+                      </form>
+                      <form
+                        action={async (formData) => {
+ "use server";
+                          await resolveQuoteDetails(formData);
+                        }}
+                      >
+                        <input type="hidden" name="quote_id" value={quote.id} />
+                        <input type="hidden" name="approve" value="false" />
+                        <button
+                          type="submit"
+                          className="rounded-lg border border-red-500/50 px-4 py-1.5 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/10"
+                        >
+                          ✕ Refuser
+                        </button>
+                      </form>
+                      <form
+                        action={async (formData) => {
+ "use server";
+                          await notifyDevisReady(formData);
+                        }}
+                      >
+                        <input type="hidden" name="quote_id" value={quote.id} />
+                        <SubmitButton
+                          pendingLabel="Envoi…"
+                          confirm="Envoyer l'e-mail « documents à signer » au client maintenant ?"
+                          className="rounded-lg border border-cyan-500/50 bg-cyan-500/10 px-4 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:bg-cyan-400/25 hover:text-cyan-100"
+                        >
+                          ✉ Envoyer les documents au client
+                        </SubmitButton>
+                      </form>
+                    </div>
+                  </div>
+                ) : null}
                 <AdminQuoteDetails
                   quote={quote}
                   options={options}
                   schedule={schedulesByQuote.get(quote.id)}
                 />
-                <AdminRdvRequests quoteId={quote.id} />
-                {/* Dossier complet : conversation, musiques et fichiers du client */}
-                <div className="space-y-6 border-t border-border px-4 pb-5 pt-4">
-                  <AdminQuoteConversation
-                    quoteId={quote.id}
-                    initialMessages={
-                      (initialMessagesByQuote.get(quote.id) ?? []) as {
-                        id: string;
-                        sender: string;
-                        body: string;
-                        created_at: string;
-                      }[]
-                    }
-                  />
-                  <AdminQuotePlaylist
-                    quoteId={quote.id}
-                    moments={eventMoments(quote.formula_name)}
-                  />
-                  <AdminQuoteFiles quoteId={quote.id} />
-                  <AdminQuoteDocuments quoteId={quote.id} />
-                </div>
+                {/* Dossier complet (conversation, musiques, fichiers,
+                    documents) : chargé uniquement à l'ouverture du devis. */}
+                <AdminQuoteLazyFolder
+                  quoteId={quote.id}
+                  formulaName={quote.formula_name}
+                  adjustments={
+                    Array.isArray(quote.invoice_adjustments)
+                      ? (quote.invoice_adjustments as { label: string; amount_cents: number }[])
+                      : []
+                  }
+                  initialMessages={
+                    (initialMessagesByQuote.get(quote.id) ?? []) as {
+                      id: string;
+                      sender: string;
+                      body: string;
+                      created_at: string;
+                    }[]
+                  }
+                />
               </details>
             );
           })}
