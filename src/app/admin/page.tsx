@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { DashboardDetail } from "@/components/dashboard-detail";
 import { ValidateEcheanceButton } from "@/components/validate-echeance-button";
+import { AdminStats } from "@/components/admin-stats";
+import { AdminPushButton } from "@/components/admin-push-button";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +44,7 @@ export default async function AdminDashboard({
 
   // Tous les devis confirmés, triés par date d'événement.
   // (Requêtes en parallèle pour un chargement rapide du tableau de bord.)
-  const [confirmedRes, devisAttenteRes, devisRecentsRes, facturesRes, echeanciersRes] = await Promise.all([
+  const [confirmedRes, devisAttenteRes, devisRecentsRes, facturesRes, echeanciersRes, allQuotesRes] = await Promise.all([
     supabase
       .from("quotes")
       .select("id, customer_name, formula_name, total_cents, event_date, event_location, status, created_at, notes")
@@ -63,6 +65,8 @@ export default async function AdminDashboard({
       .from("payment_schedule")
       .select("id, numero, total, amount_cents, due_date, status, valide_urssaf, paid_at, quote_id, quotes(id, customer_name, formula_name)")
       .order("due_date", { ascending: true }),
+    // Tous les devis (léger) : entonnoir de conversion des statistiques.
+    supabase.from("quotes").select("id, status"),
   ]);
   const confirmed = confirmedRes.data;
   const devisAttente = devisAttenteRes.count ?? 0;
@@ -194,6 +198,45 @@ export default async function AdminDashboard({
   });
   /* SUITE-RENDU */
 
+  // ---- Statistiques : CA URSSAF par mois + entonnoir de conversion ----
+  const totalPct = (part: number, total: number) =>
+    total > 0 ? Math.round((part / total) * 100) : null;
+
+  // ---- Statistiques : CA URSSAF par mois + entonnoir de conversion ----
+  const MONTH_LABELS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+  const monthly = Array.from({ length: 12 }, (_, m) => {
+    const prefix = `${year}-${String(m + 1).padStart(2, "0")}`;
+    const soldes = allConfirmed
+      .filter((q) => (q.event_date ?? "").startsWith(prefix) && soldeValide(q) && !echeancierQuoteIds.has(q.id))
+      .reduce((sum, q) => sum + soldeDe(q), 0);
+    const echeances = echeancesValidees
+      .filter((e) => e.dueDate.startsWith(prefix))
+      .reduce((sum, e) => sum + e.amountCents, 0);
+    return { label: MONTH_LABELS[m], cents: soldes + echeances };
+  });
+  const allQuotes = allQuotesRes.data ?? [];
+  const countStatus = (...statuses: string[]) =>
+    allQuotes.filter((q) => statuses.includes(q.status ?? "")).length;
+  const funnel = [
+    { label: "Demandes reçues", count: allQuotes.length, hint: "devis + sur mesure" },
+    {
+      label: "En cours de discussion",
+      count: countStatus("nouveau", "contacte", "attente_signature", "attente_acompte"),
+    },
+    {
+      label: "Confirmées",
+      count: countStatus("confirme"),
+      hint:
+        totalPct(countStatus("confirme"), allQuotes.length) === null
+          ? undefined
+          : `${totalPct(countStatus("confirme"), allQuotes.length)} % du total`,
+    },
+    {
+      label: "Refusées / annulées",
+      count: countStatus("refuse", "annule"),
+    },
+  ];
+
   // Données des cartes et panneaux de détail (rendu instantané côté client).
   const mapDetailRow = (q: (typeof upcoming)[number]) => ({
     id: q.id,
@@ -242,6 +285,7 @@ export default async function AdminDashboard({
           >
             + Nouveau devis reçu ? Voir les demandes
           </Link>
+          <AdminPushButton vapidPublicKey={process.env.VAPID_PUBLIC_KEY ?? ""} />
         </div>
 
       <DashboardDetail
@@ -482,10 +526,14 @@ export default async function AdminDashboard({
         </section>
       </div>
 
+      {/* Statistiques : CA mensuel + conversion */}
+      <AdminStats year={year} months={monthly} funnel={funnel} />
+
       {/* Raccourcis */}
       <div className="grid gap-4 sm:grid-cols-3">
         {[
           { href: "/admin/factures", icon: FileText, label: "Factures libres", extra: `${nbFactures} générée(s)` },
+          { href: `/api/admin/export-ca?annee=${year}`, icon: Receipt, label: "Export comptable (CSV)", extra: `encaissements ${year}` },
           { href: "/admin/import", icon: BookOpen, label: "Soirées d'avant le site" },
           { href: "/admin/messages", icon: MessageSquare, label: "Messagerie clients" },
           { href: "/admin/comptes", icon: Users, label: "Comptes clients" },

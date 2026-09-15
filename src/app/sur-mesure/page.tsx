@@ -1,6 +1,31 @@
 import { FadeIn } from "@/components/fade-in";
 import { CustomRequestForm } from "@/components/custom-request-form";
+import { FaqSection } from "@/components/faq-section";
 import { SiteHeader } from "@/components/site-header";
+
+// FAQ SEO : questions typiques d'un projet sur-mesure (extrait enrichi Google).
+const faqItems = [
+  {
+    q: "Quels types d'événements sont considérés comme sur-mesure ?",
+    a: "Tout ce qui ne rentre pas dans les formules du site : deux espaces sonorisés (cérémonie + soirée), effectifs importants, horaires atypiques, contraintes spécifiques (sonorisation extérieure, salle atypique), ou un besoin de coordination avec d'autres prestataires.",
+  },
+  {
+    q: "Sous quel délai recevez-vous une réponse ?",
+    a: "Votre demande arrive directement chez le DJ : réponse en général sous 24 h, avec un devis formalisé si le projet est clair, ou une proposition de téléphone pour cadrer les détails.",
+  },
+  {
+    q: "Un devis et une facture sont-ils fournis ?",
+    a: "Oui, systématiquement : devis détaillé avant engagement, facture après la prestation — indispensable pour les associations, mairies et entreprises.",
+  },
+  {
+    q: "Quelle est la zone d'intervention ?",
+    a: "Blois et le Loir-et-Cher au quotidien, et le Centre-Val de Loire plus largement (Orléans, Tours, Vendôme…). Les 30 premiers kilomètres de déplacement sont offerts.",
+  },
+  {
+    q: "Comment se passe le paiement ?",
+    a: "Acompte de réservation (20 %) puis solde après la soirée, par virement, carte bancaire ou paiement en plusieurs fois (2 à 10×) directement en ligne.",
+  },
+];
 
 export default function SurMesurePage() {
   return (
@@ -17,6 +42,7 @@ export default function SurMesurePage() {
           <CustomRequestForm />
         </div>
       </main>
+      <FaqSection title="Questions fréquentes — projets sur-mesure" items={faqItems} />
     </>
   );
 }

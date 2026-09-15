@@ -217,6 +217,60 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
     }
   }
 
+  // ---------- 2 bis. Relance d'avis J+10 ----------
+  // La demande d'avis est partie (MARK_AVIS présent) mais rien ne dit qu'un
+  // avis a été laissé ([[avis-ok]] absent) : relance unique, douce, 10 jours
+  // après la soirée (et au plus tard 30 jours — au-delà, ce n'est plus le
+  // bon moment). Marqueur [[avis-relance:]] pour ne jamais relancer deux fois.
+  const tenDaysAgoDate = new Date(now - 10 * 86400_000).toISOString().slice(0, 10);
+
+  const { data: toRelanceAvis } = await supabase
+    .from("quotes")
+    .select("id, customer_name, customer_email, event_date, notes")
+    .eq("status", "confirme")
+    .gte("event_date", monthAgo)
+    .lte("event_date", tenDaysAgoDate)
+    .limit(20);
+
+  for (const q of toRelanceAvis ?? []) {
+    const notes = q.notes ?? "";
+    if (!notes.includes(MARK_AVIS)) continue;
+    if (notes.includes("[[avis-relance:")) continue;
+    if (notes.includes("[[avis-ok]]")) continue;
+    if (!q.customer_email) continue;
+
+    const eventFr = q.event_date
+      ? new Date(q.event_date).toLocaleDateString("fr-FR")
+      : null;
+    const ok = await sendEmail(
+      q.customer_email,
+      "Petit coup de pouce ? Votre avis aide énormément un DJ indépendant 🙏",
+      {
+        title: "Un avis ? 2 minutes, pas plus",
+        emoji: "🙏",
+        intro: `Bonjour ${q.customer_name ?? ""},<br/><br/>J'espère que la soirée${eventFr ? ` du <strong>${eventFr}</strong>` : ""} vous a plu ! Je me permets un petit rappel : <strong>votre avis Google</strong> est ce qui permet aux futurs mariés et organisateurs de me faire confiance — un DJ indépendant n'a que ça pour se faire connaître.`,
+        sections: [
+          {
+            title: "Deux liens, deux minutes",
+            lines: [
+              `<a href="https://g.page/r/CYgCQMSAgDcWEAE/review" style="color:#21619A;"><strong>Laisser un avis Google</strong></a> — le plus utile`,
+              `<a href="https://www.mariages.net/musique-mariage/propulsound-dj--e366139" style="color:#21619A;"><strong>Laisser un avis Mariages.net</strong></a> — pour les couples en préparation`,
+              "Et si vous avez des photos ou vidéos de la piste de danse, je suis toujours preneur !",
+            ],
+          },
+        ],
+        button: { label: "Laisser un avis Google (2 min)", href: "https://g.page/r/CYgCQMSAgDcWEAE/review" },
+        footer: "Désolé pour le rappel — et surtout, merci ! — Maxime, Propul'Sound DJ",
+      }
+    );
+    if (ok) {
+      await supabase
+        .from("quotes")
+        .update({ notes: addMarker(q.notes, "[[avis-relance:") })
+        .eq("id", q.id);
+    }
+  }
+
   // ---------- 4. Rappel J-30 : playlist encore vide ----------
   const in30Days = new Date(now + 30 * 86400_000).toISOString().slice(0, 10);
 

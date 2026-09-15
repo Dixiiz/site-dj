@@ -152,3 +152,12 @@ on conflict (slot_date, start_time) do nothing;
 -- client — était référencé dans le code mais jamais créé en base.
 alter table quotes add column if not exists extra_fee_cents integer not null default 0;
 alter table quotes add column if not exists extra_fee_label text;
+
+-- Migration : abonnements aux notifications push de l'admin (Web Push).
+-- Un endpoint = un navigateur/apparail ayant accepté les notifications.
+create table if not exists push_subscriptions (
+  endpoint text primary key,
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz not null default now()
+);

@@ -26,6 +26,21 @@ async function sendQuoteNotification(
   subject: string,
   emailData: Parameters<typeof import("@/lib/emails").buildEmailHtml>[0]
 ) {
+  // Notification push admin (en plus de l'e-mail) : titre de l'e-mail,
+  // texte court extrait de l'intro, et lien vers la page cible du bouton.
+  const { notifyAdminPush } = await import("@/lib/push");
+  const extrait = emailData.intro
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .slice(0, 120);
+  void notifyAdminPush({
+    title: emailData.title || subject,
+    body: extrait,
+    url: emailData.button?.href?.startsWith(SITE_URL)
+      ? emailData.button.href.replace(SITE_URL, "")
+      : "/admin",
+  });
+
   if (!NOTIF_EMAIL || !RESEND_API_KEY) return;
   try {
     const resend = new Resend(RESEND_API_KEY);
@@ -631,6 +646,14 @@ export async function submitCustomRequest(formData: FormData) {
   if (error) {
     return { ok: false as const, error: "Impossible d’enregistrer la demande. Réessaie dans un instant." };
   }
+
+  // Notification push admin (pas d'e-mail pour les demandes sur-mesure).
+  const { notifyAdminPush } = await import("@/lib/push");
+  void notifyAdminPush({
+    title: "Nouvelle demande sur-mesure",
+    body: `${customer_name} — ${event_location}${event_date ? ` — ${event_date}` : ""}`,
+    url: "/admin/devis",
+  });
 
   redirect(`/merci?nom=${encodeURIComponent(customer_name)}`);
 }

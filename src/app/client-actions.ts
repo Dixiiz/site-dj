@@ -423,8 +423,14 @@ export async function sendQuoteMessage(formData: FormData) {
     body,
   });
 
-  // Pastille nouveautés côté admin.
+  // Pastille nouveautés côté admin + notification push.
   await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
+  const { notifyAdminPush } = await import("@/lib/push");
+  void notifyAdminPush({
+    title: "Nouveau message client",
+    body: `${quote.customer_name ?? user.email} : ${body.slice(0, 100)}`,
+    url: `/admin/devis?focus=${quoteId}`,
+  });
 
   // Notification e-mail à l'admin (best effort).
   try {
@@ -1571,6 +1577,14 @@ export async function declareAcompteSent(formData: FormData) {
     console.error("[acompte] Echec e-mail admin:", err);
   }
 
+  // Notification push admin (même info que l'e-mail).
+  const { notifyAdminPush } = await import("@/lib/push");
+  void notifyAdminPush({
+    title: "Acompte déclaré par le client",
+    body: `${quote.customer_name ?? quote.customer_email ?? user.email} dit avoir envoyé l'acompte — à vérifier`,
+    url: "/admin/devis",
+  });
+
   console.log(`[acompte] Le client ${user.email} a déclaré avoir envoyé l'acompte du devis ${quoteId}`);
 
   revalidatePath(`/mon-espace/devis/${quoteId}`);
@@ -2334,8 +2348,14 @@ export async function uploadClientFile(formData: FormData) {
     moment,
   });
 
-  // Pastille nouveautés côté admin.
+  // Pastille nouveautés côté admin + notification push.
   await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
+  const { notifyAdminPush } = await import("@/lib/push");
+  void notifyAdminPush({
+    title: "Nouveau fichier client",
+    body: `${quote.customer_name ?? user.email} a envoyé « ${file.name} »`,
+    url: `/admin/devis?focus=${quoteId}`,
+  });
 
   revalidatePath(`/mon-espace/devis/${quoteId}`);
   revalidatePath("/admin/devis");

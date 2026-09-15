@@ -95,12 +95,12 @@ export async function GoogleReviews() {
           )}
         </div>
       </FadeIn>
-      <div className="mt-10 grid gap-4 md:grid-cols-3">
+      <div className="scrollbar-none mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {data.reviews.slice(0, 5).map((review, index) => {
           const name = review.authorAttribution?.displayName ?? "Client Google";
           const text = review.text?.text ?? review.originalText?.text ?? "";
           return (
-            <FadeIn key={`${name}-${index}`} delay={index * 0.05}>
+            <FadeIn key={`${name}-${index}`} delay={index * 0.05} className="w-[85%] shrink-0 snap-start sm:w-[360px]">
               <figure className="flex h-full flex-col rounded-xl border border-border bg-card/60 p-5">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{name}</span>
@@ -118,7 +118,7 @@ export async function GoogleReviews() {
             </FadeIn>
           );
         })}
-        <FadeIn delay={5 * 0.05}>
+        <FadeIn delay={5 * 0.05} className="w-[85%] shrink-0 snap-start sm:w-[360px]">
           <a
             href={`https://www.google.com/maps/place/?q=place_id:${process.env.GOOGLE_PLACE_ID ?? ""}`}
             target="_blank"
@@ -141,6 +141,9 @@ export async function GoogleReviews() {
           </a>
         </FadeIn>
       </div>
+      <FadeIn delay={0.2} className="mt-2 text-center text-xs text-muted-foreground sm:hidden">
+        ← Faites défiler pour lire tous les avis →
+      </FadeIn>
       <FadeIn delay={0.3} className="mt-6 text-center">
         <Link
           href="/avis"

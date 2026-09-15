@@ -17,9 +17,9 @@ import {
 import { SITE_URL } from "@/lib/site-url";
 
 export const metadata: Metadata = {
-  title: "Galerie — photos de prestations",
+  title: "Galerie — photos & vidéos de prestations",
   description:
-    "Photos des mariages, anniversaires et soirées animés par Propul'Sound DJ, créditées à leurs photographes.",
+    "Photos et vidéos des mariages, anniversaires et soirées animés par Propul'Sound DJ, créditées à leurs photographes.",
 };
 
 // Fusion stockage + local, ordre admin si défini sinon tri alphabétique.
@@ -44,9 +44,21 @@ async function mergedPhotos(): Promise<MediaItem[]> {
   return [...sorted, ...byName.values()];
 }
 
+// Vidéos showcase (uploadées dans Admin → Médias) : stockage + repli local.
+async function mergedVideos(): Promise<MediaItem[]> {
+  const [storage, local] = await Promise.all([
+    listMedia("videos/showcase").then((files) =>
+      files.map((f) => ({ ...f, origin: "storage" as const }))
+    ),
+    Promise.resolve(listLocalMedia("videos/showcase")),
+  ]);
+  return [...storage, ...local.filter((l) => !storage.some((s) => s.name === l.name))];
+}
+
 export default async function GaleriePage() {
-  const [photos, credits] = await Promise.all([
+  const [photos, videos, credits] = await Promise.all([
     mergedPhotos(),
+    mergedVideos(),
     getCreditsBundle("galerie").catch(() => ({
       photographers: {},
       lieux: {},
@@ -168,6 +180,33 @@ export default async function GaleriePage() {
           })}
         </div>
       )}
+
+      {/* Vidéos : extraits des prestations (upload dans Admin → Médias).
+          Masqué entièrement tant qu'aucune vidéo n'est disponible. */}
+      {videos.length > 0 ? (
+        <section className="mt-14">
+          <p className="text-center text-sm uppercase tracking-[0.2em] text-accent">Vidéos</p>
+          <h2 className="mt-2 text-center text-xl font-medium tracking-tight sm:text-2xl">
+            La piste de danse en action
+          </h2>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {videos.map((video) => (
+              <figure key={video.name} className="overflow-hidden rounded-2xl border border-border">
+                <video
+                  src={video.url}
+                  controls
+                  preload="metadata"
+                  playsInline
+                  className="aspect-video w-full bg-background"
+                />
+                <figcaption className="px-3 py-2 text-xs text-muted-foreground">
+                  Prestation Propul&apos;Sound DJ
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      ) : null}
       </main>
     </>
   );

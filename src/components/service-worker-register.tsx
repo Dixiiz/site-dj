@@ -1,44 +1,41 @@
 "use client";
 
+/**
+ * Gestion PWA de l'admin : purge des anciens caches + service worker push.
+ *
+ * Historique : le premier SW (cache hors-ligne) causait des bugs bloquants
+ * sur iOS PWA (requêtes sans cookies → navigation figée). Le SW actuel
+ * (public/sw.js) est « push only » : il n'intercepte AUCUN fetch, donc le
+ * comportement réseau reste 100 % natif. Ce composant purge les vieux
+ * caches à chaque visite et enregistre le SW pour les notifications.
+ */
 import { useEffect } from "react";
 
-/**
- * Nettoyage complet des service workers et caches PWA.
- *
- * Le service worker (consultation hors-ligne) causait des bugs bloquants
- * sur iOS PWA : ses requêtes partaient sans les cookies de session, le
- * serveur répondait une page de connexion à la place des données, et la
- * navigation Next.js restait figée (clic → scroll en haut, rien d'autre).
- *
- * Ce composant déregistre tout SW existant et vide les caches à chaque
- * visite de l'admin, pour garantir un comportement identique à Safari.
- */
 export function ServiceWorkerRegister() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const cleanup = async () => {
+    const setup = async () => {
       try {
-        if ("serviceWorker" in navigator) {
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(registrations.map((r) => r.unregister()));
-        }
+        // 1) Purge des anciens caches (versions hors-ligne historiques).
         if ("caches" in window) {
           const keys = await caches.keys();
           await Promise.all(
             keys
-              .filter(
-                (k) => k.startsWith("admin-pages-") || k.startsWith("offline-"),
-              )
+              .filter((k) => k.startsWith("admin-pages-") || k.startsWith("offline-"))
               .map((k) => caches.delete(k)),
           );
         }
+        // 2) Enregistrement du SW push-only (si supporté).
+        if ("serviceWorker" in navigator && "PushManager" in window) {
+          await navigator.serviceWorker.register("/sw.js");
+        }
       } catch (error) {
-        console.error("Nettoyage PWA :", error);
+        console.error("PWA setup :", error);
       }
     };
 
-    cleanup();
+    setup();
   }, []);
 
   return null;
