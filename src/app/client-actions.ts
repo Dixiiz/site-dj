@@ -935,49 +935,6 @@ export async function resolveQuoteOptions(formData: FormData) {
   return { ok: true as const };
 }
 
-// Dossier complet d'un devis pour l'admin (playlist, fichiers, RDV) en une
-// seule action groupée : appelée uniquement à l'ouverture du devis (les blocs
-// sont montés paresseusement), au lieu de 4-5 requêtes par devis affiché.
-export async function getQuoteAdminBundle(quoteId: string) {
-  const t0 = Date.now();
-  const { isAdmin } = await import("@/lib/admin-auth");
-  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
-  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
-  const tAuth = Date.now();
-
-  const supabase = createAdminClient();
-  const [tracks, files, rdvs] = await Promise.all([
-    supabase
-      .from("playlist_tracks")
-      .select("id, moment, title, artist, kind, preview_url, artwork_url")
-      .eq("quote_id", quoteId)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("quote_files")
-      .select("id, name, mime_type, size_bytes, moment, doc_kind, from_admin, signed_name")
-      .eq("quote_id", quoteId)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("rdv_requests")
-      .select("id, proposed_at, availability, status")
-      .eq("quote_id", quoteId)
-      .order("created_at", { ascending: true }),
-  ]);
-  const tDb = Date.now();
-
-  // Chronométrage (visible dans les logs Vercel) : auth / base / total.
-  console.log(
-    `[bundle] auth=${tAuth - t0}ms db=${tDb - tAuth}ms total=${tDb - t0}ms`
-  );
-
-  return {
-    ok: true as const,
-    tracks: tracks.data ?? [],
-    files: files.data ?? [],
-    rdvs: rdvs.data ?? [],
-  };
-}
-
 // ---------- Modification du devis par le client (lieu, date, horaires, pack) ----------
 
 export type PendingQuoteDetails = {
