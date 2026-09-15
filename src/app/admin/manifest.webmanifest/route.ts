@@ -12,8 +12,8 @@ const manifest: MetadataRoute.Manifest = {
   short_name: "Admin",
   description:
     "Administration du site Propul'Sound DJ : devis, factures, planning, médias et comptes.",
-  id: "/admin",
-  start_url: "/admin",
+  id: "/admin/",
+  start_url: "/admin/",
   scope: "/admin/",
   display: "standalone",
   background_color: "#f5f7fa",
