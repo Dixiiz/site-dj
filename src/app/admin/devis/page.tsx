@@ -66,32 +66,36 @@ export default async function DevisPage({
   const { q, tri, focus, cree, revise, erreur_revise } = await searchParams as { q?: string; tri?: string; focus?: string; cree?: string; revise?: string; erreur_revise?: string };
   const query = (q ?? "").trim().toLowerCase();
   const supabase = createAdminClient();
-  const { data: quotes } = await supabase
-    .from("quotes")
-    .select("*")
-    .order("created_at", { ascending: false });
+
+  // Les 3 requêtes partent en parallèle (au lieu d'être enchaînées) : le
+  // temps de chargement de la page devient celui de la plus lente des trois.
+  const [quotesRes, schedulesRes, messagesRes] = await Promise.all([
+    supabase
+      .from("quotes")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(500),
+    supabase
+      .from("payment_schedule")
+      .select("quote_id, numero, total, amount_cents, due_date, status")
+      .order("numero", { ascending: true }),
+    supabase
+      .from("quote_messages")
+      .select("id, quote_id, sender, body, created_at")
+      .order("created_at", { ascending: true }),
+  ]);
+  const quotes = quotesRes.data;
 
   // Échéanciers de paiement (barre de progression dans le détail de chaque devis).
   const schedulesByQuote = new Map<string, { numero: number; total: number; amount_cents: number; due_date: string; status: string }[]>();
-  try {
-    const { data: schedules } = await supabase
-      .from("payment_schedule")
-      .select("quote_id, numero, total, amount_cents, due_date, status")
-      .order("numero", { ascending: true });
-    for (const row of schedules ?? []) {
-      const list = schedulesByQuote.get(row.quote_id) ?? [];
-      list.push({ numero: row.numero, total: row.total, amount_cents: row.amount_cents, due_date: row.due_date, status: row.status });
-      schedulesByQuote.set(row.quote_id, list);
-    }
-  } catch {
-    // Migration échéancier pas encore exécutée : silencieux.
+  for (const row of schedulesRes.data ?? []) {
+    const list = schedulesByQuote.get(row.quote_id) ?? [];
+    list.push({ numero: row.numero, total: row.total, amount_cents: row.amount_cents, due_date: row.due_date, status: row.status });
+    schedulesByQuote.set(row.quote_id, list);
   }
 
   // Messages regroupés par devis (conversation initiale ; ensuite rafraîchie en direct).
-  const { data: allMessages } = await supabase
-    .from("quote_messages")
-    .select("id, quote_id, sender, body, created_at")
-    .order("created_at", { ascending: true });
+  const allMessages = messagesRes.data;
   const initialMessagesByQuote = new Map<string, typeof allMessages>();
   for (const message of allMessages ?? []) {
     const list = initialMessagesByQuote.get(message.quote_id) ?? [];
