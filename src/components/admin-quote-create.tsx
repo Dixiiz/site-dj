@@ -16,7 +16,8 @@ export function AdminQuoteCreateForm() {
   const [co2Qty, setCo2Qty] = useState(1);
   const [travelDist, setTravelDist] = useState("");
   const [travelFee, setTravelFee] = useState("0,00");
-  const [extraHours, setExtraHours] = useState("0");
+  const [startVal, setStartVal] = useState("");
+  const [endVal, setEndVal] = useState("");
   const [extraRate, setExtraRate] = useState("55");
   const [otherFee, setOtherFee] = useState("0,00");
   const [otherLabel, setOtherLabel] = useState("");
@@ -64,18 +65,32 @@ export function AdminQuoteCreateForm() {
     })
     .filter((o): o is { name: string; price: number } => o !== null);
 
-  // Supplément : heures supp × taux horaire du pack (+ autres frais libres).
-  const extraHoursNum = Math.max(0, Number.parseFloat(extraHours.replace(",", ".")) || 0);
+  // Heures facturées : déduites automatiquement des horaires (fin après
+  // minuit gérée), moins les minutes incluses dans le pack sélectionné
+  // (pack « prix libre » → 0 h incluse, toute la durée est facturée).
+  const packBaseMinutes =
+    packId === "custom"
+      ? 0
+      : (ADMIN_PACK_LIST.find((p) => p.id === packId)?.baseMinutes ?? 0);
+  const toMin = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+  const startMin = toMin(startVal);
+  const endMinRaw = toMin(endVal);
+  const endMin = endMinRaw < 12 * 60 ? endMinRaw + 24 * 60 : endMinRaw;
+  const pastBase = startVal && endVal ? endMin - startMin - packBaseMinutes : 0;
+  const autoHours = pastBase > 0 ? Math.ceil(pastBase / 60) : 0;
+
+  // Supplément : heures × taux horaire du pack (+ autres frais libres).
   const extraRateNum = Math.max(0, Number.parseFloat(extraRate.replace(",", ".")) || 0);
   const otherFeeCents = Math.round(Number.parseFloat(otherFee.replace(",", ".")) * 100 || 0);
-  const extraFeeCents = Math.round(extraHoursNum * extraRateNum * 100) + otherFeeCents;
+  const extraFeeCents = Math.round(autoHours * extraRateNum * 100) + otherFeeCents;
 
   // Libellé auto : décrit précisément le calcul pour le client (PDF devis/facture).
   const labelParts: string[] = [];
-  if (extraHoursNum > 0 && extraRateNum > 0) {
-    labelParts.push(
-      `Heures supplémentaires (${String(extraHoursNum).replace(".", ",")} h × ${String(extraRateNum).replace(".", ",")} €/h)`
-    );
+  if (autoHours > 0 && extraRateNum > 0) {
+    labelParts.push(`Heures (${autoHours} h × ${String(extraRateNum).replace(".", ",")} €/h)`);
   }
   if (otherFeeCents > 0) {
     labelParts.push(otherLabel.trim() || "Frais divers");
@@ -139,11 +154,11 @@ export function AdminQuoteCreateForm() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={label}>Début</label>
-            <input name="start_time" type="time" className={input} />
+            <input name="start_time" type="time" value={startVal} onChange={(e) => setStartVal(e.target.value)} className={input} />
           </div>
           <div>
             <label className={label}>Fin</label>
-            <input name="end_time" type="time" className={input} />
+            <input name="end_time" type="time" value={endVal} onChange={(e) => setEndVal(e.target.value)} className={input} />
           </div>
         </div>
         <div>
@@ -155,11 +170,21 @@ export function AdminQuoteCreateForm() {
           <input name="travel_fee" value={travelFee} onChange={(e) => setTravelFee(e.target.value)} className={input} />
         </div>
         <div>
-          <label className={label}>Heures supplémentaires (h)</label>
-          <input name="extra_hours" value={extraHours} onChange={(e) => setExtraHours(e.target.value)} inputMode="decimal" className={input} />
+          <label className={label}>Heures (calcul auto)</label>
+          <input
+            value={autoHours > 0 ? `${autoHours} h` : "—"}
+            readOnly
+            className={`${input} cursor-default bg-muted/40 text-muted-foreground`}
+            title="Calculé depuis les horaires, moins les heures incluses dans le pack"
+          />
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            {packBaseMinutes > 0
+              ? `Forfait : ${Math.floor(packBaseMinutes / 60)} h incluses dans le pack`
+              : "Pack prix libre : toute la durée est facturée"}
+          </p>
         </div>
         <div>
-          <label className={label}>Taux horaire du pack (€/h)</label>
+          <label className={label}>Taux horaire (€/h)</label>
           <input name="extra_rate" value={extraRate} onChange={(e) => setExtraRate(e.target.value)} inputMode="decimal" className={input} />
         </div>
         <div>
@@ -204,6 +229,7 @@ export function AdminQuoteCreateForm() {
                 onClick={() => {
                   setPackId(p.id);
                   setPackPrice(euros(p.price));
+                  setExtraRate(euros(p.extraRateCents));
                 }}
                 className={`rounded-lg border px-3 py-1.5 text-sm transition-all ${
                   active

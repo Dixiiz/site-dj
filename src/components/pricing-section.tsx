@@ -379,7 +379,13 @@ function PackCard({
 }
 
 export const ADMIN_PACK_LIST = CATEGORIES.flatMap((category) =>
-  category.packs.map((pack) => ({ id: pack.name, name: pack.name, price: pack.price })),
+  category.packs.map((pack) => ({
+    id: pack.name,
+    name: pack.name,
+    price: pack.price,
+    baseMinutes: pack.baseMinutes,
+    extraRateCents: pack.extraRateCents,
+  })),
 );
 
 // Image de scénographie par nom de pack (pour les récapitulatifs de l'espace client).
