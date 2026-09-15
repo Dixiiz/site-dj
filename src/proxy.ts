@@ -27,11 +27,21 @@ export async function proxy(request: NextRequest) {
   });
 
   // Déclenche le rafraîchissement du token si nécessaire.
-  await supabase.auth.getUser();
+  // Garde-fou : si l'API auth de Supabase rame (incident, latence), on ne
+  // bloque JAMAIS la requête plus de 3 s — la page se servira de la session
+  // existante, le rafraîchissement se refera à la requête suivante.
+  await Promise.race([
+    supabase.auth.getUser(),
+    new Promise((resolve) => setTimeout(resolve, 3000)),
+  ]);
 
   return response;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp4)$).*)"],
+  matcher: [
+    // L'admin utilise son propre cookie de session (dj_admin) : pas besoin de
+    // rafraîchir la session Supabase sur ces routes (ni de la subir).
+    "/((?!admin(/|$)|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp4)$).*)",
+  ],
 };
