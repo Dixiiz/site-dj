@@ -1614,7 +1614,7 @@ async function notifyClientDocuments(
         : single ? "Un document est disponible" : "Des documents sont disponibles",
       emoji: opts.aSigner ? "" : "",
       intro: accesDirect
-        ? `Bonjour ${quote.customer_name ?? ""},<br/><br/>${single ? "Le document" : "Les documents"} <strong style="color:#21619A;">« ${docNames.map((n) => n.replace(/</g, "&lt;")).join(" », « ")} »</strong> ${single ? "est" : "sont"} en pièce jointe de cet e-mail${opts.downloadUrl ? " et téléchargeable${single ? \"\" : \"s\"} aussi via le bouton ci-dessous" : ""}. <strong>Aucun compte n'est nécessaire</strong> pour le récupérer.`
+        ? `Bonjour ${quote.customer_name ?? ""},<br/><br/>${single ? "Le document" : "Les documents"} <strong style="color:#21619A;">« ${docNames.map((n) => n.replace(/</g, "&lt;")).join(" », « ")} »</strong> ${single ? "est" : "sont"} en pièce jointe de cet e-mail${opts.downloadUrl ? (single ? " et téléchargeable aussi via le bouton ci-dessous" : " et téléchargeables aussi via le bouton ci-dessous") : ""}. <strong>Aucun compte n'est nécessaire</strong> pour le${single ? "" : "s"} récupérer.`
         : `Bonjour ${quote.customer_name ?? ""},<br/><br/>${single ? "Le document" : "Les documents"} <strong style="color:#21619A;">« ${docNames.map((n) => n.replace(/</g, "&lt;")).join(" », « ")} »</strong> ${single ? "vient" : "viennent"} d'être déposé${single ? "" : "s"} dans votre espace client${opts.aSigner ? ` et ${single ? "attend" : "attendent"} votre <strong>signature</strong>` : ""}.`,
       sections: opts.aSigner
         ? [
