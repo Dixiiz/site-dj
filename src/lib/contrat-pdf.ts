@@ -153,7 +153,7 @@ function eventKind(formulaName: string): string {
   const n = formulaName.toLowerCase();
   if (n.includes("mariage") || n.includes("essential") || n.includes("deluxe") || n.includes("ultime"))
     return "Mariage";
-  if (n.includes("set dj") || n.includes("clé en main") || n.includes("club") || n.includes("afterwork"))
+  if (n.includes("set dj") || n.includes("clé en main") || n.includes("club") || n.includes("afterwork") || n.includes("association"))
     return "Bar / Club";
   return "Anniversaire / Privé";
 }

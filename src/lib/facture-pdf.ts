@@ -115,7 +115,7 @@ export async function buildFacturePdf(
   const n = (quote.formula_name ?? "").toLowerCase();
   const eventKind = n.includes("mariage") || n.includes("essential") || n.includes("deluxe") || n.includes("ultime")
     ? "Mariage"
-    : n.includes("set dj") || n.includes("clé en main") || n.includes("club") || n.includes("afterwork")
+    : n.includes("set dj") || n.includes("clé en main") || n.includes("club") || n.includes("afterwork") || n.includes("association")
       ? "Bar / Club"
       : "Anniversaire / Privé";
   p("Type de prestation", quote.event_type || eventKind);

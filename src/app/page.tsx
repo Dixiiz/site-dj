@@ -43,10 +43,10 @@ const services = [
  "Séminaires, soirées de gala, arbres de Noël : une prestation professionnelle et adaptée à votre image.",
   },
   {
-    title: "Bars, clubs & soirées pro",
+    title: "Bars, clubs, associations & soirées pro",
     href: "/formules",
     description:
- "Sets adaptés à votre public : électro, house, hits du moment — je m'adapte à l'ambiance de votre établissement et de votre clientèle.",
+ "Sets adaptés à votre public : électro, house, hits du moment — je m'adapte à l'ambiance de votre établissement, de votre association ou de votre clientèle.",
   },
 ];
 

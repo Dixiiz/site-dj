@@ -142,10 +142,10 @@ const CATEGORIES: Category[] = [
   },
   {
     id: "pro",
-    label: "Bars, Clubs & Soirées Pro",
+    label: "Bars, Clubs, Associations & Soirées Pro",
     image: "/images/packs/3.jpg",
     intro:
- "Vous disposez déjà du son ou d'une scène ? De la simple prestation DJ à la formule clé en main complète, choisissez le niveau d'accompagnement.",
+ "Vous disposez déjà du son ou d'une scène ? De la simple prestation DJ à la formule clé en main complète, choisissez le niveau d'accompagnement — pour les bars, clubs, associations, comités des fêtes et soirées professionnelles.",
     baseNote: "Trois formats au choix selon votre lieu et vos équipements.",
     extraHourLabel: "Heure supplémentaire : dès 55 €/h selon formule",
     common: [

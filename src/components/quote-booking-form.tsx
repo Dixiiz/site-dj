@@ -156,7 +156,7 @@ export function QuoteBookingForm({
       if (!packName) return;
       const packKey = packName.toLowerCase();
       const categoryPatterns: RegExp[] = [
-        /set dj|clé en main|bar|club|pro/,
+        /set dj|clé en main|bar|club|pro|association/,
         /mariage|essential|deluxe|ultime/,
         /anniversaire|standard|premium/,
       ];
@@ -266,7 +266,7 @@ export function QuoteBookingForm({
     ? pack.baseMinutes >= 480 || isMariageFormula(pack.name)
     : (formula?.name.toLowerCase().includes("mariage") ?? false);
   const isBarClub = pack
-    ? /set dj|clé en main|bar|club|pro/i.test(pack.name)
+    ? /set dj|clé en main|bar|club|pro|association/i.test(pack.name)
     : false;
   // Départ dès 14 h pour les mariages, 18 h pour le reste. Pour les packs
   // Bars/Clubs & Soirées Pro (Set DJ seul, clé en main), l'heure de début la
