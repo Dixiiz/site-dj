@@ -16,8 +16,10 @@ export function AdminQuoteCreateForm() {
   const [co2Qty, setCo2Qty] = useState(1);
   const [travelDist, setTravelDist] = useState("");
   const [travelFee, setTravelFee] = useState("0,00");
-  const [extraFee, setExtraFee] = useState("0,00");
-  const [extraLabel, setExtraLabel] = useState("");
+  const [extraHours, setExtraHours] = useState("0");
+  const [extraRate, setExtraRate] = useState("55");
+  const [otherFee, setOtherFee] = useState("0,00");
+  const [otherLabel, setOtherLabel] = useState("");
   const [travelBusy, setTravelBusy] = useState(false);
   const [travelMsg, setTravelMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,10 +64,28 @@ export function AdminQuoteCreateForm() {
     })
     .filter((o): o is { name: string; price: number } => o !== null);
 
+  // Supplément : heures supp × taux horaire du pack (+ autres frais libres).
+  const extraHoursNum = Math.max(0, Number.parseFloat(extraHours.replace(",", ".")) || 0);
+  const extraRateNum = Math.max(0, Number.parseFloat(extraRate.replace(",", ".")) || 0);
+  const otherFeeCents = Math.round(Number.parseFloat(otherFee.replace(",", ".")) * 100 || 0);
+  const extraFeeCents = Math.round(extraHoursNum * extraRateNum * 100) + otherFeeCents;
+
+  // Libellé auto : décrit précisément le calcul pour le client (PDF devis/facture).
+  const labelParts: string[] = [];
+  if (extraHoursNum > 0 && extraRateNum > 0) {
+    labelParts.push(
+      `Heures supplémentaires (${String(extraHoursNum).replace(".", ",")} h × ${String(extraRateNum).replace(".", ",")} €/h)`
+    );
+  }
+  if (otherFeeCents > 0) {
+    labelParts.push(otherLabel.trim() || "Frais divers");
+  }
+  const extraFeeLabel = labelParts.join(" · ");
+
   const total =
     Math.round(Number.parseFloat(packPrice.replace(",", ".")) * 100 || 0) +
     Math.round(Number.parseFloat(travelFee.replace(",", ".")) * 100 || 0) +
-    Math.round(Number.parseFloat(extraFee.replace(",", ".")) * 100 || 0) +
+    extraFeeCents +
     selectedOptions.reduce((sum, o) => sum + o.price, 0);
 
   const input =
@@ -104,6 +124,7 @@ export function AdminQuoteCreateForm() {
             <option value="mariage">Mariage</option>
             <option value="anniversaire">Anniversaire</option>
             <option value="soiree_privee">Soirée privée</option>
+            <option value="association">Association / comité des fêtes</option>
             <option value="evenement_entreprise">Événement entreprise</option>
           </select>
         </div>
@@ -134,20 +155,30 @@ export function AdminQuoteCreateForm() {
           <input name="travel_fee" value={travelFee} onChange={(e) => setTravelFee(e.target.value)} className={input} />
         </div>
         <div>
-          <label className={label}>Supplément (heures supp, péage…) (€)</label>
-          <input name="extra_fee" value={extraFee} onChange={(e) => setExtraFee(e.target.value)} className={input} />
+          <label className={label}>Heures supplémentaires (h)</label>
+          <input name="extra_hours" value={extraHours} onChange={(e) => setExtraHours(e.target.value)} inputMode="decimal" className={input} />
         </div>
         <div>
-          <label className={label}>Libellé du supplément (visible par le client)</label>
+          <label className={label}>Taux horaire du pack (€/h)</label>
+          <input name="extra_rate" value={extraRate} onChange={(e) => setExtraRate(e.target.value)} inputMode="decimal" className={input} />
+        </div>
+        <div>
+          <label className={label}>Autres frais (€)</label>
+          <input name="other_fee" value={otherFee} onChange={(e) => setOtherFee(e.target.value)} className={input} />
+        </div>
+        <div>
+          <label className={label}>Libellé des autres frais (péage…)</label>
           <input
-            name="extra_fee_label"
-            value={extraLabel}
-            onChange={(e) => setExtraLabel(e.target.value)}
-            placeholder="Ex : Péage, Heures supplémentaires…"
+            name="other_fee_label"
+            value={otherLabel}
+            onChange={(e) => setOtherLabel(e.target.value)}
+            placeholder="Ex : Péage"
             className={input}
           />
         </div>
       </div>
+      <input type="hidden" name="extra_fee" value={(extraFeeCents / 100).toFixed(2).replace(".", ",")} />
+      <input type="hidden" name="extra_fee_label" value={extraFeeLabel} />
       <div className="flex items-center gap-2">
         <button
           type="button"
