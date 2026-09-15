@@ -146,3 +146,9 @@ select d::date, '18:00'::time, '23:00'::time
 from generate_series(current_date + 1, current_date + interval '60 days', interval '1 day') as d
 where extract(dow from d) in (5, 6)
 on conflict (slot_date, start_time) do nothing;
+
+-- Migration : supplément (heures supp, péage…) des devis.
+-- Utilisé par l'édition admin, la création sur mesure, les PDF et l'espace
+-- client — était référencé dans le code mais jamais créé en base.
+alter table quotes add column if not exists extra_fee_cents integer not null default 0;
+alter table quotes add column if not exists extra_fee_label text;
