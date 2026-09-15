@@ -23,6 +23,8 @@ type Quote = {
   timeline?: { time: string; label: string }[] | null;
   created_at: string;
   status: string;
+  acompte_declared_at?: string | null;
+  acompte_paid_at?: string | null;
 };
 
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
@@ -62,6 +64,30 @@ export function AdminQuoteDetails({
 
   return (
     <div className="space-y-4 border-t border-border px-4 pb-4 pt-4 text-sm">
+      {/* Suivi de l'acompte : payé, déclaré en attente de réception, ou rien */}
+      {quote.acompte_paid_at || quote.acompte_declared_at ? (
+        <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 px-3 py-2 text-xs">
+          {quote.acompte_paid_at ? (
+            <span className="font-medium text-green-400">
+              💰 Acompte réglé le{" "}
+              {new Date(quote.acompte_paid_at).toLocaleDateString("fr-FR", {
+                dateStyle: "long",
+              })}
+              {" — "}
+              {new Date(quote.acompte_paid_at).toLocaleTimeString("fr-FR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          ) : (
+            <span className="text-orange-300">
+              ⏳ Acompte déclaré envoyé par le client le{" "}
+              {new Date(quote.acompte_declared_at!).toLocaleDateString("fr-FR")} —
+              à confirmer à réception du virement.
+            </span>
+          )}
+        </div>
+      ) : null}
       {schedule && schedule.length > 0 ? (
         <div className="space-y-1.5">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">

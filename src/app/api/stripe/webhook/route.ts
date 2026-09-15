@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notifyAdmin } from "@/lib/admin-notify";
+import { SITE_URL } from "@/lib/site-url";
 
 export const runtime = "nodejs";
 
@@ -77,6 +79,7 @@ export async function POST(request: Request) {
                   .update({ acompte_paid_at: new Date().toISOString(), status: "confirme" })
                   .eq("id", quoteId);
                 console.log(`[stripe-webhook] Acompte (échéance 1) confirmé pour ${quoteId}`);
+                void notifyAdminAcompte(supabase, quoteId);
               }
             }
           }
@@ -97,9 +100,38 @@ export async function POST(request: Request) {
           .update({ acompte_paid_at: new Date().toISOString(), status: "confirme" })
           .eq("id", quoteId);
         console.log(`[stripe-webhook] Acompte enregistré pour le devis ${quoteId}`);
+        void notifyAdminAcompte(supabase, quoteId);
       }
     }
   }
 
   return NextResponse.json({ received: true });
+}
+
+// Notification admin : acompte réglé (push + e-mail) avec les infos du devis.
+async function notifyAdminAcompte(
+  supabase: ReturnType<typeof createAdminClient>,
+  quoteId: string
+) {
+  try {
+    const { data: quote } = await supabase
+      .from("quotes")
+      .select("customer_name, total_cents, event_date")
+      .eq("id", quoteId)
+      .single();
+    const name = quote?.customer_name ?? "Le client";
+    const total = quote?.total_cents ? (quote.total_cents / 100).toFixed(2).replace(".", ",") + " €" : "?";
+    const dateFr = quote?.event_date ?? "date ?";
+    await notifyAdmin({
+      title: "💰 Acompte réglé — devis confirmé !",
+      body: `${name} — ${dateFr} : acompte reçu (total ${total}). La date est verrouillée.`,
+      url: `/admin/devis?focus=${quoteId}`,
+      email: {
+        subject: `💰 Acompte reçu — ${name} (${dateFr}) — devis confirmé`,
+        html: `<p><strong>${name}</strong> (soirée du <strong>${dateFr}</strong>, total <strong>${total}</strong>) vient de régler son <strong>acompte</strong> via Stripe.</p><p>✅ Le devis est désormais <strong>confirmé</strong> : la date est verrouillée.</p><p><a href="${SITE_URL}/admin/devis?focus=${quoteId}">Ouvrir le devis dans l'admin</a></p>`,
+      },
+    });
+  } catch {
+    // best effort
+  }
 }

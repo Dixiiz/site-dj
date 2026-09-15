@@ -244,6 +244,15 @@ export default async function DevisPage({
                       <Badge variant="outline" className={status.className}>
                         {status.label}
                       </Badge>
+                      {quote.acompte_paid_at ? (
+                        <Badge variant="outline" className="mt-1 border-green-500/60 text-green-400">
+                          💰 Acompte réglé le {new Date(quote.acompte_paid_at).toLocaleDateString("fr-FR")}
+                        </Badge>
+                      ) : quote.acompte_declared_at ? (
+                        <Badge variant="outline" className="mt-1 border-orange-500/60 text-orange-400">
+                          ⏳ Acompte déclaré envoyé le {new Date(quote.acompte_declared_at).toLocaleDateString("fr-FR")}
+                        </Badge>
+                      ) : null}
                       {isPast(quote) ? (
                         <Badge variant="outline" className="mt-1 border-zinc-500/60 text-zinc-400">
                           🕰 Passée

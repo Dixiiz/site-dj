@@ -1378,6 +1378,41 @@ export async function signClientDocument(formData: FormData) {
 
   revalidatePath(`/mon-espace/devis/${quoteId}`);
   revalidatePath("/admin/devis");
+
+  // Notification admin : une signature vient d'être apposée (push + e-mail).
+  try {
+    const { data: qInfo } = await supabase
+      .from("quotes")
+      .select("customer_name")
+      .eq("id", quoteId)
+      .single();
+    const { data: fileInfo } = await supabase
+      .from("quote_files")
+      .select("name")
+      .eq("id", fileId)
+      .maybeSingle();
+    const docName = (fileInfo?.name ?? "un document").replace(/\.pdf$/, "");
+    const clientName = qInfo?.customer_name ?? "Le client";
+    const { notifyAdmin } = await import("@/lib/admin-notify");
+    void notifyAdmin({
+      title: allSigned ? "✍️ Tous les documents sont signés !" : "✍️ Signature reçue",
+      body: `${clientName} a signé ${docName}${allSigned ? " — dossier complet signé, acompte à venir." : ""}`,
+      url: `/admin/devis?focus=${quoteId}`,
+      email: {
+        subject: allSigned
+          ? `✍️ ${clientName} a signé devis + contrat — acompte à venir`
+          : `✍️ Signature reçue : ${docName} — ${clientName}`,
+        html: `<p><strong>${clientName}</strong> a signé <strong>${docName}</strong>.</p>${
+          allSigned
+            ? "<p>✅ <strong>Tous les documents à signer sont signés</strong> : le devis passe en « attente de l'acompte ». La date est quasi verrouillée — surveille l'acompte (20 %) pour confirmer définitivement.</p>"
+            : "<p>⏳ Il reste des documents à signer dans ce dossier.</p>"
+        }<p><a href="${SITE_URL}/admin/devis?focus=${quoteId}">Ouvrir le devis dans l'admin</a></p>`,
+      },
+    });
+  } catch {
+    // best effort
+  }
+
   return { ok: true as const, message: "Document signé ✓" };
 }
 
@@ -2337,6 +2372,38 @@ export async function startAcompteCheckout(formData: FormData) {
 
 // Au retour de Stripe : vérifie la session côté serveur et marque l'acompte
 // payé si le paiement est confirmé (pas besoin de webhook pour démarrer).
+// Notification admin : acompte réglé (push + e-mail) — partagé par le webhook
+// Stripe (voir api/stripe/webhook), le retour de paiement et l'échéancier.
+async function notifyAcompteRecu(
+  supabase: ReturnType<typeof createAdminClient>,
+  quoteId: string
+) {
+  try {
+    const { data: quote } = await supabase
+      .from("quotes")
+      .select("customer_name, total_cents, event_date")
+      .eq("id", quoteId)
+      .single();
+    const name = quote?.customer_name ?? "Le client";
+    const total = quote?.total_cents
+      ? (quote.total_cents / 100).toFixed(2).replace(".", ",") + " €"
+      : "?";
+    const dateFr = quote?.event_date ?? "date ?";
+    const { notifyAdmin } = await import("@/lib/admin-notify");
+    void notifyAdmin({
+      title: "💰 Acompte réglé — devis confirmé !",
+      body: `${name} — ${dateFr} : acompte reçu (total ${total}). La date est verrouillée.`,
+      url: `/admin/devis?focus=${quoteId}`,
+      email: {
+        subject: `💰 Acompte reçu — ${name} (${dateFr}) — devis confirmé`,
+        html: `<p><strong>${name}</strong> (soirée du <strong>${dateFr}</strong>, total <strong>${total}</strong>) vient de régler son <strong>acompte</strong>.</p><p>✅ Le devis est désormais <strong>confirmé</strong> : la date est verrouillée.</p><p><a href="${SITE_URL}/admin/devis?focus=${quoteId}">Ouvrir le devis dans l'admin</a></p>`,
+      },
+    });
+  } catch {
+    // best effort
+  }
+}
+
 export async function verifyStripeAcompte(quoteId: string, sessionId: string): Promise<boolean> {
   const { getStripe } = await import("@/lib/stripe");
   const stripe = getStripe();
@@ -2363,6 +2430,7 @@ export async function verifyStripeAcompte(quoteId: string, sessionId: string): P
       .from("quotes")
       .update({ acompte_paid_at: new Date().toISOString(), status: "confirme" })
       .eq("id", quoteId);
+    void notifyAcompteRecu(supabase, quoteId);
 
     revalidatePath(`/mon-espace/devis/${quoteId}`);
     revalidatePath("/admin/devis");
@@ -2416,6 +2484,7 @@ export async function verifyStripeEcheance(
           .from("quotes")
           .update({ acompte_paid_at: new Date().toISOString(), status: "confirme" })
           .eq("id", quoteId);
+        void notifyAcompteRecu(supabase, quoteId);
       }
     }
     revalidatePath(`/mon-espace/devis/${quoteId}`);
