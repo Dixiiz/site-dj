@@ -5,6 +5,8 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/admin";
 import type { Formula, QuoteOption } from "@/lib/types";
+import { SITE_URL } from "@/lib/site-url";
+import { BreadcrumbJsonLd } from "@/components/breadcrumb-jsonld";
 
 export const metadata = {
   alternates: { canonical: "/formules" },
@@ -56,6 +58,35 @@ export default async function FormulesPage() {
             Choisissez le type d&apos;événement, les options, la date, vos coordonnées, et envoyez !
           </p>
         </FadeIn>
+        {/* Offres structurées (SEO/GEO) : chaque formule active avec son tarif
+            — compréhension directe des prix par Google et les moteurs IA */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "OfferCatalog",
+              name: "Formules & tarifs — Propul'Sound DJ",
+              url: `${SITE_URL}/formules`,
+              itemListElement: (formulas ?? []).map((f) => ({
+                "@type": "Offer",
+                itemOffered: {
+                  "@type": "Service",
+                  name: f.name,
+                  ...(f.description ? { description: f.description } : {}),
+                },
+                priceCurrency: "EUR",
+                price: (f.price_cents / 100).toFixed(2),
+              })),
+            }),
+          }}
+        />
+        <BreadcrumbJsonLd
+          items={[
+            { name: "Accueil", href: "/" },
+            { name: "Formules & tarifs", href: "/formules" },
+          ]}
+        />
         <PricingSection />
         <FadeIn delay={0.15} className="mt-16">
           <div id="formulaire-devis" className="scroll-mt-24" />

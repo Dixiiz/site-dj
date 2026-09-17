@@ -36,6 +36,9 @@ export default function ArticlePrixDjAnniversaire() {
             soirées privées animées chaque mois à Blois, Vendôme, Amboise et
             dans tout le Loir-et-Cher.
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Publié le <time dateTime="2026-09-17">17 septembre 2026</time>
+          </p>
         </FadeIn>
 
         <FadeIn delay={0.1}>

@@ -36,6 +36,10 @@ export default function ArticleDjOuSpotify() {
             Le comparatif sans langue de bois, par un DJ qui anime des mariages
             et soirées dans tout le Loir-et-Cher.
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Publié le <time dateTime="2025-10-05">5 octobre 2025</time> · Mis à
+            jour le <time dateTime="2026-01-05">5 janvier 2026</time>
+          </p>
         </FadeIn>
 
         <FadeIn delay={0.1}>

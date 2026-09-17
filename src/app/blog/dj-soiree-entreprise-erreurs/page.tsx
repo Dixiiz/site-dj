@@ -36,6 +36,9 @@ export default function ArticleDjEntreprise() {
             Noël animés pour des entreprises à Blois, Vendôme, Amboise et en
             Centre-Val de Loire.
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Publié le <time dateTime="2026-09-17">17 septembre 2026</time>
+          </p>
         </FadeIn>
 
         <FadeIn delay={0.1}>

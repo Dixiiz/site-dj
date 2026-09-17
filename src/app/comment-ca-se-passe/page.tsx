@@ -8,6 +8,7 @@ import {
   DemoVideoSignature,
   DemoVideoPrepa,
 } from "@/components/demo-video";
+import { BreadcrumbJsonLd } from "@/components/breadcrumb-jsonld";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/comment-ca-se-passe" },
@@ -62,6 +63,32 @@ export default function CommentCaSePassePage() {
     <>
       <SiteHeader />
       <main className="mx-auto w-full max-w-4xl px-4 pb-16">
+        {/* Procédure structurée (HowTo) : Google et les IA comprennent les
+            3 étapes de réservation et peuvent les présenter directement */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "HowTo",
+              name: "Réserver son DJ avec Propul'Sound DJ en 3 étapes",
+              description:
+                "Devis en ligne en 2 minutes, signature et acompte en ligne, puis préparation de la soirée dans votre espace client.",
+              step: acts.map((act, i) => ({
+                "@type": "HowToStep",
+                position: i + 1,
+                name: `${act.badge} — ${act.title}`,
+                text: `${act.hook} ${act.highlights.join(". ")}.`,
+              })),
+            }),
+          }}
+        />
+        <BreadcrumbJsonLd
+          items={[
+            { name: "Accueil", href: "/" },
+            { name: "Comment ça se passe", href: "/comment-ca-se-passe" },
+          ]}
+        />
         <FadeIn>
           <p className="text-sm tracking-[0.2em] text-accent uppercase">Votre espace client</p>
           <h1 className="mt-2 text-3xl font-medium tracking-tight sm:text-4xl">

@@ -286,18 +286,19 @@ export default async function Home() {
                   vous n&apos;ayez qu&apos;une chose à faire : profiter.
                 </p>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <ul className="grid list-none gap-4 sm:grid-cols-2">
                 {services.map((service) => (
-                  <Link
-                    key={service.title}
-                    href={service.href}
-                    className="rounded-xl border border-border bg-background/70 p-5 backdrop-blur-sm transition hover:border-accent/50"
-                  >
-                    <h3 className="font-medium text-accent">{service.title}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">{service.description}</p>
-                  </Link>
+                  <li key={service.title}>
+                    <Link
+                      href={service.href}
+                      className="block rounded-xl border border-border bg-background/70 p-5 backdrop-blur-sm transition hover:border-accent/50"
+                    >
+                      <h3 className="font-medium text-accent">{service.title}</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">{service.description}</p>
+                    </Link>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           </FadeIn>
         </section>

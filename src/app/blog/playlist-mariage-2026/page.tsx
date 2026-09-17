@@ -38,6 +38,10 @@ export default function ArticlePlaylistMariage2026() {
             pistes de danse de Blois, Vendôme, Amboise et tout le
             Loir-et-Cher.
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Publié le <time dateTime="2025-12-20">20 décembre 2025</time> · Mis à
+            jour le <time dateTime="2026-01-15">15 janvier 2026</time>
+          </p>
         </FadeIn>
 
         <FadeIn delay={0.1}>

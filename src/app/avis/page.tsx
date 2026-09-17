@@ -5,6 +5,8 @@ import { SiteFooter } from "@/components/site-footer";
 import { FadeIn } from "@/components/fade-in";
 import { fetchGoogleReviews, Stars } from "@/components/google-reviews";
 import { avisMariages, mariagesStats } from "@/data/avis-mariages";
+import { SITE_URL, SITE_NAME } from "@/lib/site-url";
+import { BreadcrumbJsonLd } from "@/components/breadcrumb-jsonld";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/avis" },
@@ -16,12 +18,76 @@ export const metadata: Metadata = {
 const MARIAGES_URL =
   "https://www.mariages.net/musique-mariage/propulsound-dj--e366139";
 
+// "Juillet 2026" → "2026-07" (ISO 8601, requis par les données structurées Review)
+const MOIS_ISO: Record<string, string> = {
+  janvier: "01",
+  février: "02",
+  mars: "03",
+  avril: "04",
+  mai: "05",
+  juin: "06",
+  juillet: "07",
+  août: "08",
+  septembre: "09",
+  octobre: "10",
+  novembre: "11",
+  décembre: "12",
+};
+
+function moisEnIsoDate(date: string): string | undefined {
+  const m = /([a-zéûà]+)\s+(\d{4})/i.exec(date);
+  const mois = m ? MOIS_ISO[m[1].toLowerCase()] : undefined;
+  return mois ? `${m![2]}-${mois}` : undefined;
+}
+
 export default async function AvisPage() {
   const data = await fetchGoogleReviews();
 
   return (
     <>
       <SiteHeader />
+      {/* Avis structurés (SEO/GEO) : les avis Mariages.net rendus côté serveur
+          sont exposés en JSON-LD — c'est ce qui alimente les étoiles dans les
+          résultats Google et la compréhension directe par les moteurs IA. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: `Prestations DJ — ${SITE_NAME}`,
+            brand: { "@type": "Brand", name: SITE_NAME },
+            aggregateRating:
+              data?.rating != null && data?.count != null
+                ? {
+                    "@type": "AggregateRating",
+                    ratingValue: data.rating.toFixed(1),
+                    reviewCount: data.count,
+                    bestRating: "5",
+                  }
+                : {
+                    "@type": "AggregateRating",
+                    ratingValue: mariagesStats.rating,
+                    reviewCount: mariagesStats.count,
+                    bestRating: "5",
+                  },
+            review: avisMariages.map((a) => ({
+              "@type": "Review",
+              author: { "@type": "Person", name: a.author },
+              reviewRating: { "@type": "Rating", ratingValue: a.rating, bestRating: 5 },
+              reviewBody: a.text,
+              ...(moisEnIsoDate(a.date) ? { datePublished: moisEnIsoDate(a.date) } : {}),
+            })),
+            url: `${SITE_URL}/avis`,
+          }),
+        }}
+      />
+      <BreadcrumbJsonLd
+        items={[
+          { name: "Accueil", href: "/" },
+          { name: "Avis clients", href: "/avis" },
+        ]}
+      />
       <main className="mx-auto w-full max-w-4xl px-4 pb-24 pt-24">
         <FadeIn>
           <p className="text-center text-sm tracking-[0.2em] text-accent uppercase">

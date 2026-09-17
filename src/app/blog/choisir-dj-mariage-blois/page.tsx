@@ -36,6 +36,10 @@ export default function ArticleDjMariageBlois() {
             Par Maxime, DJ Propul&apos;Sound — des dizaines de mariages animés
             chaque année à Blois, Vendôme, Amboise et dans tout le Loir-et-Cher.
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Publié le <time dateTime="2025-11-12">12 novembre 2025</time> · Mis à
+            jour le <time dateTime="2026-01-10">10 janvier 2026</time>
+          </p>
         </FadeIn>
 
         <FadeIn delay={0.1}>

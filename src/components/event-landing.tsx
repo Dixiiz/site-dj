@@ -5,6 +5,8 @@ import Link from "next/link";
 import { FadeIn } from "@/components/fade-in";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { BreadcrumbJsonLd } from "@/components/breadcrumb-jsonld";
+import { INTERVENTION_ZONES } from "@/lib/site-url";
 
 export type EventLandingData = {
   /** Chemin de la page (pour le JSON-LD) */
@@ -25,6 +27,13 @@ export function EventLanding({ data }: { data: EventLandingData }) {
     <>
       <SiteHeader />
       <main className="relative mx-auto w-full max-w-4xl px-4 py-10">
+        {/* Fil d'Ariane structuré (SEO) : hiérarchie claire pour Google/IA */}
+        <BreadcrumbJsonLd
+          items={[
+            { name: "Accueil", href: "/" },
+            { name: data.title, href: data.path },
+          ]}
+        />
         {/* FAQ enrichie pour Google (extrait étoilé / réponse directe) */}
         <script
           type="application/ld+json"
@@ -69,14 +78,16 @@ export function EventLanding({ data }: { data: EventLandingData }) {
 
         <FadeIn delay={0.2}>
           <h2 className="mt-14 text-2xl font-medium tracking-tight">Ce qui est prévu pour vous</h2>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          {/* Vraie liste HTML (<ul>/<li>) : signal de richesse de contenu fort
+              pour les moteurs de recherche et les moteurs IA */}
+          <ul className="mt-6 grid list-none gap-4 sm:grid-cols-2">
             {data.highlights.map((h) => (
-              <div key={h.title} className="rounded-xl border border-border bg-card p-5">
+              <li key={h.title} className="rounded-xl border border-border bg-card p-5">
                 <h3 className="font-medium text-accent">{h.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{h.text}</p>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </FadeIn>
 
         <FadeIn delay={0.25}>
@@ -95,6 +106,26 @@ export function EventLanding({ data }: { data: EventLandingData }) {
               </details>
             ))}
           </div>
+        </FadeIn>
+
+        <FadeIn delay={0.28}>
+          <h2 className="mt-14 text-2xl font-medium tracking-tight">Zones d&apos;intervention</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Basé à Blois (Huisseau-sur-Cosson), Propul&apos;Sound DJ se déplace dans tout le
+            Loir-et-Cher et les départements voisins — déplacement offert dans un rayon de
+            30 km, au-delà les frais sont calculés automatiquement dans le devis en ligne.
+          </p>
+          {/* Liste des villes desservies : signal local fort pour le SEO */}
+          <ul className="mt-4 flex flex-wrap gap-2">
+            {INTERVENTION_ZONES.map((zone) => (
+              <li
+                key={zone}
+                className="rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground"
+              >
+                {zone}
+              </li>
+            ))}
+          </ul>
         </FadeIn>
 
         <FadeIn delay={0.3}>
