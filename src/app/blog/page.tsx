@@ -39,6 +39,24 @@ const articles = [
       "Lecture de la piste de danse, imprévus, matériel, transitions : le comparatif honnête entre une enceinte Bluetooth et un DJ professionnel (et quand la playlist suffit).",
     readingTime: "5 min",
   },
+  {
+    href: "/blog/combien-coute-dj-anniversaire",
+    emoji: "🎂",
+    tag: "Anniversaire",
+    title: "Combien coûte un DJ pour un anniversaire à Blois ? (2026)",
+    excerpt:
+      "Fourchettes de prix réelles en Loir-et-Cher, ce qui fait varier la facture, les pièges à éviter et comment obtenir un devis tout compris en 2 minutes.",
+    readingTime: "5 min",
+  },
+  {
+    href: "/blog/dj-soiree-entreprise-erreurs",
+    emoji: "🏢",
+    tag: "Entreprise",
+    title: "DJ pour soirée d'entreprise : les 5 erreurs à éviter",
+    excerpt:
+      "Séminaire, gala, arbre de Noël : public mixte, transitions de soirée, matériel, devis — les erreurs classiques et comment les éviter.",
+    readingTime: "5 min",
+  },
 ];
 
 export default function BlogPage() {

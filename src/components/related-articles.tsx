@@ -4,7 +4,7 @@ import { FadeIn } from "@/components/fade-in";
 const RELATED: Record<string, { href: string; emoji: string; title: string }[]> = {
   "/blog/choisir-dj-mariage-blois": [
     { href: "/blog/playlist-mariage-2026", emoji: "🎵", title: "Playlist de mariage 2026 — les 15 titres qui font lever la foule" },
-    { href: "/blog/dj-ou-playlist-spotify", emoji: "🔊", title: "DJ mariage ou playlist Spotify : ce que ça change vraiment" },
+    { href: "/blog/combien-coute-dj-anniversaire", emoji: "🎂", title: "Combien coûte un DJ pour un anniversaire à Blois ? (2026)" },
   ],
   "/blog/playlist-mariage-2026": [
     { href: "/blog/choisir-dj-mariage-blois", emoji: "💍", title: "Comment choisir son DJ de mariage à Blois ? (guide 2026)" },
@@ -13,6 +13,14 @@ const RELATED: Record<string, { href: string; emoji: string; title: string }[]> 
   "/blog/dj-ou-playlist-spotify": [
     { href: "/blog/choisir-dj-mariage-blois", emoji: "💍", title: "Comment choisir son DJ de mariage à Blois ? (guide 2026)" },
     { href: "/blog/playlist-mariage-2026", emoji: "🎵", title: "Playlist de mariage 2026 — les 15 titres qui font lever la foule" },
+  ],
+  "/blog/combien-coute-dj-anniversaire": [
+    { href: "/blog/choisir-dj-mariage-blois", emoji: "💍", title: "Comment choisir son DJ de mariage à Blois ? (guide 2026)" },
+    { href: "/blog/dj-soiree-entreprise-erreurs", emoji: "🏢", title: "DJ pour soirée d'entreprise : les 5 erreurs à éviter" },
+  ],
+  "/blog/dj-soiree-entreprise-erreurs": [
+    { href: "/blog/choisir-dj-mariage-blois", emoji: "💍", title: "Comment choisir son DJ de mariage à Blois ? (guide 2026)" },
+    { href: "/blog/combien-coute-dj-anniversaire", emoji: "🎂", title: "Combien coûte un DJ pour un anniversaire à Blois ? (2026)" },
   ],
 };
 
