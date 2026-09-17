@@ -160,9 +160,8 @@ create table if not exists push_subscriptions (
   p256dh text not null,
   auth text not null,
   created_at timestamptz not null default now()
+);
 
 -- Migration : acompte optionnel par devis. L'admin peut décider, devis par
 -- devis, de ne pas demander d'acompte de réservation (défaut : demandé).
 alter table quotes add column if not exists acompte_required boolean not null default true;
-
-);
