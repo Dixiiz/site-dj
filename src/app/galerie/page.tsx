@@ -137,6 +137,35 @@ export default async function GaleriePage() {
         au survol de chaque photo (en permanence sur mobile).
       </p>
 
+      {/* Texte descriptif : contexte utile pour les visiteurs + richesse de
+          contenu pour le référencement (mots-clés naturels, lieux, options) */}
+      <div className="mx-auto mt-6 max-w-2xl space-y-3 text-center text-sm leading-relaxed text-muted-foreground">
+        <p>
+          Ces photos et vidéos ont été prises lors de vraies prestations :
+          mariages à Blois, Vendôme et Amboise, anniversaires, soirées
+          privées et événements d&apos;entreprise en Loir-et-Cher et dans les
+          départements voisins.
+        </p>
+        <p>
+          Vous y verrez l&apos;ambiance en piste de danse, la scénographie
+          lumière et les options FX (fumée lourde, étincelles froides, CO2)
+          telles qu&apos;elles sont déployées le jour J. Chaque événement a sa
+          propre identité : le matériel et la programmation musicale sont
+          adaptés à votre public, du cocktail jazzy à la soirée dansante.
+        </p>
+        <p>
+          Envie de voir plus ? La{" "}
+          <Link href="/" className="text-accent hover:underline">
+            page d&apos;accueil
+          </Link>{" "}
+          affiche aussi un carrousel de vidéos, et la{" "}
+          <Link href="/avis" className="text-accent hover:underline">
+            page avis
+          </Link>{" "}
+          regroupe les retours des mariés et organisateurs.
+        </p>
+      </div>
+
       {photos.length === 0 ? (
         <p className="mt-10 text-center text-sm text-muted-foreground">
           Aucune photo pour le moment.

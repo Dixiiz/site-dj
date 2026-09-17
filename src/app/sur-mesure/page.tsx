@@ -46,6 +46,32 @@ export default function SurMesurePage() {
             Un événement unique nécessite une approche personnalisée. Parlez-nous de votre projet.
           </p>
         </FadeIn>
+
+        <FadeIn delay={0.05}>
+          <div className="mt-8 space-y-4 text-sm leading-relaxed text-muted-foreground">
+            <h2 className="text-xl font-medium text-foreground">
+              Des exemples de projets sur-mesure
+            </h2>
+            <p>
+              Chaque année, des dizaines d&apos;événements ne rentrent dans
+              aucune case : et c&apos;est justement là que le sur-mesure prend
+              tout son sens. Voici les projets les plus fréquents :
+            </p>
+            <ul className="space-y-2">
+              <li>💒 Mariage avec double sonorisation : cérémonie laïque au domaine + soirée dansante dans une seconde salle</li>
+              <li>🌳 Soirée en extérieur : sonorisation et éclairage adaptés aux jardins, chapiteaux et terrasses</li>
+              <li>🏛️ Mairies et comités des fêtes : bals populaires, feu de la Saint-Jean, vignettes d&apos;honneur</li>
+              <li>🏢 Entreprises : soirée de gala, arbre de Noël, séminaire avec coordination du discours à la piste de danse</li>
+              <li>🎂 Anniversaires surprise : horaires atypiques, deux espaces à sonoriser, effets spéciaux</li>
+            </ul>
+            <p>
+              Décrivez votre projet ci-dessous : vous recevez une réponse sous
+              24 h, avec un devis détaillé si le projet est clair, ou une
+              proposition d&apos;appel pour cadrer les détails. Devis et facture
+              sont systématiquement fournis.
+            </p>
+          </div>
+        </FadeIn>
         <div className="mt-10">
           <CustomRequestForm />
         </div>
