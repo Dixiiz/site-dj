@@ -216,7 +216,7 @@ export default async function Home() {
               <span className="text-gradient-neon">Propul&apos;Sound DJ</span>
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-              DJ &amp; Show Lumière à Blois (Huisseau-sur-Cosson, 41350). Une ambiance électro moderne et du
+              DJ &amp; Show Lumière à Blois. Une ambiance électro moderne et du
               matériel professionnel pour illuminer et faire vibrer vos événements.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
