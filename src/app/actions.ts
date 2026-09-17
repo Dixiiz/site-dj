@@ -1347,6 +1347,49 @@ export async function marquerAvisRecu(formData: FormData) {
   };
 }
 
+// Valide ou annule la déclaration URSSAF d'un acompte reçu pour un devis
+// SANS échéancier (marqueur [[acompte-valide:date]] dans les notes).
+// L'acompte est compté dans le CA URSSAF du mois de sa réception ; le solde
+// de la même soirée sera compté séparément après l'événement (solde =
+// total - acompte → aucun double comptage).
+export async function validerAcompteUrssaf(formData: FormData) {
+  if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
+  const id = String(formData.get("id") ?? "").trim();
+  const annuler = String(formData.get("annuler") ?? "") === "1";
+  if (!id) return { ok: false as const, error: "Soirée introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("id, notes, customer_name")
+    .eq("id", id)
+    .maybeSingle();
+  if (!quote) return { ok: false as const, error: "Soirée introuvable." };
+
+  let notes = quote.notes ?? "";
+  if (annuler) {
+    notes = notes.replace(/\[\[acompte-valide:[^\]]*\]\]\s*/g, "");
+  } else if (!notes.includes("[[acompte-valide:")) {
+    notes = `[[acompte-valide:${new Date().toLocaleDateString("fr-CA")}]]\n${notes}`;
+  } else {
+    return { ok: true as const, message: "Acompte déjà validé." };
+  }
+
+  const { error } = await supabase.from("quotes").update({ notes }).eq("id", id);
+  if (error) {
+    console.error("Validation acompte impossible", error);
+    return { ok: false as const, error: "Opération impossible." };
+  }
+
+  revalidatePath("/admin");
+  return {
+    ok: true as const,
+    message: annuler
+      ? `Acompte retiré du CA URSSAF pour « ${quote.customer_name} » ✓`
+      : `Acompte compté dans le CA URSSAF pour « ${quote.customer_name} » ✓`,
+  };
+}
+
 // Confirme (ou annule) une échéance d'échéancier pour le CA URSSAF du mois
 // de sa date limite. Marque valide_urssaf sur la ligne payment_schedule.
 export async function validerEcheanceUrssaf(formData: FormData) {

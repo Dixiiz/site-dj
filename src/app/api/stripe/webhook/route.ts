@@ -90,14 +90,26 @@ export async function POST(request: Request) {
       // Acompte classique.
       const { data: quote } = await supabase
         .from("quotes")
-        .select("acompte_paid_at, status")
+        .select("acompte_paid_at, status, notes")
         .eq("id", quoteId)
         .single();
       // Idempotent : ne met à jour que si pas déjà réglé.
       if (quote && !quote.acompte_paid_at) {
+        // Pose le marqueur du MONTANT RÉEL de l'acompte (utilisé pour le
+        // calcul du solde et la déclaration URSSAF du mois de réception).
+        // Ne s'applique qu'aux devis sans échéancier : pour un échéancier,
+        // l'acompte est suivi échéance par échéance (branche au-dessus).
+        let notes = String(quote.notes ?? "");
+        if (!/\[\[acompte:\d+\]\]/.test(notes)) {
+          notes = `[[acompte:${session.amount_total ?? 0}]]\n${notes}`;
+        }
         await supabase
           .from("quotes")
-          .update({ acompte_paid_at: new Date().toISOString(), status: "confirme" })
+          .update({
+            acompte_paid_at: new Date().toISOString(),
+            status: "confirme",
+            notes,
+          })
           .eq("id", quoteId);
         console.log(`[stripe-webhook] Acompte enregistré pour le devis ${quoteId}`);
         void notifyAdminAcompte(supabase, quoteId);

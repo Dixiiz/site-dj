@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { DashboardDetail } from "@/components/dashboard-detail";
 import { ValidateEcheanceButton } from "@/components/validate-echeance-button";
+import { ValidateAcompteButton } from "@/components/validate-acompte-button";
 import { AdminStats } from "@/components/admin-stats";
 import { AdminPushButton } from "@/components/admin-push-button";
 
@@ -47,7 +48,7 @@ export default async function AdminDashboard({
   const [confirmedRes, devisAttenteRes, devisRecentsRes, facturesRes, echeanciersRes, allQuotesRes] = await Promise.all([
     supabase
       .from("quotes")
-      .select("id, customer_name, formula_name, total_cents, event_date, event_location, status, created_at, notes")
+      .select("id, customer_name, formula_name, total_cents, event_date, event_location, status, created_at, notes, acompte_paid_at")
       .eq("status", "confirme")
       .order("event_date", { ascending: true }),
     supabase
@@ -154,6 +155,35 @@ export default async function AdminDashboard({
   const soldeValide = (q: { notes: unknown }) =>
     (String(q.notes ?? "")).includes("[[solde-valide:");
 
+  // Acompte reçu pour un devis SANS échéancier : marqueur [[acompte:centimes]]
+  // (posé par le webhook Stripe avec le montant réel, ou renseigné à la main
+  // dans /admin/import), sinon acompte standard du devis (règle du PDF :
+  // 20 %, solde arrondi au multiple de 10 inférieur).
+  const acompteDe = (q: { total_cents: unknown; notes?: unknown }) => {
+    const marker = /\[\[acompte:(\d+)\]\]/.exec(String(q.notes ?? ""));
+    if (marker) return Number(marker[1]);
+    return montant(q) - Math.floor((montant(q) * 0.8) / 10) * 10;
+  };
+  const acompteRecu = (q: { acompte_paid_at?: unknown; notes?: unknown }) =>
+    Boolean(q.acompte_paid_at) || /\[\[acompte:\d+\]\]/.test(String(q.notes ?? ""));
+  const acompteValide = (q: { notes?: unknown }) =>
+    String(q.notes ?? "").includes("[[acompte-valide:");
+
+  // Acomptes reçus (hors échéancier) non encore validés pour l'URSSAF :
+  // à confirmer pour les compter dans le CA du mois de leur réception.
+  const acomptesAValider = allConfirmed.filter(
+    (q) => acompteRecu(q) && !acompteValide(q) && !echeancierQuoteIds.has(q.id)
+  );
+  // Acomptes validés : comptés dans le CA URSSAF du mois de réception
+  // (acompte_paid_at). Le solde de la même soirée sera compté séparément
+  // après l'événement — aucun double comptage.
+  const acomptesValides = allConfirmed.filter(
+    (q) => acompteRecu(q) && acompteValide(q) && !echeancierQuoteIds.has(q.id)
+  );
+  const urssafAcomptes = acomptesValides
+    .filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix))
+    .reduce((sum, q) => sum + acompteDe(q), 0);
+
   // CA de l'année : tous les événements confirmés qui se déroulent cette année.
   const caAnnee = allConfirmed
     .filter((q) => (q.event_date ?? "").startsWith(String(year)))
@@ -171,7 +201,7 @@ export default async function AdminDashboard({
   const attenteValidation = ceMoisJouees.filter((q) => !soldeValide(q));
   // Le CA URSSAF du mois inclut aussi les échéances d'échéancier confirmées
   // (attribuées au mois de leur date limite).
-  const caMois = caMoisQuotes + urssafEcheances;
+  const caMois = caMoisQuotes + urssafEcheances + urssafAcomptes;
 
   // CA à venir : confirmé, pas encore joué.
   const caAVenir = upcoming.reduce((sum, q) => sum + montant(q), 0);
@@ -302,7 +332,7 @@ export default async function AdminDashboard({
           },
           {
             vue: "urssaf",
-            label: "CA encaissé ce mois — à déclarer (URSSAF, soldes seuls)",
+            label: "CA encaissé ce mois — à déclarer (URSSAF)",
             value: eur(caMois),
             hint: `${encaisse.length} soirée(s) validée(s) · ${
               urssafEcheances > 0
@@ -319,7 +349,7 @@ export default async function AdminDashboard({
         ]}
         cards2={[
           { vue: "echeanciers", label: "Échéances en cours", value: String(echeancesDuMois.length), hint: "échéance(s) à recevoir ce mois-ci — clic pour le détail" },
-          { vue: "solde", label: "Soldes à valider", value: eur(soldeAValiderToutes + echeancesAConfirmer.reduce((s, e) => s + e.amountCents, 0)), hint: `${aValiderToutes.length} solde(s) + ${echeancesAConfirmer.length} échéance(s) reçue(s) — valider pour compter dans l'URSSAF` },
+          { vue: "solde", label: "Soldes à valider", value: eur(soldeAValiderToutes + echeancesAConfirmer.reduce((s, e) => s + e.amountCents, 0) + acomptesAValider.reduce((s, q) => s + acompteDe(q), 0)), hint: `${aValiderToutes.length} solde(s) + ${echeancesAConfirmer.length} échéance(s) + ${acomptesAValider.length} acompte(s) — valider pour compter dans l'URSSAF` },
           { vue: "ca-avenir", label: "CA à venir (déjà signé)", value: eur(caAVenir), hint: `${upcoming.length} soirée(s) confirmée(s) restante(s)` },
           { vue: "devis", href: "/admin/devis", label: "Devis en attente", value: String(devisAttente ?? 0), hint: "à relancer ou traiter" },
         ]}
@@ -398,13 +428,93 @@ export default async function AdminDashboard({
             <div className="flex items-center justify-between gap-2">
               <h2 className="flex items-center gap-2 font-medium">
                 <Receipt className="size-4 text-accent" aria-hidden />
-                Échéanciers — paiements reçus à confirmer
+                Paiements reçus à confirmer
               </h2>
               <span className="text-xs text-muted-foreground">Cliquez à nouveau sur la carte pour fermer</span>
             </div>
-            {echeancesAConfirmer.length === 0 ? (
+
+            {/* Acomptes reçus (hors échéancier) : valider pour compter dans
+                le CA URSSAF du mois de leur réception. */}
+            {acomptesAValider.length > 0 ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Acomptes reçus — devis sans échéancier
+                </p>
+                <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+                  {acomptesAValider.map((q) => (
+                    <li key={q.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+                      <div className="min-w-0">
+                        <Link
+                          href={`/admin/devis?focus=${q.id}`}
+                          className="font-medium transition-colors hover:text-accent hover:underline"
+                          title="Ouvrir ce devis dans la liste"
+                        >
+                          {q.customer_name}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">
+                          Acompte reçu le{" "}
+                          {q.acompte_paid_at
+                            ? new Date(q.acompte_paid_at).toLocaleDateString("fr-FR")
+                            : "à la main"}{" "}
+                          · soirée le {q.event_date ? new Date(`${q.event_date}T12:00:00`).toLocaleDateString("fr-FR") : "?"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium">{eur(acompteDe(q))}</span>
+                        <ValidateAcompteButton id={q.id} customerName={q.customer_name ?? ""} validated={false} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {/* Acomptes déjà validés : possibilité de retrait en cas d'erreur. */}
+            {acomptesValides
+              .filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix))
+              .length > 0 ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Acomptes déjà comptés ce mois
+                </p>
+                <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+                  {acomptesValides
+                    .filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix))
+                    .map((q) => (
+                      <li key={q.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+                        <div className="min-w-0">
+                          <Link
+                            href={`/admin/devis?focus=${q.id}`}
+                            className="font-medium transition-colors hover:text-accent hover:underline"
+                          >
+                            {q.customer_name}
+                          </Link>
+                          <p className="text-xs text-muted-foreground">
+                            Reçu le{" "}
+                            {q.acompte_paid_at
+                              ? new Date(q.acompte_paid_at).toLocaleDateString("fr-FR")
+                              : "?"}{" "}
+                            — dans le CA URSSAF ✓
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium">{eur(acompteDe(q))}</span>
+                          <ValidateAcompteButton id={q.id} customerName={q.customer_name ?? ""} validated={true} />
+                        </div>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Échéanciers — paiements reçus
+              </p>
+            </div>
+            {echeancesAConfirmer.length === 0 && acomptesAValider.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Aucun paiement d&apos;échéancier en attente de confirmation ✓
+                Aucun paiement en attente de confirmation ✓
               </p>
             ) : (
               <ul className="divide-y divide-border rounded-lg border border-border">
