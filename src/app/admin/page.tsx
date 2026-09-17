@@ -100,11 +100,6 @@ export default async function AdminDashboard({
   const echeancesAConfirmer = echeancesEnCours.filter((e) => e.status === "payee" && !e.valideUrssaf);
   // Confirmées URSSAF (attribuées au mois de la date limite de l'échéance).
   const echeancesValidees = echeancesEnCours.filter((e) => e.status === "payee" && e.valideUrssaf);
-  // CA URSSAF du mois inclut aussi les échéances d'échéancier confirmées
-  // (attribuées au mois de leur date limite) — en NET de frais Stripe.
-  const urssafEcheances = echeancesValidees
-    .filter((e) => e.dueDate.startsWith(monthPrefix))
-    .reduce((sum, e) => sum + netEcheance(e.quoteId, e.numero, e.amountCents), 0);
   // Devis avec échéancier : leur argent est suivi échéance par échéance
   // (ils sont exclus du calcul de solde par devis pour éviter les doubles comptes).
   const echeancierQuoteIds = new Set(echeancesEnCours.map((e) => e.quoteId));
@@ -143,6 +138,11 @@ export default async function AdminDashboard({
   const soldeDe = (q: { total_cents: unknown; notes?: unknown }) => {
     const notes = String(q.notes ?? "");
     const total = montant(q);
+    // Solde FIGÉ : [[solde-montant:centimes]] = montant réellement reçu comme
+    // solde, indépendant du marqueur acompte (cas d'un acompte supprimé car
+    // jamais encaissé — le solde validé ne doit pas changer).
+    const soldeFixe = /\[\[solde-montant:(\d+)\]\]/.exec(notes);
+    if (soldeFixe) return Number(soldeFixe[1]);
     // L'acompte RÉELLEMENT réglé, stocké via [[acompte:centimes]]
     // (renseignable dans l'édition de la soirée sur /admin/import).
     const marker = /\[\[acompte:(\d+)\]\]/.exec(notes);
@@ -205,6 +205,11 @@ export default async function AdminDashboard({
   const urssafAcomptes = acomptesValides
     .filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix))
     .reduce((sum, q) => sum + acompteNetDe(q), 0);
+  // CA URSSAF du mois inclut aussi les échéances d'échéancier confirmées
+  // (attribuées au mois de leur date limite) — en NET de frais Stripe.
+  const urssafEcheances = echeancesValidees
+    .filter((e) => e.dueDate.startsWith(monthPrefix))
+    .reduce((sum, e) => sum + netEcheance(e.quoteId, e.numero, e.amountCents), 0);
 
   // CA de l'année : tous les événements confirmés qui se déroulent cette année.
   const caAnnee = allConfirmed
@@ -263,8 +268,12 @@ export default async function AdminDashboard({
       .reduce((sum, q) => sum + soldeDe(q), 0);
     const echeances = echeancesValidees
       .filter((e) => e.dueDate.startsWith(prefix))
-      .reduce((sum, e) => sum + e.amountCents, 0);
-    return { label: MONTH_LABELS[m], cents: soldes + echeances };
+      .reduce((sum, e) => sum + netEcheance(e.quoteId, e.numero, e.amountCents), 0);
+    // Acomptes reçus ce mois et validés URSSAF (base nette de frais Stripe).
+    const acomptes = acomptesValides
+      .filter((q) => String(q.acompte_paid_at ?? "").startsWith(prefix))
+      .reduce((sum, q) => sum + acompteNetDe(q), 0);
+    return { label: MONTH_LABELS[m], cents: soldes + echeances + acomptes };
   });
   const allQuotes = allQuotesRes.data ?? [];
   const countStatus = (...statuses: string[]) =>
@@ -308,8 +317,37 @@ export default async function AdminDashboard({
         .map(mapDetailRow),
     },
     urssaf: {
-      titre: `CA ${monthPrefix} (URSSAF) — soldes encaissés et validés`,
-      rows: encaisse.map(mapDetailRow),
+      titre: `CA ${monthPrefix} (URSSAF) — encaissements validés (nets de frais Stripe)`,
+      rows: [
+        // Soldes validés après soirée.
+        ...encaisse.map(mapDetailRow),
+        // Acomptes reçus ce mois et validés URSSAF (base nette).
+        ...acomptesValides
+          .filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix))
+          .map((q) => ({
+            id: q.id,
+            customerName: q.customer_name,
+            formulaName: "Acompte — net après frais Stripe",
+            eventLocation: "",
+            eventDate: String(q.acompte_paid_at ?? "").slice(0, 10),
+            totalCents: acompteNetDe(q),
+            notes: String(q.notes ?? ""),
+            status: q.status ?? "",
+          })),
+        // Échéances d'échéancier confirmées ce mois (base nette).
+        ...echeancesValidees
+          .filter((e) => e.dueDate.startsWith(monthPrefix))
+          .map((e) => ({
+            id: e.id,
+            customerName: e.client,
+            formulaName: `Échéancier ${e.numero}/${e.totalEcheances} — net après frais Stripe`,
+            eventLocation: "",
+            eventDate: e.dueDate,
+            totalCents: netEcheance(e.quoteId, e.numero, e.amountCents),
+            notes: "",
+            status: "confirme",
+          })),
+      ],
       solde: true,
     },
     solde: {
@@ -357,6 +395,10 @@ export default async function AdminDashboard({
             label: "CA encaissé ce mois — à déclarer (URSSAF)",
             value: eur(caMois),
             hint: `${encaisse.length} soirée(s) validée(s) · ${
+              urssafAcomptes > 0
+                ? `${acomptesValides.filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix)).length} acompte(s) validé(s) · `
+                : ""
+            }${
               urssafEcheances > 0
                 ? `${echeancesValidees.filter((e) => e.dueDate.startsWith(monthPrefix)).length} échéance(s) d'échéancier · `
                 : ""

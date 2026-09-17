@@ -83,13 +83,16 @@ export async function GET(request: Request) {
     // « Valider le solde ») : même calcul de solde que le tableau de bord.
     if (soldeMarker && soldeDeCetteAnnee) {
       const total = Number(q.total_cents ?? 0);
+      // Solde figé : [[solde-montant:centimes]] prioritaire (acompte supprimé
+      // car jamais encaissé — le solde validé garde son montant d'origine).
+      const soldeFixe = /\[\[solde-montant:(\d+)\]\]/.exec(notes);
       const acompteMarker = /\[\[acompte:(\d+)\]\]/.exec(notes);
       const acompte = acompteMarker
         ? Number(acompteMarker[1])
         : notes.includes("[[facture-libre]]") || notes.includes("[[import-avant-site]]")
           ? 0
           : Math.floor((total * 0.8) / 10) * 10;
-      const solde = Math.max(0, total - acompte);
+      const solde = soldeFixe ? Number(soldeFixe[1]) : Math.max(0, total - acompte);
       if (solde > 0) {
         rows.push({
           date: soldeMarker[1],
