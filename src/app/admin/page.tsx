@@ -320,8 +320,12 @@ export default async function AdminDashboard({
     urssaf: {
       titre: `CA ${monthPrefix} (URSSAF) — encaissements validés (nets de frais Stripe)`,
       rows: [
-        // Soldes validés après soirée.
-        ...encaisse.map(mapDetailRow),
+        // Soldes validés après soirée — montant = solde réel (pas le total).
+        ...encaisse.map((q) => ({
+          ...mapDetailRow(q),
+          afficheCents: soldeDe(q),
+          type: "solde" as const,
+        })),
         // Acomptes reçus ce mois et validés URSSAF (base nette).
         ...acomptesValides
           .filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix))
@@ -334,6 +338,8 @@ export default async function AdminDashboard({
             totalCents: acompteNetDe(q),
             notes: String(q.notes ?? ""),
             status: q.status ?? "",
+            afficheCents: acompteNetDe(q),
+            type: "acompte" as const,
           })),
         // Échéances d'échéancier confirmées ce mois (base nette).
         ...echeancesValidees
@@ -347,6 +353,8 @@ export default async function AdminDashboard({
             totalCents: netEcheance(e.quoteId, e.numero, e.amountCents),
             notes: "",
             status: "confirme",
+            afficheCents: netEcheance(e.quoteId, e.numero, e.amountCents),
+            type: "echeance" as const,
           })),
       ],
       solde: true,

@@ -21,6 +21,8 @@ export type DetailRow = {
   notes: string;
   status: string;
   solde?: boolean;
+  afficheCents?: number;
+  type?: "solde" | "acompte" | "echeance";
 };
 
 const isManaged = (notes: string) =>
@@ -30,6 +32,8 @@ const acompteDe = (notes: string) => {
   return m ? Number(m[1]) : 0;
 };
 const soldeDe = (row: DetailRow) => {
+  const fixe = /[[solde-montant:(d+)]]/.exec(row.notes);
+  if (fixe) return Number(fixe[1]);
   const total = Number.isFinite(row.totalCents) ? row.totalCents : 0;
   const acompte = acompteDe(row.notes);
   if (row.notes.includes("[[facture-libre]]")) return total;
@@ -68,7 +72,12 @@ export function CaDetailPanel({
     const openedAt = Date.now();
     function onClick(e: MouseEvent) {
       if (Date.now() - openedAt < 500) return;
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+      // Clic sur un élément qui vient d'être retiré du DOM (ex. bouton
+      // « Modifier » remplacé par son formulaire) : le node est détaché,
+      // contains() renvoie false — ne PAS fermer le panneau dans ce cas.
+      const target = e.target as Node;
+      if (!target.isConnected) return;
+      if (ref.current && !ref.current.contains(target)) onClose();
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -110,7 +119,10 @@ export function CaDetailPanel({
   }
   /* SUITE-RENDU */
 
-  const total = rows.reduce((sum, row) => sum + (solde ? soldeDe(row) : row.totalCents), 0);
+  const total = rows.reduce(
+    (sum, row) => sum + (row.afficheCents ?? (solde ? soldeDe(row) : row.totalCents)),
+    0
+  );
 
   return (
     <motion.section
@@ -139,7 +151,7 @@ export function CaDetailPanel({
         <ul className="mt-3 divide-y divide-border">
           {rows.map((row) => {
             const managed = isManaged(row.notes);
-            const affiche = solde ? soldeDe(row) : row.totalCents;
+            const affiche = row.afficheCents ?? (solde ? soldeDe(row) : row.totalCents);
             return (
               <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0">
@@ -171,14 +183,16 @@ export function CaDetailPanel({
                     </p>
                     <p className="text-xs text-muted-foreground">{formatEuros(affiche)}</p>
                   </div>
-                  {solde && !soldeValide(row.notes) ? (
+                  {solde &&
+                    (row.type === undefined || row.type === "solde") &&
+                    !soldeValide(row.notes) ? (
                     <ValidateSoldeButton
                       id={row.id}
                       customerName={row.customerName}
                       validated={false}
                     />
                   ) : null}
-                  {solde ? (
+                  {solde && (row.type === undefined || row.type === "solde") ? (
                     <ReviewReceivedButton
                       id={row.id}
                       customerName={row.customerName}
