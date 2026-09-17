@@ -578,7 +578,7 @@ export function QuoteBookingForm({
                   </p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    30 km offerts autour de Huisseau-sur-Cosson, puis 0,80 €/km (aller-retour).
+                    30 km offerts autour de Blois, puis 0,80 €/km (aller-retour).
                     Les frais se calculent automatiquement dès que vous choisissez un lieu
                     suggéré. Péages en sus au réel.
                   </p>

@@ -29,7 +29,7 @@ export function SiteFooter() {
         ))}
       </nav>
       <p className="mt-4 px-4">
-        {SITE_NAME} — Huisseau-sur-Cosson (41350) · DJ mariage, anniversaire et
+        {SITE_NAME} — Blois (Huisseau-sur-Cosson, 41350) · DJ mariage, anniversaire et
         soirées à Blois, Vendôme, Amboise et dans un rayon de 50 km ·
         Déplacement offert dans un rayon de 30 km
       </p>

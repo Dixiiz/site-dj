@@ -22,7 +22,7 @@ export const metadata = {
   alternates: { canonical: "/" },
   title: "Propul'Sound DJ — DJ & animations événementielles",
   description:
- "DJ professionnel basé à Huisseau-sur-Cosson : mariages, anniversaires, soirées privées et événements d'entreprise en Loir-et-Cher et alentours.",
+ "DJ professionnel basé à Blois (Huisseau-sur-Cosson, 41350) : mariages, anniversaires, soirées privées et événements d'entreprise en Loir-et-Cher et alentours.",
 };
 
 const services = [
@@ -168,7 +168,7 @@ export default async function Home() {
                   name: "Dans quelles zones Propul'Sound DJ intervient-il ?",
                   acceptedAnswer: {
  "@type": "Answer",
-                    text: "Basé à Huisseau-sur-Cosson (41350), Propul'Sound DJ intervient à Blois, Vendôme, Morée et dans un rayon de 50 km autour. Les 30 premiers kilomètres de déplacement sont offerts.",
+                    text: "Basé à Blois (Huisseau-sur-Cosson, 41350), Propul'Sound DJ intervient à Vendôme, Morée, Chambord et dans un rayon de 50 km autour. Les 30 premiers kilomètres de déplacement sont offerts.",
                   },
                 },
                 {
@@ -216,7 +216,7 @@ export default async function Home() {
               <span className="text-gradient-neon">Propul&apos;Sound DJ</span>
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg text-muted-foreground">
-              DJ &amp; Show Lumière à proximité de Blois. Une ambiance électro moderne et du
+              DJ &amp; Show Lumière à Blois (Huisseau-sur-Cosson, 41350). Une ambiance électro moderne et du
               matériel professionnel pour illuminer et faire vibrer vos événements.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">

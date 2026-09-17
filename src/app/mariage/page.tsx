@@ -20,7 +20,7 @@ const data: EventLandingData = {
   photoAlt: "Piste de danse enflammée lors d'un mariage animé par Propul'Sound DJ",
   intro: [
     "Votre mariage mérite mieux qu'une playlist en boucle : chaque moment a sa musique, son intensité, son énergie. L'entrée de la mariée, les discours, l'ouverture du bal, la pleine piste à minuit — tout est synchronisé lumières + son, et préparé en amont avec vous dans votre espace client en ligne.",
-    "Basé à Huisseau-sur-Cosson, Propul'Sound DJ intervient à Blois, Vendôme, Morée, Chambord et dans tout le Loir-et-Cher (déplacement offert dans un rayon de 30 km). Matériel professionnel, assurance, plans B : vous n'avez qu'à profiter.",
+    "Basés à Blois (Huisseau-sur-Cosson), Propul'Sound DJ intervient à Blois, Vendôme, Morée, Chambord et dans tout le Loir-et-Cher (déplacement offert dans un rayon de 30 km). Matériel professionnel, assurance, plans B : vous n'avez qu'à profiter.",
   ],
   highlights: [
     { title: "Cérémonie & cocktail (option)", text: "Micro pour la mairie ou l'extérieur, musique d'ambiance élégante pour le vin d'honneur et le repas, transitions invisibles." },

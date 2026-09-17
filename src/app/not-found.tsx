@@ -34,7 +34,7 @@ export default function NotFound() {
         </a>
       </div>
       <p className="text-xs text-muted-foreground">
-        {SITE_URL.replace("https://", "")} — Propul&apos;Sound DJ · Huisseau-sur-Cosson (41350)
+        {SITE_URL.replace("https://", "")} — Propul&apos;Sound DJ · Blois (Huisseau-sur-Cosson, 41350)
       </p>
     </main>
   );

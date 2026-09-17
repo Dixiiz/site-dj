@@ -14,7 +14,7 @@ export const metadata = {
 const faqs = [
   {
     q: "Jusqu'où vous déplacez-vous ?",
-    a: "Nous sommes basés à Huisseau-sur-Cosson, à proximité de Blois (Loir-et-Cher). 30 km aller-retour sont offerts ; au-delà, les frais sont de 0,80 €/km (aller-retour), calculés automatiquement dans le devis. Les péages éventuels sont facturés au réel.",
+    a: "Nous sommes basés à Blois (Huisseau-sur-Cosson, Loir-et-Cher). 30 km aller-retour sont offerts ; au-delà, les frais sont de 0,80 €/km (aller-retour), calculés automatiquement dans le devis. Les péages éventuels sont facturés au réel.",
   },
   {
     q: "Quels sont les horaires possibles ?",
