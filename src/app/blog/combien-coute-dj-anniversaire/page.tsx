@@ -78,7 +78,7 @@ export default function ArticlePrixDjAnniversaire() {
             <p>
               Méfiez-vous des annonces « DJ à 100 € la soirée » : à ce prix,
               c&apos;est souvent une enceinte branchée sur une playlist, sans
-              matériel de secours ni assurance.
+              matériel professionnel ni assurance.
             </p>
 
             <h2 className="text-2xl font-medium tracking-tight">
@@ -141,7 +141,7 @@ export default function ArticlePrixDjAnniversaire() {
               </li>
               <li>
                 <strong>Comparer uniquement les prix</strong> : vérifiez les
-                avis, l&apos;assurance, le matériel de secours et la zone
+                avis, l&apos;assurance et la zone
                 d&apos;intervention réelle. Un DJ « Blois » qui travaille en
                 réalité à 100 km ne viendra peut-être pas.
               </li>

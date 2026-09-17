@@ -60,8 +60,7 @@ export default function ArticleDjEntreprise() {
               parfois des conjoints, ne réagit pas comme un public de club.
               Il faut un DJ capable de passer des hits intemporels, du funk,
               des classiques français <strong>et</strong> de l&apos;électro
-              sans jamais perdre la moitié de la salle. Demandez à votre DJ
-              comment il gère un public mixte : sa réponse vaut tous les CV.
+              sans jamais perdre la moitié de la salle.
             </p>
 
             <h2 className="text-2xl font-medium tracking-tight">
@@ -78,16 +77,15 @@ export default function ArticleDjEntreprise() {
             </p>
 
             <h2 className="text-2xl font-medium tracking-tight">
-              Erreur n°3 : sous-dimensionner le matériel
+              Erreur n°3 : négliger le réglage du son
             </h2>
             <p>
-              Une salle de séminaire réverbère différemment d&apos;une piste de
-              danse. Un niveau sonore mal calibré, c&apos;est des collègues
-              qui crient pour se parler pendant le cocktail. Vérifiez que le
-              DJ adapte sa puissance à la jauge <strong>et</strong> à
-              l&apos;acoustique de votre lieu, et qu&apos;il dispose
-              d&apos;un matériel de secours (la question à poser : « que
-              se passe-t-il si ça lâche à 22 h ? »).
+              Un niveau sonore mal calibré, c&apos;est des collègues qui
+              crient pour se parler pendant le cocktail. Chaque séquence a
+              son volume : fond sonore discret pendant le repas, montée en
+              énergie pour la piste de danse. Vérifiez que votre DJ calibre
+              le son selon l&apos;ambiance de chaque moment — et qu&apos;il
+              connaît la salle (ou la repère) avant le jour J.
             </p>
 
             <h2 className="text-2xl font-medium tracking-tight">
@@ -124,7 +122,7 @@ export default function ArticleDjEntreprise() {
               <li>☐ Horaire exact des séquences transmis au DJ</li>
               <li>☐ Micro(s) de qualité pour discours et remises de prix</li>
               <li>☐ Ambiance musicale du repas validée</li>
-              <li>☐ Matériel de secours confirmé</li>
+              <li>☐ Volume calibré pour chaque séquence (cocktail, repas, piste)</li>
               <li>☐ Devis détaillé signé + facture pour la compta</li>
               <li>☐ Contact direct avec le DJ qui viendra (pas une plateforme)</li>
             </ul>
