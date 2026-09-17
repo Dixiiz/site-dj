@@ -34,6 +34,17 @@ const data: EventLandingData = {
     { q: "Comment choisir la musique ?", a: "Dans votre espace client en ligne : titres indispensables, styles à éviter, demandes spéciales. Vous gardez le contrôle, sans vous occuper de la technique." },
     { q: "Est-il possible de payer en plusieurs fois ?", a: "Oui : le paiement en plusieurs fois (2 à 10×) est disponible directement dans votre espace client, échéance par échéance." },
   ],
+  extraSection: {
+    title: "Anniversaire : tous les formats",
+    intro: "Chaque fête a son ambiance — voici les plus fréquentes, et comment elles sont abordées :",
+    list: [
+      "18 ans : hits du moment et électro, énergie maximale dès la première heure",
+      "30, 40, 50 ans : Classics et souvenirs partagés, piste qui fait danser toutes les générations",
+      "Fiançailles : ambiance festive mais élégante, tempo posé pendant le repas puis montée progressive",
+      "Départ à la retraite ou repas de famille : variétés et tubes indémodables, volume adapté aux conversations",
+      "Soirée entre amis : format libre, vous pilotez la playlist depuis votre espace client",
+    ],
+  },
 };
 
 export default function AnniversairePage() {

@@ -20,6 +20,10 @@ export type EventLandingData = {
   intro: string[];
   highlights: { title: string; text: string }[];
   faq: { q: string; a: string }[];
+  /** Section optionnelle « déroulé type » (liste ordonnée, en bas de page) */
+  timeline?: { label: string; detail: string }[];
+  /** Section optionnelle supplémentaire (liste à puces, en bas de page) */
+  extraSection?: { title: string; intro: string; list: string[] };
 };
 
 export function EventLanding({ data }: { data: EventLandingData }) {
@@ -107,6 +111,57 @@ export function EventLanding({ data }: { data: EventLandingData }) {
             ))}
           </div>
         </FadeIn>
+
+        {data.timeline && data.timeline.length > 0 ? (
+          <FadeIn delay={0.26}>
+            <h2 className="mt-14 text-2xl font-medium tracking-tight">
+              Le déroulé type de votre soirée
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              À titre d&apos;exemple — le vôtre est construit avec vous, au
+              détail près, dans votre espace client.
+            </p>
+            <ol className="mt-6 space-y-3">
+              {data.timeline.map((step) => (
+                <li
+                  key={step.label}
+                  className="flex items-start gap-3 rounded-xl border border-border bg-card p-4"
+                >
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xs font-medium text-accent">
+                    ✓
+                  </span>
+                  <span>
+                    <span className="font-medium">{step.label}</span>
+                    <span className="mt-1 block text-sm text-muted-foreground">
+                      {step.detail}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </FadeIn>
+        ) : null}
+
+        {data.extraSection ? (
+          <FadeIn delay={0.27}>
+            <h2 className="mt-14 text-2xl font-medium tracking-tight">
+              {data.extraSection.title}
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {data.extraSection.intro}
+            </p>
+            <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+              {data.extraSection.list.map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <span className="mt-0.5 text-accent" aria-hidden>
+                    •
+                  </span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </FadeIn>
+        ) : null}
 
         <FadeIn delay={0.28}>
           <h2 className="mt-14 text-2xl font-medium tracking-tight">Zones d&apos;intervention</h2>
