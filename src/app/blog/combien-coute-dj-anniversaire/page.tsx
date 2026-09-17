@@ -45,7 +45,7 @@ export default function ArticlePrixDjAnniversaire() {
               <p className="mt-2 text-sm">
                 Pour une soirée d&apos;anniversaire en Loir-et-Cher, comptez
                 généralement <strong>entre 400 € et 900 €</strong> selon la
-                durée, le nombre d&apos;invités et les options. Un devis en
+                durée et les options. Un devis en
                 ligne doit vous donner le <strong>prix final tout compris</strong>{" "}
                 (matériel, déplacement, playlist) avant tout engagement.
               </p>
@@ -71,7 +71,7 @@ export default function ArticlePrixDjAnniversaire() {
               </li>
               <li>
                 <strong>Grande soirée (100+ invités, options FX)</strong> :
-                900 € et plus — sono puissante, machine à fumée, étincelles
+                900 € et plus — durée longue, machine à fumée, étincelles
                 froides pour le gâteau, CO2 pour l&apos;entrée du héros.
               </li>
             </ul>
@@ -86,26 +86,22 @@ export default function ArticlePrixDjAnniversaire() {
             </h2>
             <ul className="list-disc space-y-2 pl-6">
               <li>
-                <strong>La durée</strong> : la première heure coûte plus cher
-                que les suivantes (montage et démontage comptent dans la
-                journée du DJ).
+                <strong>La durée</strong> : chaque heure de mix coûte le même
+                prix. L&apos;installation, elle, est facturée une seule fois —
+                pas autant de fois que d&apos;heures de mix. Plus la soirée est
+                longue, plus le coût horaire réel s&apos;amortit.
               </li>
               <li>
-                <strong>Le nombre d&apos;invités</strong> : 20 personnes dans un
-                jardin et 120 dans une salle ne demandent pas du tout le même
-                matériel — la puissance sonore se calcule en fonction de la
-                jauge.
-              </li>
-              <li>
-                <strong>Le lieu</strong> : salle des fêtes, domicile ou
-                extérieur ? Un son en extérieur demande plus de puissance et
-                de l&apos;organisation sur le voisinage.
+                <strong>Le matériel</strong> : la sono et l&apos;éclairage
+                restent les mêmes quel que soit le lieu ou le nombre
+                d&apos;invités — vous ne payez pas un « pack supérieur » parce
+                que vous êtes 80 au lieu de 40.
               </li>
               <li>
                 <strong>Les options</strong> : éclairage de piste, fumée,
-                étincelles froides, micro pour les discours… chaque option doit
-                être chiffrée clairement dans le devis, jamais facturée
-                « surprise » le soir même.
+                étincelles froides… le micro pour les discours est déjà inclus.
+                Chaque option est chiffrée clairement dans le devis, jamais
+                facturée « surprise » le soir même.
               </li>
               <li>
                 <strong>Le déplacement</strong> : chez Propul&apos;Sound DJ,
