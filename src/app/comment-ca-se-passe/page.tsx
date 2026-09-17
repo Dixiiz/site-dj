@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FadeIn } from "@/components/fade-in";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import {
   DemoVideo,
   DemoVideoSignature,
@@ -9,7 +10,8 @@ import {
 } from "@/components/demo-video";
 
 export const metadata: Metadata = {
-  title: "Comment ça se passe — Propul'Sound DJ",
+  alternates: { canonical: "/comment-ca-se-passe" },
+  title: { absolute: "Comment ça se passe — Propul'Sound DJ" },
   description:
     "De la demande de devis à la piste de danse : découvrez comment vous organisez votre soirée en ligne, étape par étape, avec votre espace client Propul'Sound DJ.",
 };
@@ -128,6 +130,7 @@ export default function CommentCaSePassePage() {
           </div>
         </FadeIn>
       </main>
+      <SiteFooter />
     </>
   );
 }

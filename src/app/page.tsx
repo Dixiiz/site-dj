@@ -3,6 +3,7 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { FadeIn } from "@/components/fade-in";
 import { GoogleReviews } from "@/components/google-reviews";
 import { Gallery } from "@/components/gallery";
@@ -10,7 +11,7 @@ import { HeroVideo } from "@/components/hero-video";
 import { VideoShowcase } from "@/components/video-showcase";
 import { TIKTOK_PROFILE_URL } from "@/config/tiktok";
 import { getOrder, listMedia } from "@/lib/site-media";
-import { SITE_URL } from "@/lib/site-url";
+import { SITE_URL, SITE_NAME } from "@/lib/site-url";
 import Link from "next/link";
 
 // La page d'accueil est régénérée au maximum toutes les 5 minutes (cache) :
@@ -18,6 +19,7 @@ import Link from "next/link";
 export const revalidate = 300;
 
 export const metadata = {
+  alternates: { canonical: "/" },
   title: "Propul'Sound DJ — DJ & animations événementielles",
   description:
  "DJ professionnel basé à Huisseau-sur-Cosson : mariages, anniversaires, soirées privées et événements d'entreprise en Loir-et-Cher et alentours.",
@@ -104,6 +106,13 @@ export default async function Home() {
  "@context": "https://schema.org",
  "@graph": [
               {
+ "@type": "WebSite",
+              name: SITE_NAME,
+              url: SITE_URL,
+              inLanguage: "fr-FR",
+              publisher: { "@type": "Organization", name: SITE_NAME },
+              },
+              {
  "@type": "DJ",
               name: "Propul'Sound DJ",
               description:
@@ -133,6 +142,12 @@ export default async function Home() {
               ],
               geo: { "@type": "GeoCoordinates", latitude: 47.5667, longitude: 1.4667 },
               priceRange: "€€",
+              aggregateRating: {
+                "@type": "AggregateRating",
+                ratingValue: "4.8",
+                bestRating: "5",
+                ratingCount: "27",
+              },
               sameAs: [
  "https://www.instagram.com/propulsounddj/",
  "https://linkaband.com/propulsound-dj",
@@ -399,21 +414,7 @@ export default async function Home() {
           </a>
         </div>
       </main>
-      <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
-        Propul&apos;Sound DJ — Huisseau-sur-Cosson (41350) · Déplacement offert dans un rayon de
-        30 km
-        <div className="mt-2 space-x-4">
-          <Link href="/comment-ca-se-passe" className="text-xs transition-colors hover:text-accent">
-            Comment ça se passe
-          </Link>
-          <Link href="/avis" className="text-xs transition-colors hover:text-accent">
-            Avis clients
-          </Link>
-          <Link href="/mentions-legales" className="text-xs transition-colors hover:text-accent">
-            Mentions légales
-          </Link>
-        </div>
-      </footer>
+      <SiteFooter />
     </>
   );
 }

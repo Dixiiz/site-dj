@@ -2,6 +2,7 @@ import { FadeIn } from "@/components/fade-in";
 import { CustomRequestForm } from "@/components/custom-request-form";
 import { FaqSection } from "@/components/faq-section";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 
 // FAQ SEO : questions typiques d'un projet sur-mesure (extrait enrichi Google).
 const faqItems = [
@@ -27,6 +28,13 @@ const faqItems = [
   },
 ];
 
+export const metadata = {
+  alternates: { canonical: "/sur-mesure" },
+  title: "Prestation DJ sur-mesure — sonorisation & besoins spécifiques",
+  description:
+    "Un projet hors des formules classiques ? Propul'Sound DJ propose des prestations sur-mesure : double sonorisation, extérieur, horaires atypiques, coordination avec d'autres prestataires. Devis gratuit en ligne.",
+};
+
 export default function SurMesurePage() {
   return (
     <>
@@ -43,6 +51,7 @@ export default function SurMesurePage() {
         </div>
       </main>
       <FaqSection title="Questions fréquentes — projets sur-mesure" items={faqItems} />
+      <SiteFooter />
     </>
   );
 }

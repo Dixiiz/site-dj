@@ -1,12 +1,14 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { FadeIn } from "@/components/fade-in";
 import { fetchGoogleReviews, Stars } from "@/components/google-reviews";
 import { avisMariages, mariagesStats } from "@/data/avis-mariages";
 
 export const metadata: Metadata = {
-  title: "Avis clients — Propul'Sound DJ",
+  alternates: { canonical: "/avis" },
+  title: { absolute: "Avis clients — Propul'Sound DJ" },
   description:
     "Ce que les mariés et organisateurs disent de Propul'Sound DJ : avis Google, Mariages.net et retours de prestations en Loir-et-Cher.",
 };
@@ -223,17 +225,7 @@ export default async function AvisPage() {
           </div>
         </FadeIn>
       </main>
-      <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
-        Propul&apos;Sound DJ — Huisseau-sur-Cosson (41350)
-        <div className="mt-2 space-x-4">
-          <Link href="/" className="transition-colors hover:text-accent">
-            Accueil
-          </Link>
-          <Link href="/contact" className="transition-colors hover:text-accent">
-            Contact
-          </Link>
-        </div>
-      </footer>
+      <SiteFooter />
     </>
   );
 }

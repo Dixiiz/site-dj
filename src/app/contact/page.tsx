@@ -1,10 +1,12 @@
 import { FadeIn } from "@/components/fade-in";
 import { CustomRequestForm } from "@/components/custom-request-form";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import Link from "next/link";
 
 export const metadata = {
-  title: "Contact — Propul'Sound DJ",
+  alternates: { canonical: "/contact" },
+  title: { absolute: "Contact — Propul'Sound DJ" },
   description:
  "Une question sur nos prestations DJ, les déplacements ou la disponibilité ? Contactez Propul'Sound DJ à proximité de Blois.",
 };
@@ -115,6 +117,7 @@ export default function ContactPage() {
           <CustomRequestForm />
         </FadeIn>
       </main>
+      <SiteFooter />
     </>
   );
 }

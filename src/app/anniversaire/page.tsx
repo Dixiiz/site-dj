@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { EventLanding, type EventLandingData } from "@/components/event-landing";
 
 export const metadata: Metadata = {
-  title: "DJ Anniversaire & Soirée privée — Propul'Sound DJ (Blois)",
+  title: { absolute: "DJ Anniversaire & Soirée privée — Propul'Sound DJ (Blois)" },
   description:
     "Anniversaire, fiançailles, fête entre amis : DJ + sonorisation + lumière pour une soirée réussie près de Blois. Devis en ligne en quelques minutes, avis 4,8/5.",
   alternates: { canonical: "/anniversaire" },

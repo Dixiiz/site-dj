@@ -2,12 +2,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { FadeIn } from "@/components/fade-in";
 import { ScrollToCurrentMonth } from "@/components/scroll-to-month";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Disponibilités — Propul'Sound DJ",
+  alternates: { canonical: "/disponibilites" },
+  title: { absolute: "Disponibilités — Propul'Sound DJ" },
   description:
  "Consultez les dates déjà réservées de Propul'Sound DJ et vérifiez la disponibilité pour votre événement.",
 };
@@ -197,6 +199,7 @@ export default async function DisponibilitesPage({
           </p>
         </FadeIn>
       </main>
+      <SiteFooter />
     </>
   );
 }

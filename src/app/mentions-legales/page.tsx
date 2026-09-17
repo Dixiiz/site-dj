@@ -1,9 +1,11 @@
 import { FadeIn } from "@/components/fade-in";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import Link from "next/link";
 
 export const metadata = {
-  title: "Mentions légales — Propul'Sound DJ",
+  alternates: { canonical: "/mentions-legales" },
+  title: { absolute: "Mentions légales — Propul'Sound DJ" },
 };
 
 const sections = [
@@ -74,6 +76,7 @@ export default function MentionsLegalesPage() {
           </p>
         </FadeIn>
       </main>
+      <SiteFooter />
     </>
   );
 }

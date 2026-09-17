@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { EventLanding, type EventLandingData } from "@/components/event-landing";
 
 export const metadata: Metadata = {
-  title: "DJ Mariage Blois & Loir-et-Cher — Propul'Sound DJ",
+  title: { absolute: "DJ Mariage Blois & Loir-et-Cher — Propul'Sound DJ" },
   description:
     "DJ pour votre mariage près de Blois : cérémonie, cocktail, dîner et piste de danse. Sonorisation, lumière et options FX incluses. Devis en ligne gratuit, avis 4,8/5.",
   alternates: { canonical: "/mariage" },

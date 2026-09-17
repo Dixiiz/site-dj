@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { EventLanding, type EventLandingData } from "@/components/event-landing";
 
 export const metadata: Metadata = {
-  title: "DJ Événement d'entreprise & Séminaire — Propul'Sound DJ (Blois)",
+  title: { absolute: "DJ Événement d'entreprise & Séminaire — Propul'Sound DJ (Blois)" },
   description:
     "Séminaires, soirées de gala, arbres de Noël : DJ professionnel pour vos événements d'entreprise à Blois et en Loir-et-Cher. Sonorisation, lumière, devis rapide.",
   alternates: { canonical: "/evenement-entreprise" },

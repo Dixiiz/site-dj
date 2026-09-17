@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FadeIn } from "@/components/fade-in";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { RelatedArticles } from "@/components/related-articles";
+import { BlogJsonLd } from "@/components/blog-jsonld";
 
 export const metadata: Metadata = {
   title: "DJ mariage ou playlist Spotify : ce que ça change vraiment",
@@ -13,6 +16,13 @@ export const metadata: Metadata = {
 export default function ArticleDjOuSpotify() {
   return (
     <>
+      <BlogJsonLd
+        title="DJ mariage ou playlist Spotify : ce que ça change vraiment"
+        description="Le comparatif honnête d'un DJ du Loir-et-Cher : ambiance, imprévus, matériel, temps forts."
+        slug="/blog/dj-ou-playlist-spotify"
+        datePublished="2025-10-05"
+        dateModified="2026-01-05"
+      />
       <SiteHeader />
       <main className="mx-auto w-full max-w-3xl px-4 pb-16">
         <FadeIn>
@@ -168,7 +178,9 @@ export default function ArticleDjOuSpotify() {
             </Link>
           </p>
         </FadeIn>
+        <RelatedArticles current="/blog/dj-ou-playlist-spotify" />
       </main>
+      <SiteFooter />
     </>
   );
 }

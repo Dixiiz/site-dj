@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Camera, MapPin } from "lucide-react";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import {
   getCreditsBundle,
   getOrder,
@@ -17,6 +18,7 @@ import {
 import { SITE_URL } from "@/lib/site-url";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/galerie" },
   title: "Galerie — photos & vidéos de prestations",
   description:
     "Photos et vidéos des mariages, anniversaires et soirées animés par Propul'Sound DJ, créditées à leurs photographes.",
@@ -208,6 +210,7 @@ export default async function GaleriePage() {
         </section>
       ) : null}
       </main>
+      <SiteFooter />
     </>
   );
 }

@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FadeIn } from "@/components/fade-in";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/blog" },
   title: "Blog — Conseils mariage & soirées (Blois, Loir-et-Cher)",
   description:
     "Guides et conseils par votre DJ en Loir-et-Cher : organiser un mariage à Blois, choisir sa playlist, réussir son ouverture du bal et sa soirée.",
@@ -90,6 +92,7 @@ export default function BlogPage() {
           </FadeIn>
         </div>
       </main>
+      <SiteFooter />
     </>
   );
 }

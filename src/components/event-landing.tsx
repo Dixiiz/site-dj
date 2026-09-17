@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FadeIn } from "@/components/fade-in";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 
 export type EventLandingData = {
   /** Chemin de la page (pour le JSON-LD) */
@@ -114,6 +115,7 @@ export function EventLanding({ data }: { data: EventLandingData }) {
           </div>
         </FadeIn>
       </main>
+      <SiteFooter />
     </>
   );
 }

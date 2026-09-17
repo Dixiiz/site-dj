@@ -2,8 +2,16 @@ import { FadeIn } from "@/components/fade-in";
 import { PricingSection } from "@/components/pricing-section";
 import { QuoteBookingForm } from "@/components/quote-booking-form";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/admin";
 import type { Formula, QuoteOption } from "@/lib/types";
+
+export const metadata = {
+  alternates: { canonical: "/formules" },
+  title: "Formules & tarifs DJ — mariage, anniversaire, soirée",
+  description:
+    "Découvrez les formules DJ de Propul'Sound DJ : mariage, anniversaire, soirée privée, événement d'entreprise. Devis gratuit et instantané en ligne, sonorisation et lumière incluses.",
+};
 
 export default async function FormulesPage() {
   if (!isSupabaseConfigured()) {
@@ -57,6 +65,7 @@ export default async function FormulesPage() {
           />
         </FadeIn>
       </main>
+      <SiteFooter />
     </>
   );
 }

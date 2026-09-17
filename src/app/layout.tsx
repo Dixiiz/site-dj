@@ -61,6 +61,17 @@ export const metadata: Metadata = {
     description:
  "Animation DJ pour mariages, anniversaires et soirées privées. Devis gratuit en ligne.",
   },
+  // Code de vérification Google Search Console : définir
+  // NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION dans les variables d'environnement Vercel.
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION && {
+    verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION },
+  }),
+  // Balises géographiques : renforcent le référencement local (Huisseau-sur-Cosson / Blois).
+  other: {
+    "geo.region": "FR-41",
+    "geo.placename": "Huisseau-sur-Cosson, Blois, Loir-et-Cher",
+    ICBM: "47.5667, 1.4667",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

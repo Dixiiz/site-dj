@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FadeIn } from "@/components/fade-in";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { RelatedArticles } from "@/components/related-articles";
+import { BlogJsonLd } from "@/components/blog-jsonld";
 
 export const metadata: Metadata = {
   title: "Comment choisir son DJ de mariage à Blois ? (guide 2026)",
@@ -13,6 +16,13 @@ export const metadata: Metadata = {
 export default function ArticleDjMariageBlois() {
   return (
     <>
+      <BlogJsonLd
+        title="Comment choisir son DJ de mariage à Blois ? Le guide complet"
+        description="Budget, répertoire, matériel, espace client : le guide complet pour choisir le DJ de votre mariage à Blois, Vendôme, Amboise et dans tout le Loir-et-Cher."
+        slug="/blog/choisir-dj-mariage-blois"
+        datePublished="2025-11-12"
+        dateModified="2026-01-10"
+      />
       <SiteHeader />
       <main className="mx-auto w-full max-w-3xl px-4 pb-16">
         <FadeIn>
@@ -181,7 +191,9 @@ export default function ArticleDjMariageBlois() {
             </Link>
           </p>
         </FadeIn>
+        <RelatedArticles current="/blog/choisir-dj-mariage-blois" />
       </main>
+      <SiteFooter />
     </>
   );
 }

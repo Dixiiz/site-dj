@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FadeIn } from "@/components/fade-in";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { RelatedArticles } from "@/components/related-articles";
 import { SongItem } from "@/components/playlist-preview";
+import { BlogJsonLd } from "@/components/blog-jsonld";
 
 export const metadata: Metadata = {
   title: "Playlist de mariage 2026 — les 20 titres qui font lever la foule",
@@ -14,6 +17,13 @@ export const metadata: Metadata = {
 export default function ArticlePlaylistMariage2026() {
   return (
     <>
+      <BlogJsonLd
+        title="Playlist de mariage 2026 — les 20 titres qui font lever la foule"
+        description="La sélection 2026 d'un DJ du Loir-et-Cher : ouverture du bal, temps forts et piste de danse en feu. 15 titres qui marchent à tous les coups."
+        slug="/blog/playlist-mariage-2026"
+        datePublished="2025-12-20"
+        dateModified="2026-01-15"
+      />
       <SiteHeader />
       <main className="mx-auto w-full max-w-3xl px-4 pb-16">
         <FadeIn>
@@ -150,7 +160,9 @@ export default function ArticlePlaylistMariage2026() {
             </Link>
           </p>
         </FadeIn>
+        <RelatedArticles current="/blog/playlist-mariage-2026" />
       </main>
+      <SiteFooter />
     </>
   );
 }

@@ -1,10 +1,12 @@
 import { FadeIn } from "@/components/fade-in";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import Link from "next/link";
 import { SITE_URL } from "@/lib/site-url";
 
 export const metadata = {
-  title: "FAQ — Propul'Sound DJ",
+  alternates: { canonical: "/faq" },
+  title: { absolute: "FAQ — Propul'Sound DJ" },
   description:
  "Questions fréquentes : déplacements, horaires, matériel, annulation. Tout ce qu'il faut savoir avant de réserver Propul'Sound DJ.",
 };
@@ -113,6 +115,7 @@ export default function FaqPage() {
           ))}
         </div>
       </main>
+      <SiteFooter />
     </>
   );
 }
