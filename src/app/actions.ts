@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { clearAdminSession, isAdmin, setAdminSession } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getStripe } from "@/lib/stripe";
+import type Stripe from "stripe";
 import { estimateTravelFromAddress } from "@/lib/travel";
 import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
 import { ADMIN_FX_OPTIONS } from "@/components/pricing-section";
@@ -1344,6 +1346,92 @@ export async function marquerAvisRecu(formData: FormData) {
     message: annuler
       ? `Avis retiré pour « ${quote.customer_name} » (relance possible)`
       : `Avis validé pour « ${quote.customer_name} » — plus de relance ✓`,
+  };
+}
+
+// Rattrapage : recalcule le NET (frais Stripe déduits) de tous les paiements
+// Stripe déjà reçus et pose les marqueurs [[acompte-net:]] /
+// [[echeance-net:n°:net]] dans les notes. Ne touche QUE les paiements passés
+// par Stripe (les virements/espèces gardent le montant complet).
+export async function rattraperFraisStripe() {
+  if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
+  const stripe = getStripe();
+  if (!stripe) return { ok: false as const, error: "Stripe non configuré." };
+
+  const supabase = createAdminClient();
+  const fraisEstimes = (gross: number) => Math.round(gross * 0.015 + 25);
+  let startingAfter: string | undefined;
+  let traite = 0;
+
+  for (;;) {
+    const sessions = await stripe.checkout.sessions.list({
+      limit: 100,
+      starting_after: startingAfter,
+    });
+    for (const s of sessions.data) {
+      if (s.payment_status !== "paid" || !s.metadata?.quote_id || !s.amount_total) continue;
+      const quoteId = s.metadata.quote_id;
+      const estEcheance = s.metadata.payment_type === "echeance";
+      const numero = parseInt(s.metadata.payment_numero ?? "0", 10);
+
+      // Frais réels de la transaction (sinon estimation carte européenne).
+      let net = s.amount_total - fraisEstimes(s.amount_total);
+      try {
+        const pi = await stripe.paymentIntents.retrieve(s.payment_intent as string, {
+          expand: ["latest_charge.balance_transaction"],
+        });
+        const bt = (
+          pi.latest_charge as Stripe.Charge | null | undefined
+        )?.balance_transaction as Stripe.BalanceTransaction | null;
+        if (bt && typeof bt.fee === "number" && bt.status !== "pending") {
+          net = s.amount_total - bt.fee;
+        }
+      } catch {
+        console.warn(`[rattrapage] Frais indisponibles pour ${s.id} — estimation`);
+      }
+
+      const { data: q } = await supabase
+        .from("quotes")
+        .select("notes, acompte_paid_at")
+        .eq("id", quoteId)
+        .single();
+      if (!q) continue;
+      let notes = String(q.notes ?? "");
+      const avant = notes;
+
+      if (estEcheance && numero > 0) {
+        notes = notes.replace(
+          new RegExp(`\\[\\[echeance-net:${numero}:\\d+\\]\\]\\s*`, "g"),
+          ""
+        );
+        notes = `[[echeance-net:${numero}:${net}]]\n${notes}`;
+      } else if (!estEcheance && q.acompte_paid_at) {
+        if (!/\[\[acompte:\d+\]\]/.test(notes)) {
+          notes = `[[acompte:${s.amount_total}]]\n${notes}`;
+        }
+        if (!/\[\[acompte-net:\d+\]\]/.test(notes)) {
+          notes = `[[acompte-net:${net}]]\n${notes}`;
+        }
+      } else {
+        continue;
+      }
+
+      if (notes !== avant) {
+        await supabase.from("quotes").update({ notes }).eq("id", quoteId);
+        traite++;
+      }
+    }
+    if (!sessions.has_more) break;
+    startingAfter = sessions.data[sessions.data.length - 1].id;
+  }
+
+  revalidatePath("/admin");
+  return {
+    ok: true as const,
+    message:
+      traite === 0
+        ? "Aucun paiement à rattraper — tout est déjà à jour ✓"
+        : `${traite} paiement(s) recalculé(s) en net (frais Stripe déduits) ✓`,
   };
 }
 

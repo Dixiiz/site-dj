@@ -14,6 +14,7 @@ import {
 import { DashboardDetail } from "@/components/dashboard-detail";
 import { ValidateEcheanceButton } from "@/components/validate-echeance-button";
 import { ValidateAcompteButton } from "@/components/validate-acompte-button";
+import { BackfillStripeButton } from "@/components/backfill-stripe-button";
 import { AdminStats } from "@/components/admin-stats";
 import { AdminPushButton } from "@/components/admin-push-button";
 
@@ -99,9 +100,11 @@ export default async function AdminDashboard({
   const echeancesAConfirmer = echeancesEnCours.filter((e) => e.status === "payee" && !e.valideUrssaf);
   // Confirmées URSSAF (attribuées au mois de la date limite de l'échéance).
   const echeancesValidees = echeancesEnCours.filter((e) => e.status === "payee" && e.valideUrssaf);
+  // CA URSSAF du mois inclut aussi les échéances d'échéancier confirmées
+  // (attribuées au mois de leur date limite) — en NET de frais Stripe.
   const urssafEcheances = echeancesValidees
     .filter((e) => e.dueDate.startsWith(monthPrefix))
-    .reduce((sum, e) => sum + e.amountCents, 0);
+    .reduce((sum, e) => sum + netEcheance(e.quoteId, e.numero, e.amountCents), 0);
   // Devis avec échéancier : leur argent est suivi échéance par échéance
   // (ils sont exclus du calcul de solde par devis pour éviter les doubles comptes).
   const echeancierQuoteIds = new Set(echeancesEnCours.map((e) => e.quoteId));
@@ -164,6 +167,25 @@ export default async function AdminDashboard({
     if (marker) return Number(marker[1]);
     return montant(q) - Math.floor((montant(q) * 0.8) / 10) * 10;
   };
+  // Base URSSAF = NET réellement encaissé : frais Stripe déduits via le
+  // marqueur [[acompte-net:centimes]] (posé par le webhook). Sans marqueur
+  // (virement, espèces, paiement sur place) : le montant complet compte.
+  const acompteNetDe = (q: { total_cents: unknown; notes?: unknown }) => {
+    const net = /\[\[acompte-net:(\d+)\]\]/.exec(String(q.notes ?? ""));
+    if (net) return Number(net[1]);
+    return acompteDe(q);
+  };
+  // Échéanciers : net de chaque échéance mémorisé par le webhook via
+  // [[echeance-net:numero:centimes]] ; sinon (virement, sur place) le brut.
+  const notesParDevis = new Map(
+    allConfirmed.map((q) => [q.id, String(q.notes ?? "")])
+  );
+  const netEcheance = (quoteId: string, numero: number, brut: number) => {
+    const m = new RegExp(`\\[\\[echeance-net:${numero}:(\\d+)\\]\\]`).exec(
+      notesParDevis.get(quoteId) ?? ""
+    );
+    return m ? Number(m[1]) : brut;
+  };
   const acompteRecu = (q: { acompte_paid_at?: unknown; notes?: unknown }) =>
     Boolean(q.acompte_paid_at) || /\[\[acompte:\d+\]\]/.test(String(q.notes ?? ""));
   const acompteValide = (q: { notes?: unknown }) =>
@@ -182,7 +204,7 @@ export default async function AdminDashboard({
   );
   const urssafAcomptes = acomptesValides
     .filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix))
-    .reduce((sum, q) => sum + acompteDe(q), 0);
+    .reduce((sum, q) => sum + acompteNetDe(q), 0);
 
   // CA de l'année : tous les événements confirmés qui se déroulent cette année.
   const caAnnee = allConfirmed
@@ -349,7 +371,7 @@ export default async function AdminDashboard({
         ]}
         cards2={[
           { vue: "echeanciers", label: "Échéances en cours", value: String(echeancesDuMois.length), hint: "échéance(s) à recevoir ce mois-ci — clic pour le détail" },
-          { vue: "solde", label: "Soldes à valider", value: eur(soldeAValiderToutes + echeancesAConfirmer.reduce((s, e) => s + e.amountCents, 0) + acomptesAValider.reduce((s, q) => s + acompteDe(q), 0)), hint: `${aValiderToutes.length} solde(s) + ${echeancesAConfirmer.length} échéance(s) + ${acomptesAValider.length} acompte(s) — valider pour compter dans l'URSSAF` },
+          { vue: "solde", label: "Soldes à valider", value: eur(soldeAValiderToutes + echeancesAConfirmer.reduce((s, e) => s + netEcheance(e.quoteId, e.numero, e.amountCents), 0) + acomptesAValider.reduce((s, q) => s + acompteNetDe(q), 0)), hint: `${aValiderToutes.length} solde(s) + ${echeancesAConfirmer.length} échéance(s) + ${acomptesAValider.length} acompte(s) — valider pour compter dans l'URSSAF` },
           { vue: "ca-avenir", label: "CA à venir (déjà signé)", value: eur(caAVenir), hint: `${upcoming.length} soirée(s) confirmée(s) restante(s)` },
           { vue: "devis", href: "/admin/devis", label: "Devis en attente", value: String(devisAttente ?? 0), hint: "à relancer ou traiter" },
         ]}
@@ -430,7 +452,10 @@ export default async function AdminDashboard({
                 <Receipt className="size-4 text-accent" aria-hidden />
                 Paiements reçus à confirmer
               </h2>
-              <span className="text-xs text-muted-foreground">Cliquez à nouveau sur la carte pour fermer</span>
+              <div className="flex items-center gap-3">
+                <BackfillStripeButton />
+                <span className="text-xs text-muted-foreground">Cliquez à nouveau sur la carte pour fermer</span>
+              </div>
             </div>
 
             {/* Acomptes reçus (hors échéancier) : valider pour compter dans
@@ -460,7 +485,7 @@ export default async function AdminDashboard({
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="font-medium">{eur(acompteDe(q))}</span>
+                        <span className="font-medium">{eur(acompteNetDe(q))}</span>
                         <ValidateAcompteButton id={q.id} customerName={q.customer_name ?? ""} validated={false} />
                       </div>
                     </li>
@@ -498,7 +523,7 @@ export default async function AdminDashboard({
                           </p>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="font-medium">{eur(acompteDe(q))}</span>
+                          <span className="font-medium">{eur(acompteNetDe(q))}</span>
                           <ValidateAcompteButton id={q.id} customerName={q.customer_name ?? ""} validated={true} />
                         </div>
                       </li>

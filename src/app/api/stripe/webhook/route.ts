@@ -9,6 +9,38 @@ export const runtime = "nodejs";
 
 // Webhook Stripe : marque l'acompte payé dès que Stripe confirme le paiement,
 // même si le client ferme son navigateur avant d'être redirigé.
+// Montant net réellement encaissé : amount_total moins les frais Stripe.
+// Les frais viennent de la balance transaction du paiement ; si Stripe ne
+// les a pas encore calculés au moment du webhook, on retombe sur une
+// estimation standard (carte européenne : 1,5 % + 0,25 €).
+async function netEncaisse(
+  stripe: Stripe,
+  session: Stripe.Checkout.Session
+): Promise<number> {
+  const gross = session.amount_total ?? 0;
+  try {
+    const pi = await stripe.paymentIntents.retrieve(
+      session.payment_intent as string,
+      { expand: ["latest_charge.balance_transaction"] }
+    );
+    const charge = pi.latest_charge as Stripe.Charge | null | undefined;
+    const bt = charge?.balance_transaction as Stripe.BalanceTransaction | null;
+    if (bt && typeof bt.fee === "number" && bt.status !== "pending") {
+      return gross - bt.fee;
+    }
+    console.warn(
+      `[stripe-webhook] Frais Stripe pas encore disponibles pour ${session.id} — estimation appliquée.`
+    );
+  } catch (err) {
+    console.warn(
+      "[stripe-webhook] Récupération des frais impossible :",
+      err instanceof Error ? err.message : err
+    );
+  }
+  const estimation = Math.round(gross * 0.015 + 25);
+  return gross - estimation;
+}
+
 // Événement attendu : checkout.session.completed
 export async function POST(request: Request) {
   const stripe = getStripe();
@@ -61,6 +93,21 @@ export async function POST(request: Request) {
             console.log(
               `[stripe-webhook] Échéance ${numero} du devis ${quoteId}: marquée payée ✓`
             );
+            // Mémorise le NET encaissé (frais Stripe déduits) pour l'URSSAF :
+            // marqueur [[echeance-net:numero:centimes]] dans les notes du devis.
+            const net = await netEncaisse(stripe, session);
+            const { data: qrow } = await supabase
+              .from("quotes")
+              .select("notes")
+              .eq("id", quoteId)
+              .single();
+            let qnotes = String(qrow?.notes ?? "");
+            qnotes = qnotes.replace(
+              new RegExp(`\\[\\[echeance-net:${numero}:\\d+\\]\\]\\s*`, "g"),
+              ""
+            );
+            qnotes = `[[echeance-net:${numero}:${net}]]\n${qnotes}`;
+            await supabase.from("quotes").update({ notes: qnotes }).eq("id", quoteId);
             // Cohérence devis : la 1ʳᵉ échéance couvre l'acompte. Jamais sur un
             // devis refusé/annulé (on n'écrase pas un statut de refus).
             if (numero === 1) {
@@ -99,9 +146,15 @@ export async function POST(request: Request) {
         // calcul du solde et la déclaration URSSAF du mois de réception).
         // Ne s'applique qu'aux devis sans échéancier : pour un échéancier,
         // l'acompte est suivi échéance par échéance (branche au-dessus).
+        // [[acompte:]] = brut payé par le client (cohérent avec le devis) ;
+        // [[acompte-net:]] = net encaissé après frais Stripe (base URSSAF).
         let notes = String(quote.notes ?? "");
         if (!/\[\[acompte:\d+\]\]/.test(notes)) {
           notes = `[[acompte:${session.amount_total ?? 0}]]\n${notes}`;
+        }
+        const net = await netEncaisse(stripe, session);
+        if (!/\[\[acompte-net:\d+\]\]/.test(notes)) {
+          notes = `[[acompte-net:${net}]]\n${notes}`;
         }
         await supabase
           .from("quotes")
