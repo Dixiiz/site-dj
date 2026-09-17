@@ -1349,6 +1349,65 @@ export async function marquerAvisRecu(formData: FormData) {
   };
 }
 
+// Supprime l'acompte d'une soirée (bouton « ✕ Supprimer l'acompte ») :
+// retire les marqueurs [[acompte:]], [[acompte-net:]] et [[acompte-valide:]],
+// vide acompte_paid_at, et FIGE le solde à la valeur actuellement affichée
+// ([[solde-montant:]]) pour que le CA URSSAF déjà validé ne bouge pas d'un
+// centime. Cas d'usage : acompte reçu avant la création du site (déjà déclaré
+// à l'époque), ou saisie erronée à annuler.
+export async function supprimerAcompte(formData: FormData) {
+  if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { ok: false as const, error: "Soirée introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("id, notes, total_cents, acompte_paid_at, customer_name")
+    .eq("id", id)
+    .maybeSingle();
+  if (!quote) return { ok: false as const, error: "Soirée introuvable." };
+
+  const notes = String(quote.notes ?? "");
+  const total = Number(quote.total_cents ?? 0);
+
+  // Solde actuellement affiché (mêmes règles que le tableau de bord), calculé
+  // AVANT suppression pour le figer ensuite.
+  const soldeFixe = /\[\[solde-montant:(\d+)\]\]/.exec(notes);
+  const acompteMarker = /\[\[acompte:(\d+)\]\]/.exec(notes);
+  const soldeActuel = soldeFixe
+    ? Number(soldeFixe[1])
+    : acompteMarker
+      ? Math.max(0, total - Number(acompteMarker[1]))
+      : notes.includes("[[facture-libre]]") || notes.includes("[[import-avant-site]]")
+        ? total
+        : Math.max(0, total - Math.floor((total * 0.8) / 10) * 10);
+
+  let newNotes = notes
+    .replace(/\[\[acompte:\d+\]\]\s*/g, "")
+    .replace(/\[\[acompte-net:\d+\]\]\s*/g, "")
+    .replace(/\[\[acompte-valide:[^\]]*\]\]\s*/g, "");
+  if (!newNotes.includes("[[solde-montant:")) {
+    newNotes = `[[solde-montant:${soldeActuel}]]\n${newNotes}`;
+  }
+
+  const { error } = await supabase
+    .from("quotes")
+    .update({ notes: newNotes, acompte_paid_at: null })
+    .eq("id", id);
+  if (error) {
+    console.error("Suppression acompte impossible", error);
+    return { ok: false as const, error: "Opération impossible." };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/devis");
+  return {
+    ok: true as const,
+    message: `Acompte supprimé pour « ${quote.customer_name} » — le solde reste à ${(soldeActuel / 100).toFixed(2)} € ✓`,
+  };
+}
+
 // Rattrapage : recalcule le NET (frais Stripe déduits) de tous les paiements
 // Stripe déjà reçus et pose les marqueurs [[acompte-net:]] /
 // [[echeance-net:n°:net]] dans les notes. Ne touche QUE les paiements passés

@@ -15,6 +15,7 @@ import { DashboardDetail } from "@/components/dashboard-detail";
 import { ValidateEcheanceButton } from "@/components/validate-echeance-button";
 import { ValidateAcompteButton } from "@/components/validate-acompte-button";
 import { BackfillStripeButton } from "@/components/backfill-stripe-button";
+import { SupprimerAcompteButton } from "@/components/supprimer-acompte-button";
 import { AdminStats } from "@/components/admin-stats";
 import { AdminPushButton } from "@/components/admin-push-button";
 
@@ -529,6 +530,7 @@ export default async function AdminDashboard({
                       <div className="flex items-center gap-3">
                         <span className="font-medium">{eur(acompteNetDe(q))}</span>
                         <ValidateAcompteButton id={q.id} customerName={q.customer_name ?? ""} validated={false} />
+                        <SupprimerAcompteButton id={q.id} customerName={q.customer_name ?? ""} />
                       </div>
                     </li>
                   ))}
@@ -567,6 +569,7 @@ export default async function AdminDashboard({
                         <div className="flex items-center gap-3">
                           <span className="font-medium">{eur(acompteNetDe(q))}</span>
                           <ValidateAcompteButton id={q.id} customerName={q.customer_name ?? ""} validated={true} />
+                          <SupprimerAcompteButton id={q.id} customerName={q.customer_name ?? ""} />
                         </div>
                       </li>
                     ))}
