@@ -147,6 +147,60 @@ const ARTICLES_4: { titre: string; paragraphes: string[] }[] = [
 ];
 
 const ALL_ARTICLES = [...ARTICLES, ...ARTICLES_2, ...ARTICLES_3, ...ARTICLES_4];
+
+// Variante des articles pour un devis SANS acompte : les clauses qui font
+// référence au premier versement sont reformulées (la signature suffit à
+// fixer la date, le règlement se fait au jour de la prestation).
+function articlesSansAcompte(
+  articles: { titre: string; paragraphes: string[] }[]
+): { titre: string; paragraphes: string[] }[] {
+  return articles.map((art) => {
+    if (art.titre.startsWith("Article 2")) {
+      return {
+        titre: art.titre,
+        paragraphes: art.paragraphes.map((p) =>
+          p.startsWith("• Un acompte précisé")
+            ? "• Aucun acompte n'est demandé pour ce devis : la date est fixée définitivement par la signature du contrat."
+            : p.startsWith("• Après déduction de l'acompte")
+              ? "• Le montant total devra être réglé au plus tard le jour du montage du matériel, sauf échéancier validé dans l'espace client."
+              : p
+        ),
+      };
+    }
+    if (art.titre.startsWith("Article 3")) {
+      return {
+        titre: art.titre,
+        paragraphes: art.paragraphes.map((p) =>
+          p.startsWith("Pour réserver la prestation")
+            ? "Pour réserver la prestation de DJ pour la date de son évènement, l'organisateur doit signer le présent contrat."
+            : p.startsWith("L'acompte versé à la signature")
+              ? "La signature du contrat vaut engagement ferme et définitif des deux parties. Aucune annulation ne pourra intervenir, sauf en cas de force majeure, tel que défini ci-après."
+              : p.startsWith("L'acompte est un premier versement")
+                ? "La signature du présent contrat implique une obligation pour Propul'Sound de fournir la prestation de services et une obligation d'achat pour le Client, sauf accord contraire entre les parties. Les deux parties sont engagées et peuvent être condamnées à payer des dommages-intérêts si l'une ou l'autre se rétracte."
+                : p
+        ),
+      };
+    }
+    return {
+      titre: art.titre,
+      paragraphes: art.paragraphes.map((p) =>
+        p
+          .replace(
+            "signé par les deux parties avec un acompte par chèque, virement bancaire ou espèce selon le montant précisé sur le devis associé à l'évènement",
+            "signé par les deux parties ; les modalités de règlement sont précisées sur le devis associé à l'évènement"
+          )
+          .replace(
+            "l'acompte sera intégralement restitué",
+            "aucun acompte n'ayant été demandé, aucun remboursement ne sera dû"
+          )
+          .replace(
+            "l'acompte et les éventuelles pénalités prévus seront restitués au Client",
+            "aucune pénalité ne restera due par le Client"
+          )
+      ),
+    };
+  });
+}
 // Détection du type d'évènement à partir du nom de la formule
 // (même logique que le devis).
 function eventKind(formulaName: string): string {
@@ -279,14 +333,17 @@ export async function buildContratPdf(
     y -= 14;
   }
   const total = (quote.total_cents ?? 0) / 100;
-  const acompteVal = total - Math.floor((total * 0.8) / 10) * 10;
-  if (y < 70) newPage();
-  t("Acompte (environ 20 %)", M + 10, y, 9, b, C.bleu);
-  t(fmt(acompteVal), right(fmt(acompteVal), W - M - 10, 9, b), y, 9, b, C.bleu);
-  y -= 24;
+  const acompteRequis = quote.acompte_required !== false;
+  if (acompteRequis) {
+    const acompteVal = total - Math.floor((total * 0.8) / 10) * 10;
+    if (y < 70) newPage();
+    t("Acompte (environ 20 %)", M + 10, y, 9, b, C.bleu);
+    t(fmt(acompteVal), right(fmt(acompteVal), W - M - 10, 9, b), y, 9, b, C.bleu);
+    y -= 24;
+  }
 
   // ============ ARTICLES ============
-  for (const art of ALL_ARTICLES) {
+  for (const art of acompteRequis ? ALL_ARTICLES : articlesSansAcompte(ALL_ARTICLES)) {
     section(art.titre);
     for (const p of art.paragraphes) para(p);
     y -= 4;

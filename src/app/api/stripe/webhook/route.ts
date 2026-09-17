@@ -134,6 +134,25 @@ export async function POST(request: Request) {
         return NextResponse.json({ received: true });
       }
 
+      // Solde réglé par carte (choix « payer ici » du client).
+      if (session.metadata?.payment_type === "solde") {
+        const { data: quote } = await supabase
+          .from("quotes")
+          .select("notes")
+          .eq("id", quoteId)
+          .single();
+        if (quote && !/\[\[solde-en-ligne:/.test(String(quote.notes ?? ""))) {
+          const net = await netEncaisse(stripe, session);
+          const today = new Date().toLocaleDateString("fr-CA");
+          let notes = String(quote.notes ?? "").replace(/\[\[solde-declare:[^\]]*\]\]\s*/g, "");
+          notes = `[[solde-en-ligne-net:${net}]]\n[[solde-en-ligne:${today}]]\n${notes}`;
+          await supabase.from("quotes").update({ notes }).eq("id", quoteId);
+          console.log(`[stripe-webhook] Solde enregistré pour le devis ${quoteId}`);
+          void notifyAdminAcompte(supabase, quoteId, true);
+        }
+        return NextResponse.json({ received: true });
+      }
+
       // Acompte classique.
       const { data: quote } = await supabase
         .from("quotes")
@@ -173,10 +192,12 @@ export async function POST(request: Request) {
   return NextResponse.json({ received: true });
 }
 
-// Notification admin : acompte réglé (push + e-mail) avec les infos du devis.
+// Notification admin : acompte ou solde réglé (push + e-mail) avec les infos
+// du devis.
 async function notifyAdminAcompte(
   supabase: ReturnType<typeof createAdminClient>,
-  quoteId: string
+  quoteId: string,
+  estSolde = false
 ) {
   try {
     const { data: quote } = await supabase
@@ -188,12 +209,20 @@ async function notifyAdminAcompte(
     const total = quote?.total_cents ? (quote.total_cents / 100).toFixed(2).replace(".", ",") + " €" : "?";
     const dateFr = quote?.event_date ?? "date ?";
     await notifyAdmin({
-      title: "💰 Acompte réglé — devis confirmé !",
-      body: `${name} — ${dateFr} : acompte reçu (total ${total}). La date est verrouillée.`,
-      url: `/admin/devis?focus=${quoteId}`,
+      title: estSolde
+        ? "💰 Solde réglé — compté dans l'URSSAF !"
+        : "💰 Acompte réglé — devis confirmé !",
+      body: estSolde
+        ? `${name} — ${dateFr} : solde reçu (${total} brut, net de frais Stripe). Compté automatiquement dans l'URSSAF.`
+        : `${name} — ${dateFr} : acompte reçu (total ${total}). La date est verrouillée.`,
+      url: `/admin?vue=urssaf`,
       email: {
-        subject: `💰 Acompte reçu — ${name} (${dateFr}) — devis confirmé`,
-        html: `<p><strong>${name}</strong> (soirée du <strong>${dateFr}</strong>, total <strong>${total}</strong>) vient de régler son <strong>acompte</strong> via Stripe.</p><p>✅ Le devis est désormais <strong>confirmé</strong> : la date est verrouillée.</p><p><a href="${SITE_URL}/admin/devis?focus=${quoteId}">Ouvrir le devis dans l'admin</a></p>`,
+        subject: estSolde
+          ? `💰 Solde reçu — ${name} (${dateFr})`
+          : `💰 Acompte reçu — ${name} (${dateFr}) — devis confirmé`,
+        html: estSolde
+          ? `<p><strong>${name}</strong> (soirée du <strong>${dateFr}</strong>) a réglé son <strong>solde</strong> par carte (${total} brut, net de frais Stripe).</p><p>✅ Il est compté automatiquement dans le <strong>CA URSSAF</strong> du mois de réception.</p><p><a href="${SITE_URL}/admin">Ouvrir le tableau de bord</a></p>`
+          : `<p><strong>${name}</strong> (soirée du <strong>${dateFr}</strong>, total <strong>${total}</strong>) vient de régler son <strong>acompte</strong> via Stripe.</p><p>✅ Le devis est désormais <strong>confirmé</strong> : la date est verrouillée.</p><p><a href="${SITE_URL}/admin/devis?focus=${quoteId}">Ouvrir le devis dans l'admin</a></p>`,
       },
     });
   } catch {

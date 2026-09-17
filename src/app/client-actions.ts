@@ -1285,7 +1285,19 @@ export async function signClientDocument(formData: FormData) {
   const allSigned =
     (toSignFiles ?? []).length > 0 &&
     (toSignFiles ?? []).every((f) => Boolean(f.signed_name));
-  if (allSigned) await advanceQuoteStatus(supabase, quoteId, "attente_acompte");
+  // Acompte demandé ? Sinon, la signature suffit : le devis passe directement
+  // en « confirmé » (date verrouillée sans premier versement).
+  const { data: acompteFlag } = allSigned
+    ? await supabase
+        .from("quotes")
+        .select("acompte_required")
+        .eq("id", quoteId)
+        .single()
+    : { data: null };
+  const acompteRequis = acompteFlag?.acompte_required !== false;
+  if (allSigned) {
+    await advanceQuoteStatus(supabase, quoteId, acompteRequis ? "attente_acompte" : "confirme");
+  }
 
   // E-mail de confirmation au client (best effort), uniquement si tout est signé.
   if (allSigned) try {
@@ -1306,26 +1318,49 @@ export async function signClientDocument(formData: FormData) {
           emoji: "✓",
           intro:
  "Bonjour,<br/><br/>Nous avons bien reçu votre signature : vos documents sont désormais <strong style=\"color:#219653;\">validés</strong> !<br/><br/>Votre <strong>playlist est débloquée</strong> dans votre espace client — à vous de nous faire vos propositions musicales !",
-          sections: [
-            stepsSection("attente_acompte"),
-            {
-              title: "Action à faire en priorité : l'acompte (20 %)",
-              lines: [
-                "Transmettez l'<strong>acompte de réservation</strong> (20 %) par virement, puis cliquez sur <strong>« ✓ J'ai envoyé l'acompte »</strong> dans votre espace : c'est <strong>ce qui verrouille définitivement votre date</strong>.",
-                "Ensuite, renseignez votre <strong>playlist</strong> (temps forts + piste de danse) — elle vous attend dans votre espace !",
+          sections: acompteRequis
+            ? [
+                stepsSection("attente_acompte"),
+                {
+                  title: "Action à faire en priorité : l'acompte (20 %)",
+                  lines: [
+                    "Transmettez l'<strong>acompte de réservation</strong> (20 %) par virement, puis cliquez sur <strong>« ✓ J'ai envoyé l'acompte »</strong> dans votre espace : c'est <strong>ce qui verrouille définitivement votre date</strong>.",
+                    "Ensuite, renseignez votre <strong>playlist</strong> (temps forts + piste de danse) — elle vous attend dans votre espace !",
+                  ],
+                },
+                {
+                  title: "Vos conseils de préparation",
+                  lines: [
+                    "Visez <strong>15 à 30 titres</strong> pour la piste de danse : c'est votre soirée, la playlist doit vous ressembler.",
+                    "Utilisez la <strong>blacklist</strong> : le titre que vous ne supportez plus n'y échappera pas.",
+                    "Le <strong>panneau « Timeline »</strong> dans votre espace : notez les horaires (cocktail, repas, dessert, ouverture de bal) et nous suivons ce déroulé à la lettre.",
+                    "Prévenez-nous des <strong>moments surprises</strong> (discours, jeux, karaoké) : nous préparons l'ambiance en conséquence.",
+                  ],
+                },
+              ]
+            : [
+                stepsSection("confirme"),
+                {
+                  title: "Aucun acompte à envoyer",
+                  lines: [
+                    "<strong>Bonne nouvelle : aucun acompte n'est demandé pour votre devis</strong> — votre date est d'ores et déjà <strong>verrouillée</strong>.",
+                    "Le règlement se fera plus tard (dans votre espace client, par carte ou virement, en une fois ou étalé), au plus tard le jour de la prestation.",
+                    "En attendant, renseignez votre <strong>playlist</strong> (temps forts + piste de danse) — elle vous attend dans votre espace !",
+                  ],
+                },
+                {
+                  title: "Vos conseils de préparation",
+                  lines: [
+                    "Visez <strong>15 à 30 titres</strong> pour la piste de danse : c'est votre soirée, la playlist doit vous ressembler.",
+                    "Utilisez la <strong>blacklist</strong> : le titre que vous ne supportez plus n'y échappera pas.",
+                    "Le <strong>panneau « Timeline »</strong> dans votre espace : notez les horaires (cocktail, repas, dessert, ouverture de bal) et nous suivons ce déroulé à la lettre.",
+                    "Prévenez-nous des <strong>moments surprises</strong> (discours, jeux, karaoké) : nous préparons l'ambiance en conséquence.",
+                  ],
+                },
               ],
-            },
-            {
-              title: "Vos conseils de préparation",
-              lines: [
-                "Visez <strong>15 à 30 titres</strong> pour la piste de danse : c'est votre soirée, la playlist doit vous ressembler.",
-                "Utilisez la <strong>blacklist</strong> : le titre que vous ne supportez plus n'y échappera pas.",
-                "Le <strong>panneau « Timeline »</strong> dans votre espace : notez les horaires (cocktail, repas, dessert, ouverture de bal) et nous suivons ce déroulé à la lettre.",
-                "Prévenez-nous des <strong>moments surprises</strong> (discours, jeux, karaoké) : nous préparons l'ambiance en conséquence.",
-              ],
-            },
-          ],
-          button: { label: "Régler mon acompte dans mon espace", href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}#acompte`)}` },
+          button: acompteRequis
+            ? { label: "Régler mon acompte dans mon espace", href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}#acompte`)}` }
+            : { label: "Ouvrir mon espace client", href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}`)}` },
         };
         await resend.emails.send({
           from: EMAIL_FROM,
@@ -1361,15 +1396,19 @@ export async function signClientDocument(formData: FormData) {
     const { notifyAdmin } = await import("@/lib/admin-notify");
     void notifyAdmin({
       title: allSigned ? "✍️ Tous les documents sont signés !" : "✍️ Signature reçue",
-      body: `${clientName} a signé ${docName}${allSigned ? " — dossier complet signé, acompte à venir." : ""}`,
+      body: `${clientName} a signé ${docName}${allSigned ? (acompteRequis ? " — dossier complet signé, acompte à venir." : " — dossier complet signé, devis confirmé (sans acompte).") : ""}`,
       url: `/admin/devis?focus=${quoteId}`,
       email: {
         subject: allSigned
-          ? `✍️ ${clientName} a signé devis + contrat — acompte à venir`
+          ? acompteRequis
+            ? `✍️ ${clientName} a signé devis + contrat — acompte à venir`
+            : `✍️ ${clientName} a signé devis + contrat — devis confirmé (sans acompte)`
           : `✍️ Signature reçue : ${docName} — ${clientName}`,
         html: `<p><strong>${clientName}</strong> a signé <strong>${docName}</strong>.</p>${
           allSigned
-            ? "<p>✅ <strong>Tous les documents à signer sont signés</strong> : le devis passe en « attente de l'acompte ». La date est quasi verrouillée — surveille l'acompte (20 %) pour confirmer définitivement.</p>"
+            ? acompteRequis
+              ? "<p>✅ <strong>Tous les documents à signer sont signés</strong> : le devis passe en « attente de l'acompte ». La date est quasi verrouillée — surveille l'acompte (20 %) pour confirmer définitivement.</p>"
+              : "<p>✅ <strong>Tous les documents à signer sont signés</strong> : le devis est directement <strong>confirmé</strong> (acompte non demandé) — la date est verrouillée.</p>"
             : "<p>⏳ Il reste des documents à signer dans ce dossier.</p>"
         }<p><a href="${SITE_URL}/admin/devis?focus=${quoteId}">Ouvrir le devis dans l'admin</a></p>`,
       },
@@ -1631,7 +1670,12 @@ export async function generateFactureDocument(formData: FormData) {
         try {
           return {
             ok: true as const,
-            bytes: await buildFacturePdf(quote as never, { invoiceNumber, adjustments }),
+            bytes: await buildFacturePdf(quote as never, {
+              invoiceNumber,
+              adjustments,
+              // Pas d'acompte pour ce devis ? Le total est directement à régler.
+              hideAcompte: quote.acompte_required === false,
+            }),
           };
         } catch (e) {
           console.error("Génération facture impossible", e);
@@ -2290,7 +2334,7 @@ export async function startAcompteCheckout(formData: FormData) {
   const supabase = createAdminClient();
   const { data: quoteRow } = await supabase
     .from("quotes")
-    .select("customer_email, total_cents, status, acompte_paid_at, event_date, customer_name")
+    .select("customer_email, total_cents, status, acompte_paid_at, acompte_required, event_date, customer_name")
     .eq("id", quoteId)
     .single();
   const quote = quoteRow ?? null;
@@ -2299,6 +2343,7 @@ export async function startAcompteCheckout(formData: FormData) {
     !quote ||
     quote.customer_email?.toLowerCase() !== email.toLowerCase() ||
     quote.acompte_paid_at ||
+    quote.acompte_required === false ||
     (quote.status !== "attente_acompte" && quote.status !== "confirme")
   ) {
     redirect(`/mon-espace/devis/${quoteId}?paiement=indisponible`);
@@ -2460,7 +2505,380 @@ export async function verifyStripeEcheance(
   }
 }
 
-// Sauvegarde les ajustements de facture (lignes ajoutées/retirées par l'admin).
+// ---------- Solde : sur place ou réglé en ligne ----------
+
+// Solde restant d'un devis (mêmes règles que le tableau de bord : marqueurs
+// [[acompte:]], [[solde-montant:]], flag acompte_required).
+function soldeRestantDe(quote: {
+  total_cents?: number | null;
+  notes?: string | null;
+  acompte_paid_at?: string | null;
+  acompte_required?: boolean | null;
+}): number {
+  const notes = String(quote.notes ?? "");
+  const fixe = /\[\[solde-montant:(\d+)\]\]/.exec(notes);
+  if (fixe) return Number(fixe[1]);
+  const total = Number(quote.total_cents ?? 0);
+  const marker = /\[\[acompte:(\d+)\]\]/.exec(notes);
+  if (marker) return Math.max(0, total - Number(marker[1]));
+  if (
+    notes.includes("[[facture-libre]]") ||
+    notes.includes("[[import-avant-site]]") ||
+    quote.acompte_required === false ||
+    !quote.acompte_paid_at
+  ) {
+    return total;
+  }
+  return Math.max(0, total - Math.floor((total * 0.008) / 10) * 1000);
+}
+
+// Le client choisit de régler le solde SUR PLACE le jour de la soirée
+// (espèces, chèque ou virement). Le solde restera à encaisser manuellement :
+// l'admin le validera après la soirée (bouton « Valider le solde »).
+export async function chooseSoldeSurPlace(formData: FormData) {
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const modeRaw = String(formData.get("mode") ?? "");
+  const modes: Record<string, string> = {
+    especes: "en espèces",
+    cheque: "par chèque",
+    virement: "par virement",
+  };
+  if (!quoteId || !(modeRaw in modes)) {
+    return { ok: false as const, error: "Choix invalide." };
+  }
+  const { user, quote } = await getOwnedQuote(quoteId);
+  if (!user || !quote) return { ok: false as const, error: "Devis introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: sched } = await supabase
+    .from("payment_schedule")
+    .select("id, status")
+    .eq("quote_id", quoteId)
+    .limit(1);
+  const solde = soldeRestantDe(quote);
+  if (
+    (sched ?? []).some((s) => s.status === "a_payer") ||
+    /\[\[solde-en-ligne:/.test(String(quote.notes ?? ""))
+  ) {
+    return {
+      ok: false as const,
+      error: "Le solde est déjà géré autrement (échéancier ou paiement en ligne).",
+    };
+  }
+  if (solde <= 0) return { ok: false as const, error: "Il n'y a plus de solde à régler." };
+
+  let notes = String(quote.notes ?? "").replace(/\[\[solde-sur-place:[a-z]+\]\]\s*/g, "");
+  notes = `[[solde-sur-place:${modeRaw}]]\n${notes}`;
+  const { error } = await supabase.from("quotes").update({ notes }).eq("id", quoteId);
+  if (error) return { ok: false as const, error: "Enregistrement impossible." };
+
+  // Notification admin (push + e-mail) : le client paiera sur place.
+  try {
+    const dateFr = quote.event_date ?? "date à définir";
+    const { notifyAdmin } = await import("@/lib/admin-notify");
+    void notifyAdmin({
+      title: "💵 Solde à encaisser sur place",
+      body: `${quote.customer_name} paiera le solde ${modes[modeRaw]} le jour de la soirée (${dateFr}).`,
+      url: `/admin/devis?focus=${quoteId}`,
+      email: {
+        subject: `💵 Solde sur place — ${quote.customer_name} (${dateFr})`,
+        html: `<p><strong>${quote.customer_name}</strong> (soirée du <strong>${dateFr}</strong>) choisit de régler le solde <strong>${modes[modeRaw]}</strong> le jour de la prestation.</p><p>💡 Pense à valider le solde dans le tableau de bord après la soirée pour le compter dans l'URSSAF.</p><p><a href="${SITE_URL}/admin/devis?focus=${quoteId}">Ouvrir le devis dans l'admin</a></p>`,
+      },
+    });
+  } catch {
+    // best effort
+  }
+
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  revalidatePath("/admin/devis");
+  return {
+    ok: true as const,
+    message: `Noté : tu règleras le solde ${modes[modeRaw]} le jour de la soirée ✓`,
+  };
+}
+
+// Le client change d'avis : il réglera le solde ici (carte ou virement).
+export async function chooseSoldeEnLigne(formData: FormData) {
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+  const { user, quote } = await getOwnedQuote(quoteId);
+  if (!user || !quote) return { ok: false as const, error: "Devis introuvable." };
+
+  const supabase = createAdminClient();
+  const notes = String(quote.notes ?? "").replace(/\[\[solde-sur-place:[a-z]+\]\]\s*/g, "");
+  const { error } = await supabase.from("quotes").update({ notes }).eq("id", quoteId);
+  if (error) return { ok: false as const, error: "Enregistrement impossible." };
+
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  revalidatePath("/admin/devis");
+  return { ok: true as const, message: "Bien noté — tu pourras régler le solde ici ✓" };
+}
+
+// Le client déclare avoir envoyé le SOLDE par virement (paiement ici).
+// L'admin confirme à réception → le solde part dans le CA URSSAF du mois.
+export async function declareSoldeSent(formData: FormData) {
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+  const { user, quote } = await getOwnedQuote(quoteId);
+  if (!user || !quote) return { ok: false as const, error: "Devis introuvable." };
+
+  const notes = String(quote.notes ?? "");
+  if (/\[\[solde-en-ligne:/.test(notes)) {
+    return { ok: true as const, message: "Solde déjà réglé ✓" };
+  }
+  if (/\[\[solde-declare:/.test(notes)) {
+    return { ok: true as const, message: "Déclaration déjà envoyée ✓" };
+  }
+
+  const supabase = createAdminClient();
+  const newNotes = `[[solde-declare:${new Date().toLocaleDateString("fr-CA")}]]\n${notes}`;
+  const { error } = await supabase.from("quotes").update({ notes: newNotes }).eq("id", quoteId);
+  if (error) return { ok: false as const, error: "Enregistrement impossible." };
+
+  // Notification admin : le client dit avoir envoyé le solde.
+  try {
+    const dateFr = quote.event_date ?? "date à définir";
+    const solde = soldeRestantDe(quote);
+    const { notifyAdmin } = await import("@/lib/admin-notify");
+    void notifyAdmin({
+      title: "🏦 Solde envoyé par le client (virement)",
+      body: `${quote.customer_name} déclare avoir envoyé le solde (${(solde / 100).toFixed(2).replace(".", ",")} €) — à confirmer à réception.`,
+      url: `/admin?vue=solde`,
+      email: {
+        subject: `🏦 Solde envoyé — ${quote.customer_name} (${dateFr}) — à confirmer`,
+        html: `<p><strong>${quote.customer_name}</strong> (soirée du <strong>${dateFr}</strong>) déclare avoir envoyé le <strong>solde</strong> par virement (${(solde / 100).toFixed(2).replace(".", ",")} €).</p><p>➡️ Vérifie ton compte, puis confirme dans le tableau de bord (« Paiements reçus à confirmer ») pour le compter dans l'URSSAF.</p><p><a href="${SITE_URL}/admin?vue=solde">Ouvrir le tableau de bord</a></p>`,
+      },
+    });
+  } catch (err) {
+    console.error("[solde] Echec notification admin:", err);
+  }
+
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  revalidatePath("/admin");
+  console.log(`[solde] Le client a déclaré avoir envoyé le solde du devis ${quoteId}`);
+  return { ok: true as const, message: "Merci ! En attente de réception du virement ✓" };
+}
+
+// L'admin confirme la réception du solde (virement déclaré ou reçu à la main).
+// Pose [[solde-en-ligne:date]] + [[solde-en-ligne-net:centimes]] : le solde
+// part AUTOMATIQUEMENT dans le CA URSSAF du mois de réception.
+export async function confirmSoldeReceived(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+  const quoteId = String(formData.get("id") ?? "").trim();
+  if (!quoteId) return { ok: false as const, error: "Soirée introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("notes, total_cents, acompte_paid_at, acompte_required, customer_name")
+    .eq("id", quoteId)
+    .maybeSingle();
+  if (!quote) return { ok: false as const, error: "Soirée introuvable." };
+
+  const notes = String(quote.notes ?? "");
+  if (/\[\[solde-en-ligne:/.test(notes)) {
+    return { ok: true as const, message: "Solde déjà compté ✓" };
+  }
+  const solde = soldeRestantDe(quote);
+  const today = new Date().toLocaleDateString("fr-CA");
+  let newNotes = notes.replace(/\[\[solde-declare:[^\]]*\]\]\s*/g, "");
+  newNotes = `[[solde-en-ligne-net:${solde}]]\n[[solde-en-ligne:${today}]]\n${newNotes}`;
+
+  const { error } = await supabase.from("quotes").update({ notes: newNotes }).eq("id", quoteId);
+  if (error) return { ok: false as const, error: "Opération impossible." };
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/devis");
+  return {
+    ok: true as const,
+    message: `Solde reçu pour « ${quote.customer_name} » — compté dans l'URSSAF ✓`,
+  };
+}
+
+// Checkout Stripe pour régler le SOLDE par carte (metadata payment_type=solde).
+export async function startSoldeCheckout(formData: FormData) {
+  const { getStripe } = await import("@/lib/stripe");
+  const { createAuthClient: createAuth } = await import("@/lib/supabase/server");
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) redirect("/mon-espace");
+  const auth = await createAuth();
+  const {
+    data: { user },
+  } = await auth.auth.getUser();
+  const email = user?.email ?? "";
+  if (!email) redirect("/connexion");
+
+  const stripe = getStripe();
+  if (!stripe) redirect(`/mon-espace/devis/${quoteId}?paiement=indisponible`);
+
+  const supabase = createAdminClient();
+  const { data: quoteRow } = await supabase
+    .from("quotes")
+    .select("customer_email, total_cents, status, notes, acompte_paid_at, acompte_required, event_date, customer_name")
+    .eq("id", quoteId)
+    .single();
+  const quote = quoteRow ?? null;
+
+  if (
+    !quote ||
+    quote.customer_email?.toLowerCase() !== email.toLowerCase() ||
+    /\[\[solde-en-ligne:/.test(String(quote.notes ?? "")) ||
+    (quote.status !== "attente_acompte" && quote.status !== "confirme")
+  ) {
+    redirect(`/mon-espace/devis/${quoteId}?paiement=indisponible`);
+  }
+
+  // Pas de solde payable ici si un échéancier est en cours (il le couvre).
+  const { data: sched } = await supabase
+    .from("payment_schedule")
+    .select("id, status")
+    .eq("quote_id", quoteId)
+    .limit(1);
+  if ((sched ?? []).some((s) => s.status === "a_payer")) {
+    redirect(`/mon-espace/devis/${quoteId}?paiement=indisponible`);
+  }
+
+  const amount = soldeRestantDe(quote);
+  if (amount <= 0) redirect(`/mon-espace/devis/${quoteId}?paiement=indisponible`);
+
+  const h = await headers();
+  const origin =
+    process.env.NEXT_PUBLIC_SITE_URL ?? h.get("origin") ?? "http://localhost:3000";
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    customer_email: email,
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: "eur",
+          unit_amount: amount,
+          product_data: {
+            name: `Solde — prestation DJ`,
+            description: `${quote.customer_name ?? ""} — événement du ${quote.event_date ?? "date à définir"}`,
+          },
+        },
+      },
+    ],
+    metadata: { quote_id: quoteId, payment_type: "solde" },
+    success_url: `${origin}/mon-espace/devis/${quoteId}?paiement=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/mon-espace/devis/${quoteId}#paiement`,
+  });
+
+  if (session.url) redirect(session.url);
+  redirect(`/mon-espace/devis/${quoteId}?paiement=erreur`);
+}
+
+// Notification admin : solde réglé en ligne (webhook carte, retour Stripe ou
+// virement confirmé).
+async function notifySoldeRecu(
+  supabase: ReturnType<typeof createAdminClient>,
+  quoteId: string,
+  source: string
+) {
+  try {
+    const { data: quote } = await supabase
+      .from("quotes")
+      .select("customer_name, total_cents, event_date, notes")
+      .eq("id", quoteId)
+      .single();
+    const name = quote?.customer_name ?? "Le client";
+    const net = /\[\[solde-en-ligne-net:(\d+)\]\]/.exec(String(quote?.notes ?? ""));
+    const montant = net ? (Number(net[1]) / 100).toFixed(2).replace(".", ",") + " €" : "?";
+    const dateFr = quote?.event_date ?? "date ?";
+    const { notifyAdmin } = await import("@/lib/admin-notify");
+    void notifyAdmin({
+      title: "💰 Solde réglé — compté dans l'URSSAF !",
+      body: `${name} — ${dateFr} : solde reçu ${source}, net ${montant}.`,
+      url: `/admin?vue=urssaf`,
+      email: {
+        subject: `💰 Solde reçu — ${name} (${dateFr})`,
+        html: `<p><strong>${name}</strong> (soirée du <strong>${dateFr}</strong>) a réglé son <strong>solde</strong> ${source} — net ${montant}.</p><p>✅ Il est compté automatiquement dans le <strong>CA URSSAF</strong> du mois de réception.</p><p><a href="${SITE_URL}/admin">Ouvrir le tableau de bord</a></p>`,
+      },
+    });
+  } catch {
+    // best effort
+  }
+}
+
+// Marque le solde comme reçu (marqueurs URSSAF) — partagé par le webhook
+// Stripe (carte), le retour de paiement et la confirmation du virement.
+async function marquerSoldeRecu(
+  supabase: ReturnType<typeof createAdminClient>,
+  quoteId: string,
+  net: number,
+  source: string
+): Promise<boolean> {
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("notes")
+    .eq("id", quoteId)
+    .single();
+  if (!quote) return false;
+  const notes = String(quote.notes ?? "");
+  if (/\[\[solde-en-ligne:/.test(notes)) return true; // idempotent
+
+  const today = new Date().toLocaleDateString("fr-CA");
+  let newNotes = notes.replace(/\[\[solde-declare:[^\]]*\]\]\s*/g, "");
+  newNotes = `[[solde-en-ligne-net:${net}]]\n[[solde-en-ligne:${today}]]\n${newNotes}`;
+  const { error } = await supabase.from("quotes").update({ notes: newNotes }).eq("id", quoteId);
+  if (error) return false;
+  void notifySoldeRecu(supabase, quoteId, source);
+  return true;
+}
+
+// Au retour de Stripe pour le SOLDE : vérifie la session et marque le solde
+// reçu si le paiement est confirmé (compte immédiat, même si le webhook tarde).
+export async function verifyStripeSolde(quoteId: string, sessionId: string): Promise<boolean> {
+  const { getStripe } = await import("@/lib/stripe");
+  const stripe = getStripe();
+  if (!stripe || !quoteId || !sessionId) return false;
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (
+      session.payment_status !== "paid" ||
+      session.metadata?.quote_id !== quoteId ||
+      session.metadata?.payment_type !== "solde" ||
+      !session.amount_total
+    ) {
+      return false;
+    }
+    const supabase = createAdminClient();
+    const { data: quote } = await supabase
+      .from("quotes")
+      .select("notes")
+      .eq("id", quoteId)
+      .single();
+    if (!quote) return false;
+    if (/\[\[solde-en-ligne:/.test(String(quote.notes ?? ""))) return true;
+
+    // Net encaissé : frais Stripe réels si disponibles, sinon estimation
+    // standard (carte européenne : 1,5 % + 0,25 €) — comme le webhook.
+    let net = session.amount_total - Math.round(session.amount_total * 0.015 + 25);
+    try {
+      const pi = await stripe.paymentIntents.retrieve(session.payment_intent as string, {
+        expand: ["latest_charge.balance_transaction"],
+      });
+      const charge = pi.latest_charge as
+        | { balance_transaction?: { fee?: number; status?: string } | null }
+        | null;
+      const bt = charge?.balance_transaction;
+      if (bt && typeof bt.fee === "number" && bt.status !== "pending") {
+        net = session.amount_total - bt.fee;
+      }
+    } catch {
+      // estimation conservée
+    }
+    const ok = await marquerSoldeRecu(supabase, quoteId, net, "par carte");
+    revalidatePath(`/mon-espace/devis/${quoteId}`);
+    revalidatePath("/admin");
+    return ok;
+  } catch {
+    return false;
+  }
+}
 export async function saveInvoiceAdjustments(adjustments: { label: string; amount: string }[], quoteId: string) {
   const { isAdmin } = await import("@/lib/admin-auth");
   if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
@@ -2793,7 +3211,7 @@ export async function creerEcheancier(formData: FormData) {
   const supabase = createAdminClient();
   const { data: quote } = await supabase
     .from("quotes")
-    .select("total_cents, event_date, acompte_paid_at")
+    .select("total_cents, event_date, acompte_paid_at, acompte_required")
     .eq("id", quoteId)
     .maybeSingle();
   if (!quote) return { ok: false as const, error: "Devis introuvable." };
@@ -2840,9 +3258,11 @@ export async function creerEcheancier(formData: FormData) {
   }
 
   // Montant de l'acompte (20 % du total, même règle que le devis PDF :
-  // le solde est arrondi à la dizaine inférieure).
+  // le solde est arrondi à la dizaine inférieure). Aucun acompte quand
+  // l'admin l'a désactivé pour ce devis.
   const soldeStandard = Math.floor((total_cents * 0.008) / 10) * 1000;
-  const acompte = Math.max(0, total_cents - soldeStandard);
+  const acompte =
+    quote.acompte_required === false ? 0 : Math.max(0, total_cents - soldeStandard);
 
   // Planchers revalidés avec le vrai total : le format demandé doit faire
   // partie des niveaux disponibles (150 € min/échéance, x4+ dès 1 000 €).
@@ -2915,7 +3335,9 @@ export async function creerEcheancier(formData: FormData) {
     ok: true as const,
     message: acompteDejaPaye
       ? `Échéancier du solde créé : ${nombre} × ${eur(firstAmount)}`
-      : `Échéancier créé : ${eur(firstAmount)} (acompte) puis ${nombre - 1} × ${eur(restAmount)}`,
+      : acompte === 0
+        ? `Échéancier créé : ${nombre} × ${eur(firstAmount)}`
+        : `Échéancier créé : ${eur(firstAmount)} (acompte) puis ${nombre - 1} × ${eur(restAmount)}`,
   };
 }
 

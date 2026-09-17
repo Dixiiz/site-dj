@@ -328,6 +328,20 @@ export function AdminQuoteCreateForm() {
           <input name="notes" className={input} placeholder="Ex : négocié à X €, options offertes…" />
         </div>
       </div>
+      <label className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2 text-sm">
+        <input
+          type="checkbox"
+          name="acompte_required"
+          defaultChecked
+          className="size-4 accent-[#21619A]"
+        />
+        <span>
+          Acompte de réservation demandé (20 % du total)
+          <span className="ml-1 text-xs text-muted-foreground">
+            — décoche pour une soirée sans acompte
+          </span>
+        </span>
+      </label>
       {error ? (
         <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>
       ) : null}

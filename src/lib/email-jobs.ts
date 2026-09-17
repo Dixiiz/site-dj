@@ -118,11 +118,13 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
 
   const { data: awaitingDeposit } = await supabase
     .from("quotes")
-    .select("id, customer_name, customer_email, event_date, notes")
+    .select("id, customer_name, customer_email, event_date, notes, acompte_required")
     .eq("status", "attente_acompte")
     .limit(50);
 
   for (const q of awaitingDeposit ?? []) {
+    // Devis sans acompte : aucune relance (l'admin l'a désactivé).
+    if (q.acompte_required === false) continue;
     if ((q.notes ?? "").includes(MARK_ACOMPTE)) continue;
     if (isImport(q.notes)) continue;
     if (!q.customer_email) continue;

@@ -24,6 +24,7 @@ type Quote = {
   extra_fee_label?: string | null;
   total_cents: number | null;
   status: string;
+  acompte_required?: boolean | null;
 };
 
 const euros = (cents: number | null) =>
@@ -359,6 +360,20 @@ export function AdminQuoteEdit({
           <option value="annule">Annulé</option>
         </select>
       </div>
+      <label className="flex items-center gap-2.5 rounded-lg border border-border px-3 py-2 text-sm">
+        <input
+          type="checkbox"
+          name="acompte_required"
+          defaultChecked={quote.acompte_required !== false}
+          className="size-4 accent-[#21619A]"
+        />
+        <span>
+          Acompte de réservation demandé (20 % du total)
+          <span className="ml-1 text-xs text-muted-foreground">
+            — décoche pour une soirée sans acompte (confirmée dès la signature)
+          </span>
+        </span>
+      </label>
       <input type="hidden" name="options_raw" value={selectedOptions.map((o) => `${o.name} | ${(o.price / 100).toFixed(2).replace(".", ",")}`).join("\n")} />
       <input type="hidden" name="total" value={(total / 100).toFixed(2).replace(".", ",")} />
       <div className="flex gap-2">

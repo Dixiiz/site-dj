@@ -14,6 +14,7 @@ import {
 import { DashboardDetail } from "@/components/dashboard-detail";
 import { ValidateEcheanceButton } from "@/components/validate-echeance-button";
 import { ValidateAcompteButton } from "@/components/validate-acompte-button";
+import { ConfirmSoldeButton } from "@/components/confirm-solde-button";
 import { BackfillStripeButton } from "@/components/backfill-stripe-button";
 import { SupprimerAcompteButton } from "@/components/supprimer-acompte-button";
 import { AdminStats } from "@/components/admin-stats";
@@ -50,7 +51,7 @@ export default async function AdminDashboard({
   const [confirmedRes, devisAttenteRes, devisRecentsRes, facturesRes, echeanciersRes, allQuotesRes] = await Promise.all([
     supabase
       .from("quotes")
-      .select("id, customer_name, formula_name, total_cents, event_date, event_location, status, created_at, notes, acompte_paid_at")
+      .select("id, customer_name, formula_name, total_cents, event_date, event_location, status, created_at, notes, acompte_paid_at, acompte_required")
       .eq("status", "confirme")
       .order("event_date", { ascending: true }),
     supabase
@@ -136,7 +137,7 @@ export default async function AdminDashboard({
   const upcoming = allConfirmed.filter((q) => (q.event_date ?? "") >= todayIso);
 
   // ---- Chiffres clés ----
-  const soldeDe = (q: { total_cents: unknown; notes?: unknown }) => {
+  const soldeDe = (q: { total_cents: unknown; notes?: unknown; acompte_required?: unknown }) => {
     const notes = String(q.notes ?? "");
     const total = montant(q);
     // Solde FIGÉ : [[solde-montant:centimes]] = montant réellement reçu comme
@@ -152,6 +153,8 @@ export default async function AdminDashboard({
     // règle standard du devis PDF (solde arrondi à la dizaine inférieure).
     if (notes.includes("[[facture-libre]]")) return total;
     if (notes.includes("[[import-avant-site]]")) return total;
+    // Devis sans acompte : tout le montant est le solde.
+    if (q.acompte_required === false) return total;
     return Math.max(0, total - Math.floor((total * 0.8) / 10) * 10);
   };
   // Solde validé = le DJ a confirmé avoir reçu le solde après la soirée
@@ -159,13 +162,35 @@ export default async function AdminDashboard({
   const soldeValide = (q: { notes: unknown }) =>
     (String(q.notes ?? "")).includes("[[solde-valide:");
 
+  // Solde réglé EN LIGNE par le client (carte via Stripe, ou virement
+  // confirmé) : marqueurs [[solde-en-ligne:date]] + [[solde-en-ligne-net:]].
+  // Compté AUTOMATIQUEMENT dans le CA URSSAF du mois de réception.
+  const soldeEnLigneDe = (q: { notes?: unknown }) =>
+    /\[\[solde-en-ligne:(\d{4}-\d{2}-\d{2})\]\]/.exec(String(q.notes ?? ""))?.[1] ?? null;
+  const soldeEnLigneNetDe = (q: {
+    notes?: unknown;
+    total_cents: unknown;
+    acompte_required?: unknown;
+  }) => {
+    const net = /\[\[solde-en-ligne-net:(\d+)\]\]/.exec(String(q.notes ?? ""));
+    return net ? Number(net[1]) : soldeDe(q);
+  };
+  // Le client a choisi de payer le solde sur place le jour J.
+  const soldeSurPlaceDe = (q: { notes?: unknown }) =>
+    /\[\[solde-sur-place:([a-z]+)\]\]/.exec(String(q.notes ?? ""))?.[1] ?? null;
+  // Le client a déclaré avoir envoyé le solde par virement (à confirmer).
+  const soldeDeclareDe = (q: { notes?: unknown }) =>
+    /\[\[solde-declare:(\d{4}-\d{2}-\d{2})\]\]/.exec(String(q.notes ?? ""))?.[1] ?? null;
+
   // Acompte reçu pour un devis SANS échéancier : marqueur [[acompte:centimes]]
   // (posé par le webhook Stripe avec le montant réel, ou renseigné à la main
   // dans /admin/import), sinon acompte standard du devis (règle du PDF :
   // 20 %, solde arrondi au multiple de 10 inférieur).
-  const acompteDe = (q: { total_cents: unknown; notes?: unknown }) => {
+  const acompteDe = (q: { total_cents: unknown; notes?: unknown; acompte_required?: unknown }) => {
     const marker = /\[\[acompte:(\d+)\]\]/.exec(String(q.notes ?? ""));
     if (marker) return Number(marker[1]);
+    // Devis sans acompte : rien n'est attendu ni compté.
+    if (q.acompte_required === false) return 0;
     return montant(q) - Math.floor((montant(q) * 0.8) / 10) * 10;
   };
   // Base URSSAF = NET réellement encaissé : frais Stripe déduits via le
@@ -206,6 +231,20 @@ export default async function AdminDashboard({
   const urssafAcomptes = acomptesValides
     .filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix))
     .reduce((sum, q) => sum + acompteNetDe(q), 0);
+  // Soldes réglés EN LIGNE (carte Stripe ou virement confirmé) : comptés
+  // AUTOMATIQUEMENT dans l'URSSAF du mois de réception — aucune validation
+  // manuelle nécessaire.
+  const urssafSoldesEnLigne = allConfirmed
+    .filter((q) => {
+      const d = soldeEnLigneDe(q);
+      return d && d.startsWith(monthPrefix) && !echeancierQuoteIds.has(q.id);
+    })
+    .reduce((sum, q) => sum + soldeEnLigneNetDe(q), 0);
+  // Soldes envoyés par virement et déclarés par le client : à confirmer à
+  // réception (bouton « Reçu — compter dans l'URSSAF » du panneau Paiements).
+  const soldesDeclaresAConfirmer = allConfirmed.filter(
+    (q) => soldeDeclareDe(q) && !soldeEnLigneDe(q) && !echeancierQuoteIds.has(q.id)
+  );
   // CA URSSAF du mois inclut aussi les échéances d'échéancier confirmées
   // (attribuées au mois de leur date limite) — en NET de frais Stripe.
   const urssafEcheances = echeancesValidees
@@ -224,12 +263,12 @@ export default async function AdminDashboard({
   const ceMoisJouees = allConfirmed.filter(
     (q) => (q.event_date ?? "").startsWith(monthPrefix) && (q.event_date ?? "") <= todayIso
   );
-  const encaisse = ceMoisJouees.filter((q) => soldeValide(q));
+  const encaisse = ceMoisJouees.filter((q) => soldeValide(q) && !soldeEnLigneDe(q));
   const caMoisQuotes = encaisse.reduce((sum, q) => sum + soldeDe(q), 0);
-  const attenteValidation = ceMoisJouees.filter((q) => !soldeValide(q));
+  const attenteValidation = ceMoisJouees.filter((q) => !soldeValide(q) && !soldeEnLigneDe(q));
   // Le CA URSSAF du mois inclut aussi les échéances d'échéancier confirmées
   // (attribuées au mois de leur date limite).
-  const caMois = caMoisQuotes + urssafEcheances + urssafAcomptes;
+  const caMois = caMoisQuotes + urssafEcheances + urssafAcomptes + urssafSoldesEnLigne;
 
   // CA à venir : confirmé, pas encore joué.
   const caAVenir = upcoming.reduce((sum, q) => sum + montant(q), 0);
@@ -245,7 +284,11 @@ export default async function AdminDashboard({
         !soldeValide(q) &&
         !echeancierQuoteIds.has(q.id)
     );
-  const soldeAValiderToutes = aValiderToutes.reduce((sum, q) => sum + soldeDe(q), 0);
+  // Soldes réglés en ligne : déjà comptés automatiquement dans l'URSSAF
+  // (bucket urssafSoldesEnLigne) — ils restent listés pour mémoire/avis mais
+  // ne sont plus « à encaisser ».
+  const soldesAEncaisser = aValiderToutes.filter((q) => !soldeEnLigneDe(q));
+  const soldeAValiderToutes = soldesAEncaisser.reduce((sum, q) => sum + soldeDe(q), 0);
 
   const prochaines = upcoming.slice(0, 5);
   const aujourdhui = now.toLocaleDateString("fr-FR", {
@@ -326,6 +369,19 @@ export default async function AdminDashboard({
           afficheCents: soldeDe(q),
           type: "solde" as const,
         })),
+        // Soldes réglés EN LIGNE ce mois (carte ou virement confirmé) :
+        // comptés automatiquement, base nette de frais Stripe.
+        ...allConfirmed
+          .filter((q) => {
+            const d = soldeEnLigneDe(q);
+            return d && d.startsWith(monthPrefix) && !echeancierQuoteIds.has(q.id);
+          })
+          .map((q) => ({
+            ...mapDetailRow(q),
+            afficheCents: soldeEnLigneNetDe(q),
+            type: "solde" as const,
+            soldeEnLigneLe: soldeEnLigneDe(q),
+          })),
         // Acomptes reçus ce mois et validés URSSAF (base nette).
         ...acomptesValides
           .filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix))
@@ -361,7 +417,15 @@ export default async function AdminDashboard({
     },
     solde: {
       titre: "Soldes à valider — soirées terminées, solde non confirmé",
-      rows: aValiderToutes.map(mapDetailRow),
+      rows: aValiderToutes.map((q) => ({
+        ...mapDetailRow(q),
+        afficheCents: soldeDe(q),
+        soldeEnLigneLe: soldeEnLigneDe(q),
+        soldeSurPlaceMode: soldeSurPlaceDe(q),
+        soldeDeclareLe: soldeDeclareDe(q),
+        // Déjà compté automatiquement (réglé en ligne) : hors total du panneau.
+        horsTotal: Boolean(soldeEnLigneDe(q)),
+      })),
       solde: true,
     },
     "ca-avenir": {
@@ -422,7 +486,7 @@ export default async function AdminDashboard({
         ]}
         cards2={[
           { vue: "echeanciers", label: "Échéances en cours", value: String(echeancesDuMois.length), hint: "échéance(s) à recevoir ce mois-ci — clic pour le détail" },
-          { vue: "solde", label: "Soldes à valider", value: eur(soldeAValiderToutes + echeancesAConfirmer.reduce((s, e) => s + netEcheance(e.quoteId, e.numero, e.amountCents), 0) + acomptesAValider.reduce((s, q) => s + acompteNetDe(q), 0)), hint: `${aValiderToutes.length} solde(s) + ${echeancesAConfirmer.length} échéance(s) + ${acomptesAValider.length} acompte(s) — valider pour compter dans l'URSSAF` },
+          { vue: "solde", label: "Soldes à valider", value: eur(soldeAValiderToutes + soldesDeclaresAConfirmer.reduce((s, q) => s + soldeDe(q), 0) + echeancesAConfirmer.reduce((s, e) => s + netEcheance(e.quoteId, e.numero, e.amountCents), 0) + acomptesAValider.reduce((s, q) => s + acompteNetDe(q), 0)), hint: `${soldesAEncaisser.length + soldesDeclaresAConfirmer.length} solde(s) + ${echeancesAConfirmer.length} échéance(s) + ${acomptesAValider.length} acompte(s) — valider pour compter dans l'URSSAF (soldes réglés en ligne : comptés automatiquement)` },
           { vue: "ca-avenir", label: "CA à venir (déjà signé)", value: eur(caAVenir), hint: `${upcoming.length} soirée(s) confirmée(s) restante(s)` },
           { vue: "devis", href: "/admin/devis", label: "Devis en attente", value: String(devisAttente ?? 0), hint: "à relancer ou traiter" },
         ]}
@@ -581,6 +645,44 @@ export default async function AdminDashboard({
                         </div>
                       </li>
                     ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {/* Soldes envoyés par virement (déclarés par le client) : à
+                confirmer à réception — comptés ensuite automatiquement dans
+                l'URSSAF du mois. */}
+            {soldesDeclaresAConfirmer.length > 0 ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Soldes envoyés par virement — à confirmer
+                </p>
+                <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+                  {soldesDeclaresAConfirmer.map((q) => (
+                    <li key={q.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+                      <div className="min-w-0">
+                        <Link
+                          href={`/admin/devis?focus=${q.id}`}
+                          className="font-medium transition-colors hover:text-accent hover:underline"
+                          title="Ouvrir ce devis dans la liste"
+                        >
+                          {q.customer_name}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">
+                          Solde déclaré le{" "}
+                          {soldeDeclareDe(q)
+                            ? new Date(`${soldeDeclareDe(q)}T12:00:00`).toLocaleDateString("fr-FR")
+                            : "?"}
+                          {" · "}soirée le{" "}
+                          {q.event_date ? new Date(`${q.event_date}T12:00:00`).toLocaleDateString("fr-FR") : "?"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium">{eur(soldeDe(q))}</span>
+                        <ConfirmSoldeButton id={q.id} customerName={q.customer_name ?? ""} confirmed={false} />
+                      </div>
+                    </li>
+                  ))}
                 </ul>
               </div>
             ) : null}

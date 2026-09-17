@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     // (acompte payé / solde validé) est fait en JS ci-dessous.
     supabase
       .from("quotes")
-      .select("id, customer_name, formula_name, total_cents, notes, acompte_paid_at")
+      .select("id, customer_name, formula_name, total_cents, notes, acompte_paid_at, acompte_required")
       .eq("status", "confirme"),
   ]);
 
@@ -59,7 +59,11 @@ export async function GET(request: Request) {
     const soldeMarker = /\[\[solde-valide:(\d{4}-\d{2}-\d{2})\]\]/.exec(notes);
     const acompteDeCetteAnnee = Boolean(q.acompte_paid_at?.startsWith(year));
     const soldeDeCetteAnnee = Boolean(soldeMarker?.[1]?.startsWith(year));
-    if (!acompteDeCetteAnnee && !soldeDeCetteAnnee) continue;
+    // Solde réglé EN LIGNE (carte Stripe ou virement confirmé) : compté à la
+    // date de réception, net de frais Stripe.
+    const soldeEnLigneMarker = /\[\[solde-en-ligne:(\d{4}-\d{2}-\d{2})\]\]/.exec(notes);
+    const soldeEnLigneDeCetteAnnee = Boolean(soldeEnLigneMarker?.[1]?.startsWith(year));
+    if (!acompteDeCetteAnnee && !soldeDeCetteAnnee && !soldeEnLigneDeCetteAnnee) continue;
 
     // Acompte : marqueur [[acompte:centimes]] sinon règle standard (20 %,
     // solde arrondi à la dizaine inférieure — même calcul que le devis PDF).
@@ -67,7 +71,9 @@ export async function GET(request: Request) {
       const acompteMarker = /\[\[acompte:(\d+)\]\]/.exec(notes);
       const acompte = acompteMarker
         ? Number(acompteMarker[1])
-        : Math.max(0, (q.total_cents ?? 0) - Math.floor(((q.total_cents ?? 0) * 0.8) / 10) * 10);
+        : q.acompte_required === false
+          ? 0
+          : Math.max(0, (q.total_cents ?? 0) - Math.floor(((q.total_cents ?? 0) * 0.8) / 10) * 10);
       if (acompte > 0) {
         rows.push({
           date: q.acompte_paid_at.slice(0, 10),
@@ -79,9 +85,33 @@ export async function GET(request: Request) {
       }
     }
 
+    // Solde réglé en ligne : montants exacts (net de frais Stripe) à la date
+    // de réception — une seule ligne, jamais cumulée avec « solde validé ».
+    if (soldeEnLigneMarker && soldeEnLigneDeCetteAnnee) {
+      const netMarker = /\[\[solde-en-ligne-net:(\d+)\]\]/.exec(notes);
+      const totalEl = Number(q.total_cents ?? 0);
+      const acompteMarkerEl = /\[\[acompte:(\d+)\]\]/.exec(notes);
+      const soldeFixeEl = /\[\[solde-montant:(\d+)\]\]/.exec(notes);
+      const solde = netMarker
+        ? Number(netMarker[1])
+        : soldeFixeEl
+          ? Number(soldeFixeEl[1])
+          : Math.max(0, totalEl - (acompteMarkerEl ? Number(acompteMarkerEl[1]) : 0));
+      if (solde > 0) {
+        rows.push({
+          date: soldeEnLigneMarker[1],
+          client: q.customer_name ?? "—",
+          libelle: `Solde (réglé en ligne) — ${formula}`,
+          montant: solde,
+          source: "Solde",
+        });
+      }
+    }
+
     // Solde validé (marqueur [[solde-valide:AAAA-MM-JJ]] posé via le bouton
     // « Valider le solde ») : même calcul de solde que le tableau de bord.
-    if (soldeMarker && soldeDeCetteAnnee) {
+    // Jamais cumulé avec un solde déjà réglé en ligne (pas de double compte).
+    if (soldeMarker && soldeDeCetteAnnee && !soldeEnLigneMarker) {
       const total = Number(q.total_cents ?? 0);
       // Solde figé : [[solde-montant:centimes]] prioritaire (acompte supprimé
       // car jamais encaissé — le solde validé garde son montant d'origine).
@@ -89,7 +119,9 @@ export async function GET(request: Request) {
       const acompteMarker = /\[\[acompte:(\d+)\]\]/.exec(notes);
       const acompte = acompteMarker
         ? Number(acompteMarker[1])
-        : notes.includes("[[facture-libre]]") || notes.includes("[[import-avant-site]]")
+        : notes.includes("[[facture-libre]]") ||
+            notes.includes("[[import-avant-site]]") ||
+            q.acompte_required === false
           ? 0
           : Math.floor((total * 0.8) / 10) * 10;
       const solde = soldeFixe ? Number(soldeFixe[1]) : Math.max(0, total - acompte);

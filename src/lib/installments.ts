@@ -21,9 +21,10 @@ export function avecFrais(base: number): number {
 
 export function montantsEcheances(
   totalCents: number,
-  n: number
+  n: number,
+  acompteRequis = true
 ): { first: number; rest: number } {
-  const acompte = acompteCents(totalCents);
+  const acompte = acompteRequis ? acompteCents(totalCents) : 0;
   const partEgale = Math.floor(totalCents / n);
   if (partEgale >= acompte) {
     return {

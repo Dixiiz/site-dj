@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ManagedQuoteRow } from "./managed-quote-row";
 import { ManagedQuoteEditForm } from "./managed-quote-edit-form";
 import { ValidateSoldeButton } from "./validate-solde-button";
+import { ConfirmSoldeButton } from "./confirm-solde-button";
 import { ReviewReceivedButton } from "./review-received-button";
 import { formatEuros } from "@/lib/money";
 
@@ -23,6 +24,14 @@ export type DetailRow = {
   solde?: boolean;
   afficheCents?: number;
   type?: "solde" | "acompte" | "echeance";
+  /** Solde déjà réglé en ligne (carte/virement confirmé) — date AAAA-MM-JJ. */
+  soldeEnLigneLe?: string | null;
+  /** Le client paiera le solde sur place (especes/cheque/virement). */
+  soldeSurPlaceMode?: string | null;
+  /** Le client a déclaré avoir envoyé le solde par virement — date. */
+  soldeDeclareLe?: string | null;
+  /** Exclure la ligne du total affiché en bas du panneau (déjà compté ailleurs). */
+  horsTotal?: boolean;
 };
 
 const isManaged = (notes: string) =>
@@ -120,7 +129,10 @@ export function CaDetailPanel({
   /* SUITE-RENDU */
 
   const total = rows.reduce(
-    (sum, row) => sum + (row.afficheCents ?? (solde ? soldeDe(row) : row.totalCents)),
+    (sum, row) =>
+      row.horsTotal
+        ? sum
+        : sum + (row.afficheCents ?? (solde ? soldeDe(row) : row.totalCents)),
     0
   );
 
@@ -165,6 +177,29 @@ export function CaDetailPanel({
                   {solde && soldeValide(row.notes) ? (
                     <span className="text-xs font-normal text-green-400">✓ solde validé</span>
                   ) : null}
+                  {row.soldeEnLigneLe ? (
+                    <span className="text-xs font-normal text-green-400">
+                      ✓ solde réglé en ligne le{" "}
+                      {new Date(`${row.soldeEnLigneLe}T12:00:00`).toLocaleDateString("fr-FR")}
+                    </span>
+                  ) : null}
+                  {row.soldeSurPlaceMode && !row.soldeEnLigneLe ? (
+                    <span className="text-xs font-normal text-orange-300">
+                      💵 à encaisser sur place (
+                      {row.soldeSurPlaceMode === "especes"
+                        ? "espèces"
+                        : row.soldeSurPlaceMode === "cheque"
+                          ? "chèque"
+                          : "virement"}
+                      )
+                    </span>
+                  ) : null}
+                  {row.soldeDeclareLe && !row.soldeEnLigneLe ? (
+                    <span className="text-xs font-normal text-orange-300">
+                      🏦 virement déclaré le{" "}
+                      {new Date(`${row.soldeDeclareLe}T12:00:00`).toLocaleDateString("fr-FR")}
+                    </span>
+                  ) : null}
                   <p className="truncate text-xs text-muted-foreground">
                     {row.formulaName}
                     {row.eventLocation ? ` · ${row.eventLocation}` : ""}
@@ -184,8 +219,18 @@ export function CaDetailPanel({
                     <p className="text-xs text-muted-foreground">{formatEuros(affiche)}</p>
                   </div>
                   {solde &&
+                  (row.type === undefined || row.type === "solde") &&
+                  row.soldeDeclareLe &&
+                  !row.soldeEnLigneLe ? (
+                    <ConfirmSoldeButton
+                      id={row.id}
+                      customerName={row.customerName}
+                      confirmed={false}
+                    />
+                  ) : solde &&
                     (row.type === undefined || row.type === "solde") &&
-                    !soldeValide(row.notes) ? (
+                    !soldeValide(row.notes) &&
+                    !row.soldeEnLigneLe ? (
                     <ValidateSoldeButton
                       id={row.id}
                       customerName={row.customerName}

@@ -17,7 +17,7 @@ const eur = (c) => (c / 100).toFixed(2) + " €";
 
 const { data: quotes, error: eq } = await sb
   .from("quotes")
-  .select("id, customer_name, status, total_cents, acompte_paid_at, notes, event_date")
+  .select("id, customer_name, status, total_cents, acompte_paid_at, acompte_required, notes, event_date")
   .eq("status", "confirme");
 if (eq) { console.error(eq.message); process.exit(1); }
 const { data: echeances, error: ee } = await sb
@@ -35,12 +35,21 @@ const soldeDe = (q) => {
   const marker = /\[\[acompte:(\d+)\]\]/.exec(notes);
   if (marker) return Math.max(0, total - Number(marker[1]));
   if (notes.includes("[[facture-libre]]") || notes.includes("[[import-avant-site]]")) return total;
+  if (q.acompte_required === false) return total;
   return Math.max(0, total - Math.floor((total * 0.8) / 10) * 10);
 };
 const acompteDe = (q) => {
   const marker = /\[\[acompte:(\d+)\]\]/.exec(String(q.notes ?? ""));
   if (marker) return Number(marker[1]);
+  if (q.acompte_required === false) return 0;
   return montant(q) - Math.floor((montant(q) * 0.8) / 10) * 10;
+};
+// Solde réglé EN LIGNE (carte/virement confirmé) — compté automatiquement.
+const soldeEnLigneDe = (q) =>
+  /\[\[solde-en-ligne:(\d{4}-\d{2}-\d{2})\]\]/.exec(String(q.notes ?? ""))?.[1] ?? null;
+const soldeEnLigneNetDe = (q) => {
+  const net = /\[\[solde-en-ligne-net:(\d+)\]\]/.exec(String(q.notes ?? ""));
+  return net ? Number(net[1]) : soldeDe(q);
 };
 const acompteNetDe = (q) => {
   const net = /\[\[acompte-net:(\d+)\]\]/.exec(String(q.notes ?? ""));
@@ -60,7 +69,11 @@ const netEcheance = (quoteId, numero, brut) => {
 
 const all = quotes ?? [];
 const encaisse = all.filter(
-  (q) => (q.event_date ?? "").startsWith(mois) && (q.event_date ?? "") <= todayIso && soldeValide(q)
+  (q) =>
+    (q.event_date ?? "").startsWith(mois) &&
+    (q.event_date ?? "") <= todayIso &&
+    soldeValide(q) &&
+    !soldeEnLigneDe(q)
 );
 const acomptesValides = all.filter(
   (q) => acompteRecu(q) && acompteValide(q) && !echeancierIds.has(q.id)
@@ -71,7 +84,17 @@ const urssafEcheances = (echeances ?? [])
 const urssafAcomptes = acomptesValides
   .filter((q) => String(q.acompte_paid_at ?? "").startsWith(mois))
   .reduce((s, q) => s + acompteNetDe(q), 0);
-const caMois = encaisse.reduce((s, q) => s + soldeDe(q), 0) + urssafEcheances + urssafAcomptes;
+const urssafSoldesEnLigne = all
+  .filter((q) => {
+    const d = soldeEnLigneDe(q);
+    return d && d.startsWith(mois) && !echeancierIds.has(q.id);
+  })
+  .reduce((s, q) => s + soldeEnLigneNetDe(q), 0);
+const caMois =
+  encaisse.reduce((s, q) => s + soldeDe(q), 0) +
+  urssafEcheances +
+  urssafAcomptes +
+  urssafSoldesEnLigne;
 
 console.log(`=== CA URSSAF ${mois} attendu : ${eur(caMois)} ===`);
 for (const q of encaisse) {
@@ -81,6 +104,12 @@ for (const q of acomptesValides.filter((q) => String(q.acompte_paid_at ?? "").st
   console.log(`  acompte net  : ${q.customer_name} — ${eur(acompteNetDe(q))} (reçu le ${q.acompte_paid_at?.slice(0, 10)})`);
 }
 console.log(`  échéanciers  : ${eur(urssafEcheances)}`);
+for (const q of all.filter((q) => {
+  const d = soldeEnLigneDe(q);
+  return d && d.startsWith(mois) && !echeancierIds.has(q.id);
+})) {
+  console.log(`  solde en ligne : ${q.customer_name} — ${eur(soldeEnLigneNetDe(q))} net (réglé le ${soldeEnLigneDe(q)})`);
+}
 
 console.log("\n=== Vérifications de cohérence ===");
 let problemes = 0;
@@ -98,7 +127,12 @@ for (const e of echAConfirmer)
 
 // Devis "joués" ce mois sans solde validé (oublis).
 const oublis = all.filter(
-  (q) => (q.event_date ?? "").startsWith(mois) && (q.event_date ?? "") <= todayIso && !soldeValide(q) && !echeancierIds.has(q.id)
+  (q) =>
+    (q.event_date ?? "").startsWith(mois) &&
+    (q.event_date ?? "") <= todayIso &&
+    !soldeValide(q) &&
+    !soldeEnLigneDe(q) &&
+    !echeancierIds.has(q.id)
 );
 console.log(`Soirées du mois sans solde validé : ${oublis.length}`);
 for (const q of oublis) console.log(`  → ${q.customer_name} — ${eur(soldeDe(q))} à valider`);

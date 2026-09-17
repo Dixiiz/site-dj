@@ -723,6 +723,7 @@ export async function updateQuoteAdmin(formData: FormData) {
       extra_fee_label:
         String(formData.get("extra_fee_label") ?? "").trim() || null,
       total_cents: toCents(formData.get("total")),
+      acompte_required: formData.get("acompte_required") === "on",
       status: String(formData.get("status") ?? "nouveau"),
       selected_options: selected,
     })
@@ -817,6 +818,7 @@ export async function createCustomQuote(formData: FormData) {
     extra_fee_cents: extraFeeCents,
     extra_fee_label: String(formData.get("extra_fee_label") ?? "").trim() || null,
     total_cents,
+    acompte_required: formData.get("acompte_required") === "on",
     status,
     selected_options: selected,
   });
@@ -1363,7 +1365,7 @@ export async function supprimerAcompte(formData: FormData) {
   const supabase = createAdminClient();
   const { data: quote } = await supabase
     .from("quotes")
-    .select("id, notes, total_cents, acompte_paid_at, customer_name")
+    .select("id, notes, total_cents, acompte_paid_at, acompte_required, customer_name")
     .eq("id", id)
     .maybeSingle();
   if (!quote) return { ok: false as const, error: "Soirée introuvable." };
@@ -1379,7 +1381,9 @@ export async function supprimerAcompte(formData: FormData) {
     ? Number(soldeFixe[1])
     : acompteMarker
       ? Math.max(0, total - Number(acompteMarker[1]))
-      : notes.includes("[[facture-libre]]") || notes.includes("[[import-avant-site]]")
+      : notes.includes("[[facture-libre]]") ||
+          notes.includes("[[import-avant-site]]") ||
+          quote.acompte_required === false
         ? total
         : Math.max(0, total - Math.floor((total * 0.8) / 10) * 10);
 

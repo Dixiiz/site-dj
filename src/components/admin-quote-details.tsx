@@ -25,6 +25,7 @@ type Quote = {
   status: string;
   acompte_declared_at?: string | null;
   acompte_paid_at?: string | null;
+  acompte_required?: boolean | null;
 };
 
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
@@ -64,6 +65,13 @@ export function AdminQuoteDetails({
 
   return (
     <div className="space-y-4 border-t border-border px-4 pb-4 pt-4 text-sm">
+      {/* Devis sans acompte : la signature suffit à confirmer la soirée */}
+      {quote.acompte_required === false ? (
+        <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          🚫 Aucun acompte demandé pour ce devis — confirmé dès la signature, le
+          règlement se fait le jour de la prestation (ou via un échéancier).
+        </div>
+      ) : null}
       {/* Suivi de l'acompte : payé, déclaré en attente de réception, ou rien */}
       {quote.acompte_paid_at || quote.acompte_declared_at ? (
         <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 px-3 py-2 text-xs">

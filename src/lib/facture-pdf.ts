@@ -230,9 +230,11 @@ export async function buildFacturePdf(
     return lines;
   };
   const conditionsTxt =
- "Facture payable par virement (libellé : nom de l'organisateur, numéro de contrat), chèque ou espèces. " +
- "L'acompte de réservation reste acquis en cas d'annulation par le client, sauf force majeure. " +
- "Merci de votre confiance !";
+    (opts.hideAcompte
+      ? "Facture payable par virement (libellé : nom de l'organisateur, numéro de contrat), chèque ou espèces. "
+      : "Facture payable par virement (libellé : nom de l'organisateur, numéro de contrat), chèque ou espèces. " +
+        "L'acompte de réservation reste acquis en cas d'annulation par le client, sauf force majeure. ") +
+    "Merci de votre confiance !";
   for (const l of wrap(conditionsTxt, 9, r, CW - 20)) {
     t(l, M + 10, y, 9, r, C.texte);
     y -= 12;

@@ -23,7 +23,10 @@ import { PACK_IMAGES } from "@/components/pricing-section";
 import { SignaturePad } from "@/components/signature-pad";
 import { SubmitButton } from "@/components/submit-button";
 import PaymentPanel, { type ScheduleRow } from "@/components/payment-panel";
-import { verifyStripeAcompte } from "@/app/client-actions";
+import {
+  verifyStripeAcompte,
+  verifyStripeSolde,
+} from "@/app/client-actions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEuros } from "@/lib/money";
 import type { SelectedOption } from "@/lib/types";
@@ -50,7 +53,8 @@ export default async function ClientQuotePage({
     const { verifyStripeEcheance } = await import("@/app/client-actions");
     paiementOk =
       (await verifyStripeEcheance(id, query.session_id)) ||
-      (await verifyStripeAcompte(id, query.session_id));
+      (await verifyStripeAcompte(id, query.session_id)) ||
+      (await verifyStripeSolde(id, query.session_id));
   }
 
   const quote = await getMyQuote(id);
@@ -236,6 +240,16 @@ export default async function ClientQuotePage({
             initial={schedule}
             acomptePaid={Boolean(quote.acompte_paid_at) || paiementOk}
             acompteDeclared={Boolean(quote.acompte_declared_at)}
+            acompteRequis={quote.acompte_required !== false}
+            soldePayeLe={
+              /\[\[solde-en-ligne:(\d{4}-\d{2}-\d{2})\]\]/.exec(String(quote.notes ?? ""))?.[1] ?? null
+            }
+            soldeSurPlaceMode={
+              /\[\[solde-sur-place:([a-z]+)\]\]/.exec(String(quote.notes ?? ""))?.[1] ?? null
+            }
+            soldeDeclareLe={
+              /\[\[solde-declare:(\d{4}-\d{2}-\d{2})\]\]/.exec(String(quote.notes ?? ""))?.[1] ?? null
+            }
             libelleVirement={`${quote.customer_name} — ${quote.event_date ?? ""}`}
             notice={query.paiement}
           />
@@ -283,6 +297,7 @@ export default async function ClientQuotePage({
                 nouveau: "Nouveau",
                 contacte: "Contacté",
                 attente_signature: "En attente de signature",
+                attente_acompte: "En attente de l'acompte",
                 confirme: "Confirmé ✓",
                 refuse: "Refusé",
                 annule: "Annulé",

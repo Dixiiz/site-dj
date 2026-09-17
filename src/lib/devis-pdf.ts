@@ -5,6 +5,7 @@ import path from "path";
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFImage } from "pdf-lib";
 
 export type DevisQuoteData = {
+  acompte_required?: boolean | null;
   customer_name?: string | null;
   customer_email?: string | null;
   customer_phone?: string | null;
@@ -224,11 +225,17 @@ export async function buildDevisPdf(
   // Espace libre : on répartit le vide entre le tableau et le bloc prix
   // (au lieu de tout laisser en bas de page), pour un devis aéré quelle
   // que soit la longueur du tableau.
+  const acompteRequis = quote.acompte_required !== false;
   const conditionsTxt =
     opts.conditions ??
- "Afin de confirmer votre réservation, merci de retourner le devis daté et signé accompagné d'un acompte de 20 % " +
- "par virement (libellé : nom de l'organisateur, numéro de contrat), chèque ou espèces. " +
- "Possibilité de paiement total sans acompte par virement, chèque ou espèces.";
+    (acompteRequis
+      ? "Afin de confirmer votre réservation, merci de retourner le devis daté et signé accompagné d'un acompte de 20 % " +
+        "par virement (libellé : nom de l'organisateur, numéro de contrat), chèque ou espèces. " +
+        "Possibilité de paiement total sans acompte par virement, chèque ou espèces."
+      : "Afin de confirmer votre réservation, merci de retourner le devis daté et signé. " +
+        "Aucun acompte n'est demandé pour ce devis : le règlement s'effectue par virement " +
+        "(libellé : nom de l'organisateur, numéro de contrat), chèque ou espèces, au plus tard " +
+        "le jour de la prestation (ou selon l'échéancier convenu dans l'espace client).");
   const wrapCount = (txt: string, size: number, font: PDFFont, maxW: number) => {
     const words = txt.split(" ");
     let n = 1, cur = "";
@@ -241,7 +248,7 @@ export async function buildDevisPdf(
   const restH =
     28 +                    // après TVA
     30 + 34 +               // bande TOTAL
-    32 + 44 +               // encadré acompte
+    (acompteRequis ? 32 + 44 : 0) + // encadré acompte (omis si pas d'acompte)
     16 +                    // note SACEM
     19 + wrapCount(conditionsTxt, 9, r, CW - 20) * 12 +  // conditions
     54 + 12 +               // encadrés IBAN / prestataire
@@ -253,7 +260,7 @@ export async function buildDevisPdf(
   // TOTAL + solde (solde rond à la dizaine ≈ 80 %, acompte = le reste ≈ 20 %)
   const bx = M + CW - 250;
   const total = (quote.total_cents ?? 0) / 100;
-  const soldeVal = Math.floor((total * 0.8) / 10) * 10;
+  const soldeVal = acompteRequis ? Math.floor((total * 0.8) / 10) * 10 : total;
   const acompteVal = total - soldeVal;
   const bandX = M, bandW = CW - 260;
   page.drawRectangle({ x: bandX, y: y - 9, width: bandW, height: 30, color: C.anthraciteClair });
@@ -269,10 +276,12 @@ export async function buildDevisPdf(
   y -= 34;
 
   // ============ ACOMPTE ============
-  page.drawRectangle({ x: M, y: y - 28, width: CW, height: 32, color: C.bleuPale });
-  t("Montant de l'acompte de réservation (environ 20 %)", M + 12, y - 10, 9.5, b, C.bleu);
-  t(fmt(acompteVal), right(fmt(acompteVal), M + CW - 12, 9.5, b), y - 10, 9.5, b, C.bleu);
-  y -= 44;
+  if (acompteRequis) {
+    page.drawRectangle({ x: M, y: y - 28, width: CW, height: 32, color: C.bleuPale });
+    t("Montant de l'acompte de réservation (environ 20 %)", M + 12, y - 10, 9.5, b, C.bleu);
+    t(fmt(acompteVal), right(fmt(acompteVal), M + CW - 12, 9.5, b), y - 10, 9.5, b, C.bleu);
+    y -= 44;
+  }
   t("SACEM à déclarer par l'organisateur (sauf soirées privées).", M + 12, y, 7.5, r, C.gris);
   y -= 16;
   // ============ CONDITIONS ============
