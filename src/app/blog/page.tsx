@@ -3,12 +3,30 @@ import Link from "next/link";
 import { FadeIn } from "@/components/fade-in";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import {
+  Heart,
+  Music,
+  Lightbulb,
+  Cake,
+  Building2,
+  PenLine,
+  type LucideIcon,
+} from "lucide-react";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/blog" },
   title: "Blog — Conseils mariage & soirées (Blois, Loir-et-Cher)",
   description:
     "Guides et conseils par votre DJ en Loir-et-Cher : organiser un mariage à Blois, choisir sa playlist, réussir son ouverture du bal et sa soirée.",
+};
+
+// Icône sobre (Lucide) associée à chaque catégorie d'article.
+const TAG_ICONS: Record<string, LucideIcon> = {
+  Mariage: Heart,
+  Playlist: Music,
+  Réflexion: Lightbulb,
+  Anniversaire: Cake,
+  Entreprise: Building2,
 };
 
 const articles = [
@@ -77,6 +95,12 @@ export default function BlogPage() {
                 href={article.href}
                 className="group flex h-full flex-col rounded-xl border border-border bg-card p-6 transition-colors hover:border-accent/50"
               >
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-accent/30 bg-accent/10 text-accent">
+                  {(() => {
+                    const Icon = TAG_ICONS[article.tag] ?? Music;
+                    return <Icon size={20} strokeWidth={1.75} aria-hidden />;
+                  })()}
+                </span>
                 <p className="mt-3 text-xs font-medium tracking-[0.2em] text-accent uppercase">
                   {article.tag} · {article.readingTime}
                 </p>
@@ -96,6 +120,9 @@ export default function BlogPage() {
           {/* Carte remplissage : tease les prochains articles */}
           <FadeIn delay={0.15}>
             <div className="flex h-full flex-col justify-center rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              <span className="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-muted/50 text-muted-foreground">
+                <PenLine size={20} strokeWidth={1.75} aria-hidden />
+              </span>
               <p className="mt-3">
                 Bientôt : <strong>« Organiser un mariage à Blois : le checklist complet des prestataires »</strong>
               </p>

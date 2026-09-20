@@ -1,5 +1,21 @@
 import Link from "next/link";
 import { FadeIn } from "@/components/fade-in";
+import {
+  Heart,
+  Music,
+  Cake,
+  Building2,
+  type LucideIcon,
+} from "lucide-react";
+
+// Icône sobre (Lucide) par article, cohérente avec les catégories du blog.
+const ARTICLE_ICONS: Record<string, LucideIcon> = {
+  "/blog/choisir-dj-mariage-blois": Heart,
+  "/blog/playlist-mariage-2026": Music,
+  "/blog/dj-ou-playlist-spotify": Music,
+  "/blog/combien-coute-dj-anniversaire": Cake,
+  "/blog/dj-soiree-entreprise-erreurs": Building2,
+};
 
 const RELATED: Record<string, { href: string; title: string }[]> = {
   "/blog/choisir-dj-mariage-blois": [
@@ -42,7 +58,15 @@ export function RelatedArticles({ current }: { current: string }) {
                 href={a.href}
                 className="flex items-start gap-3 rounded-lg p-2 transition-colors hover:bg-accent/5"
               >
-                <span aria-hidden className="mt-0.5 text-accent">→</span>
+                <span
+                  aria-hidden
+                  className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-accent/30 bg-accent/10 text-accent"
+                >
+                  {(() => {
+                    const Icon = ARTICLE_ICONS[a.href] ?? Music;
+                    return <Icon size={16} strokeWidth={1.75} />;
+                  })()}
+                </span>
                 <span className="text-sm font-medium leading-snug">{a.title}</span>
               </Link>
             </li>
