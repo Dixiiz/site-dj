@@ -641,7 +641,7 @@ export function QuoteBookingForm({
                 </p>
               ) : extraHours > 0 ? (
                 <p className="text-sm text-accent">
-                  ⏱ {extraLabel(extraHours)} supplémentaires (au-delà des{" "}
+                  {extraLabel(extraHours)} supplémentaires (au-delà des{" "}
                   {Math.round(includedMinutes / 60)} h incluses) —{" "}
                   {formatEuros(extraFeeCents)} ajoutés au devis.
                 </p>

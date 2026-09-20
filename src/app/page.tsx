@@ -339,7 +339,7 @@ export default async function Home() {
             </div>
             {/* Mention discrète : paiement en plusieurs fois (rassurance, pas un argument central) */}
             <p className="mt-4 text-xs text-muted-foreground/80">
-              💳 Paiement en plusieurs fois possible (2 à 10×) — estimation en direct dans le devis.
+              Paiement en plusieurs fois possible (2 à 10×) — estimation en direct dans le devis.
             </p>
           </FadeIn>
         </section>

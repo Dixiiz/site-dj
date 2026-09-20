@@ -58,7 +58,7 @@ export default function ArticlePlaylistMariage2026() {
             </div>
 
             <h2 className="text-2xl font-medium tracking-tight">
-              💐 1. L&apos;entrée des mariés
+              1. L&apos;entrée des mariés
             </h2>
             <ol className="list-decimal space-y-2 pl-6">
               <SongItem title="Sara Perche Ti Amo" artist="DJ Matrix" note="l'électro-dance italienne qui met tout le monde de bonne humeur dès l'entrée dans la salle." />
@@ -67,7 +67,7 @@ export default function ArticlePlaylistMariage2026() {
             </ol>
 
             <h2 className="text-2xl font-medium tracking-tight">
-              💍 2. L&apos;ouverture du bal
+              2. L&apos;ouverture du bal
             </h2>
             <ol className="list-decimal space-y-2 pl-6" start={4}>
               <SongItem title="Perfect" artist="Ed Sheeran" note="l'intemporel. Si vous n'avez pas d'idée, c'est le choix sûr absolu." />
@@ -76,7 +76,7 @@ export default function ArticlePlaylistMariage2026() {
             </ol>
 
             <h2 className="text-2xl font-medium tracking-tight">
-              🍰 3. Le moment du dessert
+              3. Le moment du dessert
             </h2>
             <p className="text-sm text-muted-foreground">
               Le dessert, c&apos;est le signal : la soirée passe à la vitesse
@@ -90,7 +90,7 @@ export default function ArticlePlaylistMariage2026() {
             </ol>
 
             <h2 className="text-2xl font-medium tracking-tight">
-              🔥 4. Le dancefloor (jusqu&apos;au bout de la nuit)
+              4. Le dancefloor (jusqu&apos;au bout de la nuit)
             </h2>
             <ol className="list-decimal space-y-2 pl-6" start={10}>
               <SongItem title="September" artist="Earth, Wind & Fire" note="le funk qui traverse les âges. Testé et re-testé." />
@@ -108,7 +108,7 @@ export default function ArticlePlaylistMariage2026() {
             {/* SUITE-ARTICLE */}
 
             <h2 className="text-2xl font-medium tracking-tight">
-              🚫 Et les pièges à éviter
+              Et les pièges à éviter
             </h2>
             <p>
               Le morceau que VOUS adorez mais que personne d&apos;autre ne
@@ -119,7 +119,7 @@ export default function ArticlePlaylistMariage2026() {
             </p>
 
             <h2 className="text-2xl font-medium tracking-tight">
-              🎧 Comment construire VOTRE playlist ?
+              Comment construire VOTRE playlist ?
             </h2>
             <p>
               Dans votre espace client Propul&apos;Sound, vous remplissez

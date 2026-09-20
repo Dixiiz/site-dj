@@ -81,7 +81,7 @@ export function ClientOptionsEditor({
               ? {
                   box: "border-yellow-500/70 bg-yellow-500/15 shadow-[0_0_20px_-8px_rgba(234,179,8,0.8)]",
                   badge: "bg-yellow-500 text-background",
-                  badgeIcon: "⏳",
+                  badgeIcon: "",
                   label: "text-yellow-300",
                 }
               : {

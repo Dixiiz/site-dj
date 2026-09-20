@@ -28,8 +28,8 @@ export function DevisFilterBar({ q, tri }: { q?: string; tri?: string }) {
         <option value="ancien">Devis : plus ancien d&apos;abord</option>
         <option value="cher">Prix : du plus cher au moins cher</option>
         <option value="moins_cher">Prix : du moins cher au plus cher</option>
-        <option value="tous">📅 Tous les devis (passés inclus)</option>
-        <option value="passes">🕰 Soirées passées (archives)</option>
+        <option value="tous">Tous les devis (passés inclus)</option>
+        <option value="passes">Soirées passées (archives)</option>
       </select>
       <button
         type="submit"

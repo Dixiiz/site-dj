@@ -63,9 +63,9 @@ export default function OpengraphImage() {
             gap: 32,
           }}
         >
-          <span>🎵 Devis en ligne</span>
-          <span>✍️ Signature digitale</span>
-          <span>🎉 Espace client</span>
+          <span>Devis en ligne</span>
+          <span>Signature digitale</span>
+          <span>Espace client</span>
         </div>
       </div>
     ),

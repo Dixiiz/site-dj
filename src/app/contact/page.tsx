@@ -56,12 +56,12 @@ export default function ContactPage() {
               questions que les clients posent avant de nous contacter */}
           <h2 className="mt-12 text-xl font-medium">Infos pratiques</h2>
           <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-            <li>📍 Basé à Huisseau-sur-Cosson (41350), à 5 minutes de Blois</li>
-            <li>💬 Réponse sous 24 h — souvent en moins d&apos;une heure sur WhatsApp</li>
-            <li>💰 Devis gratuit, tarif calculé en direct sur la page Formules</li>
-            <li>🚗 Déplacement offert dans un rayon de 30 km, frais automatiques au-delà</li>
-            <li>🎧 Matériel professionnel inclus : sonorisation, lumières, machine à fumée</li>
-            <li>✨ Options FX disponibles : étincelles froides, CO2, fumée lourde</li>
+            <li>Basé à Huisseau-sur-Cosson (41350), à 5 minutes de Blois</li>
+            <li>Réponse sous 24 h — souvent en moins d&apos;une heure sur WhatsApp</li>
+            <li>Devis gratuit, tarif calculé en direct sur la page Formules</li>
+            <li>Déplacement offert dans un rayon de 30 km, frais automatiques au-delà</li>
+            <li>Matériel professionnel inclus : sonorisation, lumières, machine à fumée</li>
+            <li>Options FX disponibles : étincelles froides, CO2, fumée lourde</li>
           </ul>
           <p className="mt-4 text-sm text-muted-foreground">
             Vous hésitez entre plusieurs formules ou vous ne savez pas quel

@@ -86,7 +86,7 @@ export default async function MonEspacePage() {
                     <span className="flex flex-wrap items-center gap-1.5">
                       {quote.pending_options ? (
                         <span className="rounded-full bg-yellow-500/10 px-2.5 py-0.5 text-xs font-medium text-yellow-300 border border-yellow-500/40">
-                          ⏳ Modif. en attente
+                          Modif. en attente
                         </span>
                       ) : null}
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}>
@@ -114,7 +114,7 @@ export default async function MonEspacePage() {
                       confirm="Supprimer ce devis ? Cette action est irréversible."
                       className="text-xs text-muted-foreground transition-colors hover:text-red-400"
                     >
-                      🗑 Supprimer ce devis
+                      Supprimer ce devis
                     </SubmitButton>
                   </form>
                 ) : null}

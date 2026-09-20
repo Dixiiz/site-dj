@@ -84,9 +84,8 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
           weekday: "long", day: "numeric", month: "long", year: "numeric",
         })
       : null;
-    const ok = await sendEmail(q.customer_email, "⏳ Votre devis Propul'Sound DJ — pensez à valider !", {
+    const ok = await sendEmail(q.customer_email, "Votre devis Propul'Sound DJ — pensez à valider !", {
       title: "Votre devis vous attend toujours",
-      emoji: "⏳",
       intro: `Bonjour ${q.customer_name ?? ""},<br/><br/>Il y a maintenant <strong>10 jours</strong>, vous nous avez fait part de votre projet${eventFr ? ` pour le <strong>${eventFr}</strong>` : ""} (${q.formula_name ?? "prestation"}).<br/><br/><strong>Votre devis est valable 15 jours</strong> après la demande : passé ce délai, les tarifs et la disponibilité pourraient être réévalués.`,
       sections: [
         {
@@ -149,7 +148,6 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
 
     const ok = await sendEmail(q.customer_email, "Dernière étape : l'acompte de réservation", {
       title: "Il ne manque plus que l'acompte !",
-      emoji: "",
       intro: `Bonjour ${q.customer_name ?? ""},<br/><br/>Vos documents sont signés${eventFr ? ` pour le <strong>${eventFr}</strong>` : ""}, il ne reste qu'<strong>une seule chose</strong> à faire : l'<strong>acompte de réservation (20 %)</strong>.<br/><br/>C'est lui qui <strong>verrouille définitivement votre date</strong> : tant qu'il n'est pas reçu, la soirée peut malheureusement être <strong>attribuée à quelqu'un d'autre</strong>.`,
       sections: [
         {
@@ -195,7 +193,6 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
       : null;
     const ok = await sendEmail(q.customer_email, "Merci pour cette soirée ! Votre avis compte énormément", {
       title: "Merci pour cette soirée !",
-      emoji: "",
       intro: `Bonjour ${q.customer_name ?? ""},<br/><br/>J'espère que cette soirée${eventFr ? ` du <strong>${eventFr}</strong>` : ""} restera un beau souvenir !<br/><br/>Ce fut un plaisir d'animer votre événement. <strong>Votre avis compte énormément</strong> pour un DJ indépendant comme moi : c'est ce qui permet aux futurs mariés et organisateurs de me faire confiance.`,
       sections: [
         {
@@ -246,10 +243,9 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
       : null;
     const ok = await sendEmail(
       q.customer_email,
-      "Petit coup de pouce ? Votre avis aide énormément un DJ indépendant 🙏",
+      "Petit coup de pouce ? Votre avis aide énormément un DJ indépendant ",
       {
         title: "Un avis ? 2 minutes, pas plus",
-        emoji: "🙏",
         intro: `Bonjour ${q.customer_name ?? ""},<br/><br/>J'espère que la soirée${eventFr ? ` du <strong>${eventFr}</strong>` : ""} vous a plu ! Je me permets un petit rappel : <strong>votre avis Google</strong> est ce qui permet aux futurs mariés et organisateurs de me faire confiance — un DJ indépendant n'a que ça pour se faire connaître.`,
         sections: [
           {
@@ -303,10 +299,9 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
       : "ta soirée";
     const ok = await sendEmail(
       q.customer_email,
-      "J-30 — ta playlist attend ses premiers titres 🎵",
+      "J-30 — ta playlist attend ses premiers titres ",
       {
         title: "Ta playlist est encore vide",
-        emoji: "🎵",
         intro: `Bonjour ${q.customer_name ?? ""},<br/><br/>Plus que <strong>30 jours</strong> avant ta soirée du <strong>${eventFr}</strong> !<br/><br/>Ta playlist n'a pas encore ses premiers titres : c'est le moment de t'y mettre — <strong>10 minutes suffisent</strong> pour poser tes incontournables, tes temps forts et même les chansons à éviter.`,
         sections: [
           {
@@ -314,7 +309,7 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
             lines: [
               "Ajoute <strong>3 à 5 titres incontournables</strong> (ceux sans lesquels la soirée ne serait pas la même)",
               "Indique tes <strong>temps forts</strong> : entrée, ouverture du bal, dessert…",
-              "Le reste, je m'en charge en lisant la piste de danse 🕺",
+              "Le reste, je m'en charge en lisant la piste de danse ",
             ],
           },
         ],
@@ -367,8 +362,7 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
         ? "J-7 — ta playlist est toujours vide, on la remplit ?"
         : "J-7 — c'est bientôt la soirée !",
       {
-        title: playlistVide ? "J-7, et toujours aucun titre 🙈" : "J-7, on arrive !",
-        emoji: playlistVide ? "🎵" : "",
+        title: playlistVide ? "J-7, et toujours aucun titre " : "J-7, on arrive !",
         intro: playlistVide
           ? `Bonjour ${q.customer_name ?? ""},<br/><br/>Plus que <strong>7 jours</strong> avant ta soirée du <strong>${eventFr}</strong>… et ta playlist est <strong>toujours vide</strong> !<br/><br/>Pas de panique : <strong>5 minutes</strong> suffisent. Tes incontournables, tes temps forts, et on est prêts.`
           : `Bonjour ${q.customer_name ?? ""},<br/><br/>Plus que <strong>7 jours</strong> avant ta soirée du <strong>${eventFr}</strong> ! Voici le rappel de tous les détails pour qu'elle soit parfaite.`,
@@ -435,10 +429,9 @@ export async function runEcheanceReminders() {
 
     const ok = await sendEmail(
       q.customer_email,
-      `💳 Échéance ${row.numero}/${row.total} — ${montant} à régler d'ici le ${new Date(row.due_date).toLocaleDateString("fr-FR")}`,
+      `Échéance ${row.numero}/${row.total} — ${montant} à régler d'ici le ${new Date(row.due_date).toLocaleDateString("fr-FR")}`,
       {
         title: `Échéance ${row.numero} sur ${row.total}`,
-        emoji: "💳",
         intro: `Bonjour ${q.customer_name ?? ""},<br/><br/>Conformément à votre échéancier de paiement, votre <strong>${row.numero}${row.numero === 1 ? "ᵉʳᵉ" : "ᵉ"} échéance de ${montant}</strong> est à régler avant le <strong>${new Date(row.due_date).toLocaleDateString("fr-FR")}</strong>${eventFr ? ` (soirée prévue le ${eventFr})` : ""}.`,
         sections: [
           {

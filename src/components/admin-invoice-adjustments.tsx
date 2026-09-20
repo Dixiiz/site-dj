@@ -111,7 +111,7 @@ export function InvoiceAdjustments({
           disabled={busy}
           className="rounded-md border border-cyan-500/50 bg-cyan-500/10 px-2 py-1 text-xs text-cyan-400 transition-colors hover:bg-cyan-400/25 hover:text-cyan-200 disabled:opacity-50"
         >
-          {busy ? "…" : "💾 Enregistrer"}
+          {busy ? "…" : "Enregistrer"}
         </button>
       </div>
       {msg && <p className="mt-1 text-[11px] text-muted-foreground">{msg}</p>}

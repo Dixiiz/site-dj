@@ -93,7 +93,7 @@ export default async function ClientQuotePage({
                 rel="noopener"
                 className="block rounded-xl border border-accent/60 bg-card px-4 py-3 font-medium text-accent transition-colors hover:bg-accent/10"
               >
-                📄 {l.name}
+                {l.name}
               </a>
             ))}
             <p className="text-xs text-muted-foreground">
@@ -315,7 +315,7 @@ export default async function ClientQuotePage({
         <h2 className="font-medium">Options</h2>
         {pendingOptions ? (
           <div className="mt-3 rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm">
-            <p className="font-medium text-yellow-300">⏳ Modification en attente de validation</p>
+            <p className="font-medium text-yellow-300">Modification en attente de validation</p>
             <p className="mt-1 text-muted-foreground">
               Vous avez demandé :{" "}
               {pendingOptions.length > 0
@@ -492,7 +492,7 @@ export default async function ClientQuotePage({
                     </form>
                   ) : (
                     <p className="mt-2 text-xs text-orange-300">
-                      ⏳ En attente de signature — disponible après confirmation du devis
+                      En attente de signature — disponible après confirmation du devis
                     </p>
                   )}
                 </li>

@@ -85,7 +85,7 @@ function ChoixSolde({
           onClick={() => setSoldeChoix("ici")}
           className="rounded-lg border border-accent/50 bg-accent/5 px-3 py-2 text-left text-sm font-medium transition-all hover:bg-accent/15"
         >
-          💳 Payer ici maintenant
+          Payer ici maintenant
           <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
             par carte (sécurisé) ou par virement
           </span>
@@ -95,7 +95,7 @@ function ChoixSolde({
           onClick={() => setSoldeChoix("surplace")}
           className="rounded-lg border border-border px-3 py-2 text-left text-sm font-medium transition-all hover:border-accent/50"
         >
-          💵 Payer sur place
+          Payer sur place
           <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
             espèces, chèque ou virement le jour de la soirée
           </span>
@@ -355,7 +355,7 @@ export default function PaymentPanel({
         <h2 className="font-medium">Paiement</h2>
         {notice === "ordre" ? (
           <p className="mt-2 rounded-lg border border-orange-500/40 bg-orange-500/10 px-3 py-2 text-xs font-medium text-orange-600">
-            ⏳ Les échéances se règlent dans l&apos;ordre — réglez d&apos;abord la
+            Les échéances se règlent dans l&apos;ordre — réglez d&apos;abord la
             précédente pour débloquer la suivante.
           </p>
         ) : null}
@@ -380,7 +380,7 @@ export default function PaymentPanel({
                 </p>
                 {acompteDeclared ? (
                   <p className="mt-2 rounded-md bg-orange-100 px-3 py-2 text-xs font-medium text-orange-700">
-                    ⏳ Virement déclaré — en attente de réception.
+                    Virement déclaré — en attente de réception.
                   </p>
                 ) : null}
                 <form action={startAcompteCheckout} className="mt-3">
@@ -493,7 +493,7 @@ export default function PaymentPanel({
                 ) : soldeDeclareLe ? (
                   <>
                     <p className="text-sm font-medium text-orange-700">
-                      ⏳ Virement du solde déclaré le{" "}
+                      Virement du solde déclaré le{" "}
                       {new Date(`${soldeDeclareLe}T12:00:00`).toLocaleDateString("fr-FR")} —
                       en attente de réception.
                     </p>
@@ -687,7 +687,7 @@ export default function PaymentPanel({
                         className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground"
                         title={`Payez d'abord l'échéance ${premiereAPayer?.numero ?? 1}`}
                       >
-                        🔒 après l&apos;échéance {premiereAPayer?.numero ?? 1}
+                        après l&apos;échéance {premiereAPayer?.numero ?? 1}
                       </span>
                     )}
                   </div>

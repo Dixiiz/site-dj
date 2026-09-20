@@ -87,7 +87,7 @@ export async function POST(request: Request) {
             // Argent encaissé mais aucune échéance correspondante : échéancier
             // annulé entre-temps, ou déjà marquée payée. Alerte pour action manuelle.
             console.warn(
-              `[stripe-webhook] ⚠️ Échéance ${numero} du devis ${quoteId} payée (${session.amount_total ?? "?"} centimes) mais 0 ligne mise à jour — vérifier dans Stripe et rattraper manuellement si besoin.`
+              `[stripe-webhook] Échéance ${numero} du devis ${quoteId} payée (${session.amount_total ?? "?"} centimes) mais 0 ligne mise à jour — vérifier dans Stripe et rattraper manuellement si besoin.`
             );
           } else {
             console.log(
@@ -210,19 +210,19 @@ async function notifyAdminAcompte(
     const dateFr = quote?.event_date ?? "date ?";
     await notifyAdmin({
       title: estSolde
-        ? "💰 Solde réglé — compté dans l'URSSAF !"
-        : "💰 Acompte réglé — devis confirmé !",
+        ? "Solde réglé — compté dans l'URSSAF !"
+        : "Acompte réglé — devis confirmé !",
       body: estSolde
         ? `${name} — ${dateFr} : solde reçu (${total} brut, net de frais Stripe). Compté automatiquement dans l'URSSAF.`
         : `${name} — ${dateFr} : acompte reçu (total ${total}). La date est verrouillée.`,
       url: `/admin?vue=urssaf`,
       email: {
         subject: estSolde
-          ? `💰 Solde reçu — ${name} (${dateFr})`
-          : `💰 Acompte reçu — ${name} (${dateFr}) — devis confirmé`,
+          ? `Solde reçu — ${name} (${dateFr})`
+          : `Acompte reçu — ${name} (${dateFr}) — devis confirmé`,
         html: estSolde
-          ? `<p><strong>${name}</strong> (soirée du <strong>${dateFr}</strong>) a réglé son <strong>solde</strong> par carte (${total} brut, net de frais Stripe).</p><p>✅ Il est compté automatiquement dans le <strong>CA URSSAF</strong> du mois de réception.</p><p><a href="${SITE_URL}/admin">Ouvrir le tableau de bord</a></p>`
-          : `<p><strong>${name}</strong> (soirée du <strong>${dateFr}</strong>, total <strong>${total}</strong>) vient de régler son <strong>acompte</strong> via Stripe.</p><p>✅ Le devis est désormais <strong>confirmé</strong> : la date est verrouillée.</p><p><a href="${SITE_URL}/admin/devis?focus=${quoteId}">Ouvrir le devis dans l'admin</a></p>`,
+          ? `<p><strong>${name}</strong> (soirée du <strong>${dateFr}</strong>) a réglé son <strong>solde</strong> par carte (${total} brut, net de frais Stripe).</p><p>Il est compté automatiquement dans le <strong>CA URSSAF</strong> du mois de réception.</p><p><a href="${SITE_URL}/admin">Ouvrir le tableau de bord</a></p>`
+          : `<p><strong>${name}</strong> (soirée du <strong>${dateFr}</strong>, total <strong>${total}</strong>) vient de régler son <strong>acompte</strong> via Stripe.</p><p>Le devis est désormais <strong>confirmé</strong> : la date est verrouillée.</p><p><a href="${SITE_URL}/admin/devis?focus=${quoteId}">Ouvrir le devis dans l'admin</a></p>`,
       },
     });
   } catch {

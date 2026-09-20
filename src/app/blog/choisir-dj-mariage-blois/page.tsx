@@ -163,12 +163,12 @@ export default function ArticleDjMariageBlois() {
               6. La checklist finale avant de signer
             </h2>
             <ul className="list-disc space-y-2 pl-6">
-              <li>☐ Devis détaillé avec le prix final (options et déplacement inclus)</li>
-              <li>☐ Espace client pour la playlist et la timeline</li>
-              <li>☐ Matériel adapté à votre jauge et à votre salle</li>
-              <li>☐ Contrat signé en ligne + acompte sécurisé</li>
-              <li>☐ Des avis clients récents et vérifiables</li>
-              <li>☐ Un échange téléphonique avant la soirée (le feeling !)</li>
+              <li>Devis détaillé avec le prix final (options et déplacement inclus)</li>
+              <li>Espace client pour la playlist et la timeline</li>
+              <li>Matériel adapté à votre jauge et à votre salle</li>
+              <li>Contrat signé en ligne + acompte sécurisé</li>
+              <li>Des avis clients récents et vérifiables</li>
+              <li>Un échange téléphonique avant la soirée (le feeling !)</li>
             </ul>
 
             <div className="rounded-xl border border-accent/40 bg-accent/5 p-5 text-center">

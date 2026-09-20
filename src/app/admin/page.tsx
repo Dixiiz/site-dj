@@ -733,7 +733,7 @@ export default async function AdminDashboard({
         {/* Prochaines dates */}
         <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-card p-5">
           <div className="flex items-center justify-between">
-            <h2 className="font-medium">📅 Prochaines dates</h2>
+            <h2 className="font-medium">Prochaines dates</h2>
             <Link href="/admin/planning" className="text-xs text-accent hover:underline">
               Planning →
             </Link>

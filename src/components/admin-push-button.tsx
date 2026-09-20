@@ -85,7 +85,7 @@ export function AdminPushButton({ vapidPublicKey }: { vapidPublicKey: string }) 
       disabled={busy}
       className="rounded-lg border border-green-500/40 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/20 disabled:opacity-60"
     >
-      🔔 Notifications activées — désactiver
+      Notifications activées — désactiver
     </button>
   ) : (
     <button
@@ -94,7 +94,7 @@ export function AdminPushButton({ vapidPublicKey }: { vapidPublicKey: string }) 
       disabled={busy}
       className="rounded-lg border border-accent/50 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-60"
     >
-      {busy ? "…" : "🔔 Activer les notifications push"}
+      {busy ? "…" : "Activer les notifications push"}
     </button>
   );
 }

@@ -14,7 +14,6 @@ export const metadata: Metadata = {
 const articles = [
   {
     href: "/blog/choisir-dj-mariage-blois",
-    emoji: "💍",
     tag: "Mariage",
     title: "Comment choisir son DJ de mariage à Blois ? (guide 2026)",
     excerpt:
@@ -23,7 +22,6 @@ const articles = [
   },
   {
     href: "/blog/playlist-mariage-2026",
-    emoji: "🎵",
     tag: "Playlist",
     title: "Playlist de mariage 2026 — les 15 titres qui font lever la foule",
     excerpt:
@@ -32,7 +30,6 @@ const articles = [
   },
   {
     href: "/blog/dj-ou-playlist-spotify",
-    emoji: "🔊",
     tag: "Réflexion",
     title: "DJ mariage ou playlist Spotify : ce que ça change vraiment",
     excerpt:
@@ -41,7 +38,6 @@ const articles = [
   },
   {
     href: "/blog/combien-coute-dj-anniversaire",
-    emoji: "🎂",
     tag: "Anniversaire",
     title: "Combien coûte un DJ pour un anniversaire à Blois ? (2026)",
     excerpt:
@@ -50,7 +46,6 @@ const articles = [
   },
   {
     href: "/blog/dj-soiree-entreprise-erreurs",
-    emoji: "🏢",
     tag: "Entreprise",
     title: "DJ pour soirée d'entreprise : les 5 erreurs à éviter",
     excerpt:
@@ -82,7 +77,6 @@ export default function BlogPage() {
                 href={article.href}
                 className="group flex h-full flex-col rounded-xl border border-border bg-card p-6 transition-colors hover:border-accent/50"
               >
-                <span className="text-3xl">{article.emoji}</span>
                 <p className="mt-3 text-xs font-medium tracking-[0.2em] text-accent uppercase">
                   {article.tag} · {article.readingTime}
                 </p>
@@ -102,7 +96,6 @@ export default function BlogPage() {
           {/* Carte remplissage : tease les prochains articles */}
           <FadeIn delay={0.15}>
             <div className="flex h-full flex-col justify-center rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-              <span className="text-3xl">📝</span>
               <p className="mt-3">
                 Bientôt : <strong>« Organiser un mariage à Blois : le checklist complet des prestataires »</strong>
               </p>

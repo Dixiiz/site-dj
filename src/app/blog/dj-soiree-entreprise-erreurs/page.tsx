@@ -122,12 +122,12 @@ export default function ArticleDjEntreprise() {
               La checklist de l&apos;organisateur
             </h2>
             <ul className="list-disc space-y-2 pl-6">
-              <li>☐ Horaire exact des séquences transmis au DJ</li>
-              <li>☐ Micro(s) de qualité pour discours et remises de prix</li>
-              <li>☐ Ambiance musicale du repas validée</li>
-              <li>☐ Volume calibré pour chaque séquence (cocktail, repas, piste)</li>
-              <li>☐ Devis détaillé signé + facture pour la compta</li>
-              <li>☐ Contact direct avec le DJ qui viendra (pas une plateforme)</li>
+              <li>Horaire exact des séquences transmis au DJ</li>
+              <li>Micro(s) de qualité pour discours et remises de prix</li>
+              <li>Ambiance musicale du repas validée</li>
+              <li>Volume calibré pour chaque séquence (cocktail, repas, piste)</li>
+              <li>Devis détaillé signé + facture pour la compta</li>
+              <li>Contact direct avec le DJ qui viendra (pas une plateforme)</li>
             </ul>
 
             <div className="rounded-xl border border-accent/40 bg-accent/5 p-5 text-center">

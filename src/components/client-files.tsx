@@ -142,7 +142,7 @@ export function DiversFiles({ files }: { quoteId: string; files: ClientFile[] })
   if (misc.length === 0) return null;
   return (
     <div className="rounded-xl border border-border p-4">
-      <h3 className="font-medium text-muted-foreground">📎 Autres fichiers</h3>
+      <h3 className="font-medium text-muted-foreground">Autres fichiers</h3>
       <ul className="mt-3 space-y-2">
         {misc.map((file) => (
           <li

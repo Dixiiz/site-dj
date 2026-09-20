@@ -28,7 +28,7 @@ const FOLDERS: { key: MediaFolder; titre: string; hint: string; accept: string; 
   },
   {
     key: "packs",
-    titre: "🎒 Photos des packs",
+    titre: "Photos des packs",
     hint: "Visuels des packs et formules sur la page d'accueil (aperçus scénographie).",
     accept: "image/jpeg,image/png,image/webp,image/avif",
     kind: "image",

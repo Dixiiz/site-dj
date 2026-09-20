@@ -120,7 +120,7 @@ export function AdminQuoteEdit({
         onClick={() => setOpen(true)}
         className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-accent hover:text-foreground"
       >
-        ✎ Modifier
+        Modifier
       </button>
     );
   }

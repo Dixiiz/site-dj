@@ -45,7 +45,7 @@ export function ClientDetailsEditor({
   if (pending) {
     return (
       <div className="mt-4 rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm">
-        <p className="font-medium text-yellow-300">⏳ Modification en attente de validation</p>
+        <p className="font-medium text-yellow-300">Modification en attente de validation</p>
         <ul className="mt-2 space-y-0.5 text-muted-foreground">
           {pending.event_location ? <li>Lieu : {pending.event_location}</li> : null}
           {pending.event_date ? <li>Date : {pending.event_date}</li> : null}
@@ -67,7 +67,7 @@ export function ClientDetailsEditor({
       <input type="hidden" name="quote_id" value={quoteId} />
       <details className="rounded-lg border border-border">
         <summary className="cursor-pointer list-none px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
-          ✏️ Demander une modification (lieu, date, horaires, pack)
+          Demander une modification (lieu, date, horaires, pack)
         </summary>
         <div className="space-y-3 px-3 pb-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

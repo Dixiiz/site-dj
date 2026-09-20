@@ -150,7 +150,7 @@ export function AdminQuotePlaylist({
         {danceFiles.length > 0 ? (
           <>
             <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              📎 Fichiers de la soirée
+              Fichiers de la soirée
             </p>
             <ul className="mt-2 space-y-1.5">{danceFiles.map((f) => fileRow(quoteId, f))}</ul>
           </>
@@ -197,7 +197,7 @@ export function AdminQuotePlaylist({
           const momentFiles = allFiles.filter((f) => f.moment === moment);
           return (
             <div key={moment} className="rounded-xl border border-border p-4">
-              <h3 className="font-medium text-accent">{moment} ✨</h3>
+              <h3 className="font-medium text-accent">{moment} </h3>
               <ul className="mt-3 space-y-2">{momentTracks.map(trackRow)}</ul>
               {momentFiles.length > 0 ? (
                 <ul className="mt-3 space-y-1.5">
@@ -210,7 +210,7 @@ export function AdminQuotePlaylist({
 
         {miscFiles.length > 0 ? (
           <div className="rounded-xl border border-border p-4">
-            <h3 className="font-medium text-muted-foreground">📎 Autres fichiers</h3>
+            <h3 className="font-medium text-muted-foreground">Autres fichiers</h3>
             <ul className="mt-3 space-y-1.5">{miscFiles.map((f) => fileRow(quoteId, f))}</ul>
           </div>
         ) : null}

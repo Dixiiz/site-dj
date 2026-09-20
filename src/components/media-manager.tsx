@@ -154,7 +154,7 @@ export function MediaManager({
       <p className="mt-2 text-[11px] text-muted-foreground/70">
         Glisse-dépose les vignettes pour changer l&apos;ordre d&apos;affichage sur le site.
         <span className="ml-1 rounded bg-yellow-500/10 px-1.5 py-0.5 text-yellow-300 border border-yellow-500/30">local</span>
-        {" "}= fichier du dossier du projet — importe-le (⬆) dans le stockage pour qu&apos;il reste en ligne.
+        {" "}= fichier du dossier du projet — importe-le dans le stockage pour qu&apos;il reste en ligne.
       </p>
 
       {msg ? <p className="mt-2 text-xs text-muted-foreground">{msg}</p> : null}
@@ -237,7 +237,7 @@ export function MediaManager({
                     pendingLabel="…"
                     className="rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-cyan-600"
                   >
-                    ⬆
+                    Importer
                   </SubmitButton>
                 </form>
               ) : null}

@@ -185,7 +185,7 @@ export function CaDetailPanel({
                   ) : null}
                   {row.soldeSurPlaceMode && !row.soldeEnLigneLe ? (
                     <span className="text-xs font-normal text-orange-300">
-                      💵 à encaisser sur place (
+                      à encaisser sur place (
                       {row.soldeSurPlaceMode === "especes"
                         ? "espèces"
                         : row.soldeSurPlaceMode === "cheque"
@@ -196,7 +196,7 @@ export function CaDetailPanel({
                   ) : null}
                   {row.soldeDeclareLe && !row.soldeEnLigneLe ? (
                     <span className="text-xs font-normal text-orange-300">
-                      🏦 virement déclaré le{" "}
+                      virement déclaré le{" "}
                       {new Date(`${row.soldeDeclareLe}T12:00:00`).toLocaleDateString("fr-FR")}
                     </span>
                   ) : null}

@@ -68,7 +68,7 @@ export function AdminQuoteDetails({
       {/* Devis sans acompte : la signature suffit à confirmer la soirée */}
       {quote.acompte_required === false ? (
         <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-          🚫 Aucun acompte demandé pour ce devis — confirmé dès la signature, le
+          Aucun acompte demandé pour ce devis — confirmé dès la signature, le
           règlement se fait le jour de la prestation (ou via un échéancier).
         </div>
       ) : null}
@@ -77,7 +77,7 @@ export function AdminQuoteDetails({
         <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 px-3 py-2 text-xs">
           {quote.acompte_paid_at ? (
             <span className="font-medium text-green-400">
-              💰 Acompte réglé le{" "}
+              Acompte réglé le{" "}
               {new Date(quote.acompte_paid_at).toLocaleDateString("fr-FR", {
                 dateStyle: "long",
               })}
@@ -89,7 +89,7 @@ export function AdminQuoteDetails({
             </span>
           ) : (
             <span className="text-orange-300">
-              ⏳ Acompte déclaré envoyé par le client le{" "}
+              Acompte déclaré envoyé par le client le{" "}
               {new Date(quote.acompte_declared_at!).toLocaleDateString("fr-FR")} —
               à confirmer à réception du virement.
             </span>

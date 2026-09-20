@@ -35,7 +35,6 @@ type Section = {
  */
 export function buildEmailHtml(opts: {
   title: string; // gros titre sous le logo
-  emoji?: string;
   intro: string; // paragraphe d'introduction
   sections?: Section[]; // blocs « carte » (infos, options…)
   button?: Button; // gros bouton d'action
@@ -98,7 +97,7 @@ export function buildEmailHtml(opts: {
     <!-- Titre -->
     <tr><td align="center" style="padding:28px 30px 6px 30px;font-family:Arial,sans-serif;">
       <h1 style="margin:0;font-size:23px;line-height:30px;color:${COLORS.anthracite};font-weight:bold;">
-        ${opts.emoji ? `${opts.emoji} ` : ""}${esc(opts.title)}
+        ${esc(opts.title)}
       </h1>
     </td></tr>
 

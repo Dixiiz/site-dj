@@ -6,7 +6,6 @@ import { SITE_URL } from "@/lib/site-url";
 export default function NotFound() {
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-6 px-6 text-center">
-      <p className="text-5xl">🎹</p>
       <h1 className="text-2xl font-medium tracking-tight">
         Oups, cette page n&apos;existe pas…
       </h1>

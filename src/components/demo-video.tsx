@@ -49,9 +49,9 @@ const DEMO_PREPA = {
     { from: 0, to: 8, text: "Change d'avis ? Un message et c'est réglé — même pour réserver un appel", origin: "50% 40%", scale: 1.15 },
     { from: 8, to: 12, text: "Ta fiche de soirée : tout le programme en un coup d'œil", origin: "30% 40%", scale: 1.2 },
     { from: 12, to: 17.6, text: "Tape tes titres préférés et choisis tes temps forts", origin: "55% 55%", scale: 1.25 },
-    { from: 17.6, to: 24, text: "Et ceux à éviter à tout prix (on ne juge pas, promis 😄)", origin: "45% 65%", scale: 1.2 },
+    { from: 17.6, to: 24, text: "Et ceux à éviter à tout prix (on ne juge pas, promis )", origin: "45% 65%", scale: 1.2 },
     { from: 24, to: 36, text: "Une question ? Écris direct à ton DJ, il te répond", origin: "50% 55%", scale: 1.15 },
-    { from: 36, to: 47, text: "Tout est prêt. Il ne reste qu'à danser 🕺", origin: "50% 45%", scale: 1.1 },
+    { from: 36, to: 47, text: "Tout est prêt. Il ne reste qu'à danser ", origin: "50% 45%", scale: 1.1 },
   ] as Segment[],
 };
 

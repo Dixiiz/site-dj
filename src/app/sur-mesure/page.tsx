@@ -58,11 +58,11 @@ export default function SurMesurePage() {
               tout son sens. Voici les projets les plus fréquents :
             </p>
             <ul className="space-y-2">
-              <li>💒 Mariage avec double sonorisation : cérémonie laïque au domaine + soirée dansante dans une seconde salle</li>
-              <li>🌳 Soirée en extérieur : sonorisation et éclairage adaptés aux jardins, chapiteaux et terrasses</li>
-              <li>🏛️ Mairies et comités des fêtes : bals populaires, feu de la Saint-Jean, vignettes d&apos;honneur</li>
-              <li>🏢 Entreprises : soirée de gala, arbre de Noël, séminaire avec coordination du discours à la piste de danse</li>
-              <li>🎂 Anniversaires surprise : horaires atypiques, deux espaces à sonoriser, effets spéciaux</li>
+              <li>Mariage avec double sonorisation : cérémonie laïque au domaine + soirée dansante dans une seconde salle</li>
+              <li>Soirée en extérieur : sonorisation et éclairage adaptés aux jardins, chapiteaux et terrasses</li>
+              <li>Mairies et comités des fêtes : bals populaires, feu de la Saint-Jean, vignettes d&apos;honneur</li>
+              <li>Entreprises : soirée de gala, arbre de Noël, séminaire avec coordination du discours à la piste de danse</li>
+              <li>Anniversaires surprise : horaires atypiques, deux espaces à sonoriser, effets spéciaux</li>
             </ul>
             <p>
               Décrivez votre projet ci-dessous : vous recevez une réponse sous

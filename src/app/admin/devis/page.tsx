@@ -201,7 +201,7 @@ export default async function DevisPage({
           href="/admin/devis/nouveau"
           className="shrink-0 rounded-lg border border-accent/50 bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent/20"
         >
-          ➕ Nouveau devis sur mesure
+          Nouveau devis sur mesure
         </a>
       </div>
 
@@ -257,7 +257,7 @@ export default async function DevisPage({
                       <span className="text-accent">{eventKind(quote.formula_name ?? "")}</span>
                       {options.length > 0 ? (
                         <span className="text-muted-foreground">
-                          {" · 🎛️ "}
+                          {" · "}
                           {options.map((o) => optionShort(o.name, o.qty)).join(" · ")}
                         </span>
                       ) : null}
@@ -282,16 +282,16 @@ export default async function DevisPage({
                       </Badge>
                       {quote.acompte_paid_at ? (
                         <Badge variant="outline" className="mt-1 border-green-500/60 text-green-400">
-                          💰 Acompte réglé le {new Date(quote.acompte_paid_at).toLocaleDateString("fr-FR")}
+                          Acompte réglé le {new Date(quote.acompte_paid_at).toLocaleDateString("fr-FR")}
                         </Badge>
                       ) : quote.acompte_declared_at ? (
                         <Badge variant="outline" className="mt-1 border-orange-500/60 text-orange-400">
-                          ⏳ Acompte déclaré envoyé le {new Date(quote.acompte_declared_at).toLocaleDateString("fr-FR")}
+                          Acompte déclaré envoyé le {new Date(quote.acompte_declared_at).toLocaleDateString("fr-FR")}
                         </Badge>
                       ) : null}
                       {isPast(quote) ? (
                         <Badge variant="outline" className="mt-1 border-zinc-500/60 text-zinc-400">
-                          🕰 Passée
+                          Passée
                         </Badge>
                       ) : null}
                     </div>
@@ -335,9 +335,9 @@ export default async function DevisPage({
                   <div className="flex flex-wrap items-center gap-3 border-t border-border px-4 pt-3 text-sm">
                     <span className="text-yellow-400">
                       {quote.pending_options
-                        ? "⏳ Le client a demandé une modification d'options."
+                        ? "Le client a demandé une modification d'options."
                         : quote.pending_details
-                          ? "⏳ Le client a demandé une modification du devis (voir bloc dédié)."
+                          ? "Le client a demandé une modification du devis (voir bloc dédié)."
                           : "Nouveautés client (musique ou message)."}
                     </span>
                     {quote.has_unread_updates ? (
@@ -409,7 +409,7 @@ export default async function DevisPage({
                 {quote.pending_details ? (
                   <div className="space-y-2 border-t border-border px-4 pt-3 text-sm">
                     <p className="font-medium text-yellow-400">
-                      ⏳ Le client demande une modification du devis :
+                      Le client demande une modification du devis :
                     </p>
                     <ul className="space-y-0.5 rounded-lg border border-border bg-muted/50 p-3 text-muted-foreground">
                       {(quote.pending_details as {

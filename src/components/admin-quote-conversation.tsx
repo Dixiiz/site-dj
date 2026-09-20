@@ -18,7 +18,7 @@ function timeLabel(iso: string) {
   });
 }
 
-// Conversation du devis, avec rafraîchissement automatique (client ↔ admin).
+// Conversation du devis, avec rafraîchissement automatique (client admin).
 export function AdminQuoteConversation({
   quoteId,
   initialMessages,

@@ -23,7 +23,7 @@ export function BackfillStripeButton() {
       className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
       title="Déduit les frais Stripe des paiements déjà reçus, pour une base URSSAF exacte"
     >
-      {pending ? "Recalcul…" : "↻ Recalculer les frais Stripe des paiements reçus"}
+      {pending ? "Recalcul…" : "Recalculer les frais Stripe des paiements reçus"}
     </button>
   );
 }

@@ -547,7 +547,6 @@ export async function submitQuoteAndBooking(formData: FormData) {
             : null;
           const emailData = {
             title: "Nous avons bien reçu votre devis !",
-            emoji: "",
             intro: `Bonjour ${customer_name},<br/><br/>Merci pour votre confiance ! Votre demande de devis a bien été enregistrée dans notre système. Vous recevrez très rapidement une réponse de notre part — généralement sous <strong>24 à 48 h</strong>.`,
             sections: [
               {
@@ -589,7 +588,6 @@ export async function submitQuoteAndBooking(formData: FormData) {
 
     await sendQuoteNotification("Nouveau devis reçu — à traiter", {
       title: "Nouveau devis reçu !",
-      emoji: "",
       intro: `Un nouveau devis vient d'être soumis sur le site par <strong>${esc(customer_name)}</strong>.`,
       sections: [
         {
@@ -939,7 +937,6 @@ export async function updateQuoteStatus(formData: FormData) {
               : null;
             const emailData = {
               title: "Votre devis est confirmé !",
-              emoji: "",
               intro: `Bonjour,<br/><br/>Excellente nouvelle : votre devis${dateFr ? ` pour le <strong>${dateFr}</strong>` : ""} est désormais <strong style="color:${"#219653"};">confirmé</strong> !<br/><br/>La date est bloquée pour vous. Vous pouvez dès maintenant préparer votre soirée.`,
               sections: [
                 stepsSection("confirme"),

@@ -19,7 +19,6 @@ export const metadata: Metadata = {
 
 const acts = [
   {
-    emoji: "🎬",
     badge: "Acte 1",
     title: "Le devis express",
     hook: "Moins de temps que de choisir la playlist du trajet.",
@@ -31,7 +30,6 @@ const acts = [
     ],
   },
   {
-    emoji: "✍️",
     badge: "Acte 2",
     title: "Signe & verrouille",
     hook: "Bye le rendez-vous administratif, bonjour le doigt magique.",
@@ -44,13 +42,12 @@ const acts = [
     ],
   },
   {
-    emoji: "🎧",
     badge: "Acte 3",
     title: "Ta soirée se prépare",
     hook: "Ici, c'est ton terrain de jeu jusqu'au jour J.",
     video: "prepa",
     highlights: [
-      "Ta playlist, tes temps forts (et ceux à éviter 😄)",
+      "Ta playlist, tes temps forts (et ceux à éviter )",
       "La timeline minute par minute",
       "Une question ? La messagerie est là",
     ],
@@ -92,7 +89,7 @@ export default function CommentCaSePassePage() {
         <FadeIn>
           <p className="text-sm tracking-[0.2em] text-accent uppercase">Votre espace client</p>
           <h1 className="mt-2 text-3xl font-medium tracking-tight sm:text-4xl">
-            Comment ça se passe ? <span className="whitespace-nowrap">🍿</span>
+            Comment ça se passe ?
           </h1>
           <p className="mt-3 max-w-2xl text-muted-foreground">
             Réserver un DJ ne devrait pas être une course aux messages perdus.
@@ -105,9 +102,6 @@ export default function CommentCaSePassePage() {
             <FadeIn key={act.title} delay={0.05 * i}>
               <section>
                 <div className="flex items-center gap-3">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-accent/40 bg-accent/10 text-2xl">
-                    {act.emoji}
-                  </span>
                   <div>
                     <p className="text-xs font-medium tracking-[0.2em] text-accent uppercase">
                       {act.badge}
@@ -142,7 +136,7 @@ export default function CommentCaSePassePage() {
 
         <FadeIn delay={0.2}>
           <div className="mt-14 rounded-xl border border-accent/40 bg-accent/5 p-6 text-center">
-            <h2 className="text-xl font-medium">Ça te plaît ? À toi de jouer 🎵</h2>
+            <h2 className="text-xl font-medium">Ça te plaît ? À toi de jouer </h2>
             <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
               Ton devis t&apos;attend — et ton espace client aussi.
             </p>

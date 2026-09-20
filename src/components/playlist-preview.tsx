@@ -88,7 +88,7 @@ export function PreviewButton({ title, artist }: { title: string; artist: string
           …
         </>
       ) : state === "playing" ? (
-        <>⏸ Stop</>
+        <>Stop</>
       ) : (
         <>▶ 30 s</>
       )}

@@ -65,7 +65,7 @@ export function AdminQuoteDocuments({
           </span>
         ) : (
           <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-xs font-medium text-orange-400">
-            ⏳ En attente de signature
+            En attente de signature
           </span>
         )
       ) : null}
@@ -116,7 +116,7 @@ export function AdminQuoteDocuments({
             {/* Personnalisation du devis (facultatif) */}
             <details className="mb-2 text-left">
               <summary className="cursor-pointer text-xs text-muted-foreground hover:text-accent">
-                ⚙️ Personnaliser le devis
+                Personnaliser le devis
               </summary>
               <div className="mt-2 space-y-2 rounded-lg border border-border p-3">
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -181,7 +181,7 @@ export function AdminQuoteDocuments({
               formAction={async (fd: FormData) => { await generateDevisEtContratDocument(fd); }}
               className="rounded-lg border border-cyan-500/50 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:border-cyan-400 hover:bg-cyan-400/25 hover:text-cyan-100"
             >
-              📝 Générer devis + contrat
+              Générer devis + contrat
             </SubmitButton>
           </form>
           <form action={async (fd: FormData) => { await generateContratDocument(fd); }}>
@@ -190,7 +190,7 @@ export function AdminQuoteDocuments({
               pendingLabel="Génération du contrat…"
               className="rounded-lg border border-cyan-500/50 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:border-cyan-400 hover:bg-cyan-400/25 hover:text-cyan-100"
             >
-              📝 Générer le contrat PDF
+              Générer le contrat PDF
             </SubmitButton>
           </form>
           </div>
@@ -210,7 +210,7 @@ export function AdminQuoteDocuments({
 
       {/* Documents simples */}
       <div className="rounded-xl border border-border p-4">
-        <h3 className="font-medium text-muted-foreground">📎 Documents simples</h3>
+        <h3 className="font-medium text-muted-foreground">Documents simples</h3>
         <form action={async (fd: FormData) => { await generateFactureDocument(fd); }} className="mt-2">
           <input type="hidden" name="quote_id" value={quoteId} />
           <SubmitButton

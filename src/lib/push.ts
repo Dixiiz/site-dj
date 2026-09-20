@@ -62,12 +62,12 @@ async function alertPushOutage(reason: string, detail: string): Promise<void> {
     await new Resend(apiKey).emails.send({
       from: EMAIL_FROM,
       to,
-      subject: `⚠️ Notifications push inopérantes — ${reason}`,
+      subject: `Notifications push inopérantes — ${reason}`,
       html: `<p>Les <strong>notifications push</strong> du site ne fonctionnent pas : tu risques de manquer des devis, messages ou paiements (tu reçois encore les e-mails, mais pas les push).</p>
 <p><strong>Cause détectée :</strong> ${detail}</p>
 <ul>
 <li>Clés VAPID manquantes → vérifie les variables <code>VAPID_PUBLIC_KEY</code>, <code>VAPID_PRIVATE_KEY</code>, <code>VAPID_SUBJECT</code> sur Vercel puis redéploie.</li>
-<li>Aucun appareil abonné → ouvre <a href="https://propulsounddj.fr/admin">l'admin</a> et clique sur « 🔔 Activer les notifications push ».</li>
+<li>Aucun appareil abonné → ouvre <a href="https://propulsounddj.fr/admin">l'admin</a> et clique sur « Activer les notifications push ».</li>
 <li>Envois en échec → teste avec <code>node scripts/test-push.mjs</code> et consulte les logs Vercel.</li>
 </ul>
 <p><em>(Alerte envoyée une fois maximum toutes les 24 h tant que le problème persiste.)</em></p>`,
@@ -102,7 +102,7 @@ export async function notifyAdminPush(payload: AdminPushPayload): Promise<PushRe
     if (!subs || subs.length === 0) {
       await alertPushOutage(
         "aucun appareil abonné",
-        "aucun appareil n'est abonné aux notifications (table push_subscriptions vide) — réactive les notifications depuis l'admin (bouton 🔔)."
+        "aucun appareil n'est abonné aux notifications (table push_subscriptions vide) — réactive les notifications depuis l'admin (bouton )."
       );
       return base;
     }
