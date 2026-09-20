@@ -192,23 +192,47 @@ export async function searchAddresses(query: string) {
     // Repli ci-dessous.
   }
 
-  // 2) Repli : OpenStreetMap Nominatim.
+  // 2) Repli : OpenStreetMap Nominatim, puis BAN (api-adresse.data.gouv.fr)
+  // — les IP partagées de Vercel sont souvent rate-limitées par Nominatim.
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=fr&addressdetails=1&q=${encodeURIComponent(q)}`;
-    const res = await fetch(url, {
-      headers: {
- "User-Agent": "propulsounddj-site/1.0 (contact@propulsounddj.fr)",
- "Accept-Language": "fr",
-      },
-      cache: "no-store",
-    });
-    if (!res.ok)
-      return { ok: true as const, results: [], subtitles: [], details: [], placeIds: [] };
-    const data = (await res.json()) as { display_name?: string }[];
-    const fallbackResults = data
-      .map((item) => item.display_name ?? "")
-      .filter((label) => label.length > 0)
-      .slice(0, 5);
+    let fallbackResults: string[] = [];
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=fr&addressdetails=1&q=${encodeURIComponent(q)}`;
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "propulsounddj-site/1.0 (contact@propulsounddj.fr)",
+          "Accept-Language": "fr",
+        },
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { display_name?: string }[];
+        fallbackResults = data
+          .map((item) => item.display_name ?? "")
+          .filter((label) => label.length > 0)
+          .slice(0, 5);
+      }
+    } catch {
+      // Repli ci-dessous (BAN).
+    }
+
+    // Repli final : BAN — géocodeur officiel français, adresses postales.
+    if (fallbackResults.length === 0) {
+      const res = await fetch(
+        `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=5`,
+        { cache: "no-store" }
+      );
+      if (res.ok) {
+        const data = (await res.json()) as {
+          features?: { properties?: { label?: string } }[];
+        };
+        fallbackResults = (data.features ?? [])
+          .map((f) => f.properties?.label ?? "")
+          .filter((label) => label.length > 0)
+          .slice(0, 5);
+      }
+    }
+
     return {
       ok: true as const,
       results: fallbackResults,
@@ -458,6 +482,11 @@ export async function submitQuoteAndBooking(formData: FormData) {
   const confirmedTravelDistanceKm = travelResult.ok
     ? travelResult.estimate.distanceKm
     : travel_distance_km;
+  // Garde-fou : si le géocodage a échoué (donc frais potentiellement faux),
+  // on le signale dans les notes pour que le devis soit corrigé avant facturation.
+  const travelWarning = travelResult.ok
+    ? null
+    : "ATTENTION : frais de déplacement non recalculés automatiquement (adresse non géocodée) — à recalculer.";
 
   // Prix : le pack choisi prime sur le prix de la formule de base.
   const packPriceCents = pack_price_cents > 0 ? pack_price_cents : formula.price_cents;
@@ -498,6 +527,7 @@ export async function submitQuoteAndBooking(formData: FormData) {
     extra_hours > 0 ? `Heures supplémentaires : ${extra_hours} (${(extra_fee_cents / 100).toFixed(2)} €)` : null,
     co2_qty > 1 ? `Pistolets CO2 : ${co2_qty} unités` : null,
     notes ? `Message : ${notes}` : null,
+    travelWarning,
   ]
     .filter(Boolean)
     .join(" | ");

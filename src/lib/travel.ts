@@ -48,7 +48,33 @@ async function routeDistanceKm(dest: { lat: number; lon: number }): Promise<numb
   }
 }
 
+// Repli : géocodeur officiel français (BAN — api-adresse.data.gouv.fr).
+// Très fiable pour les adresses postales françaises, sans clé API et sans
+// les blocages/rate-limits que Nominatim inflige aux IP partagées (Vercel).
+async function geocodeBan(address: string): Promise<{ lat: number; lon: number } | null> {
+  try {
+    const res = await fetch(
+      `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(address)}&limit=1`,
+      { cache: "no-store" }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const coords = data?.features?.[0]?.geometry?.coordinates; // [lon, lat]
+    if (!Array.isArray(coords) || coords.length < 2) return null;
+    return { lat: coords[1], lon: coords[0] };
+  } catch {
+    return null;
+  }
+}
+
+// Géocodage avec repli : Nominatim (noms de lieux, domaines…) puis BAN
+// (adresses postales). Renvoie null seulement si les deux échouent.
+async function geocodeWithFallback(address: string): Promise<{ lat: number; lon: number } | null> {
+  return (await geocodeAddress(address)) ?? (await geocodeBan(address));
+}
+
 export function computeTravelFee(distanceKm: number): TravelEstimate {
+
   const roundTripKm = distanceKm * 2; // aller-retour
   const billableKm = Math.max(0, roundTripKm - FREE_KM);
   const feeCents = Math.round(billableKm * RATE_PER_KM_CENTS);
@@ -66,7 +92,7 @@ export async function estimateTravelWithToll(
   if (!address.trim()) {
     return { ok: false, error: "Merci d'indiquer le lieu de l'événement." };
   }
-  const coords = await geocodeAddress(address);
+  const coords = await geocodeWithFallback(address);
   if (!coords) {
     return { ok: false, error: "Adresse introuvable. Précise la ville ou le code postal." };
   }
@@ -83,7 +109,7 @@ export async function estimateTravelFromAddress(
   if (!address.trim()) {
     return { ok: false, error: "Merci d’indiquer le lieu de l’événement." };
   }
-  const coords = await geocodeAddress(address);
+  const coords = await geocodeWithFallback(address);
   if (!coords) {
     return {
       ok: false,
