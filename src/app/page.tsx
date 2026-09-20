@@ -113,7 +113,7 @@ export default async function Home() {
               publisher: { "@type": "Organization", name: SITE_NAME },
               },
               {
- "@type": "DJ",
+              "@type": ["LocalBusiness", "ProfessionalService"],
               name: "Propul'Sound DJ",
               description:
  "DJ généraliste et techno pour mariages, anniversaires et soirées privées. Sonorisation, lumière et options FX incluses.",
