@@ -198,13 +198,13 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
         {
           title: "2 minutes pour m'aider",
           lines: [
-            `<a href="https://g.page/r/CYgCQMSAgDcWEAE/review" style="color:#21619A;"><strong>Laisser un avis Google</strong></a> — le plus utile pour me faire connaître`,
-            `<a href="https://www.mariages.net/musique-mariage/propulsound-dj--e366139" style="color:#21619A;"><strong>Laisser un avis Mariages.net</strong></a> — pour les couples en préparation`,
+            `<a href="${SITE}/avis/google" style="color:#21619A;"><strong>Laisser un avis Google</strong></a> — le plus utile pour me faire connaître`,
+            `<a href="${SITE}/avis/mariages" style="color:#21619A;"><strong>Laisser un avis Mariages.net</strong></a> — pour les couples en préparation`,
  "Et si vous avez des photos ou vidéos de la piste de danse, je suis preneur !",
           ],
         },
       ],
-      button: { label: "Laisser un avis Google (2 min)", href: "https://g.page/r/CYgCQMSAgDcWEAE/review" },
+      button: { label: "Laisser un avis Google (2 min)", href: `${SITE}/avis/google` },
       footer: "Encore merci pour votre confiance, et à une prochaine soirée peut-être ! — Maxime, Propul'Sound DJ",
     });
     if (ok) {
@@ -251,13 +251,13 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
           {
             title: "Deux liens, deux minutes",
             lines: [
-              `<a href="https://g.page/r/CYgCQMSAgDcWEAE/review" style="color:#21619A;"><strong>Laisser un avis Google</strong></a> — le plus utile`,
-              `<a href="https://www.mariages.net/musique-mariage/propulsound-dj--e366139" style="color:#21619A;"><strong>Laisser un avis Mariages.net</strong></a> — pour les couples en préparation`,
+              `<a href="${SITE}/avis/google" style="color:#21619A;"><strong>Laisser un avis Google</strong></a> — le plus utile`,
+              `<a href="${SITE}/avis/mariages" style="color:#21619A;"><strong>Laisser un avis Mariages.net</strong></a> — pour les couples en préparation`,
               "Et si vous avez des photos ou vidéos de la piste de danse, je suis toujours preneur !",
             ],
           },
         ],
-        button: { label: "Laisser un avis Google (2 min)", href: "https://g.page/r/CYgCQMSAgDcWEAE/review" },
+        button: { label: "Laisser un avis Google (2 min)", href: `${SITE}/avis/google` },
         footer: "Désolé pour le rappel — et surtout, merci ! — Maxime, Propul'Sound DJ",
       }
     );
