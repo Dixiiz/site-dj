@@ -3,6 +3,15 @@ import { CustomRequestForm } from "@/components/custom-request-form";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import Link from "next/link";
+import {
+  MapPin,
+  MessageCircle,
+  Calculator,
+  Car,
+  Speaker,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react";
 
 export const metadata = {
   alternates: { canonical: "/contact" },
@@ -38,6 +47,16 @@ const BRANDS = [
   },
 ];
 
+// Infos pratiques avec icônes sobres (Lucide), cohérentes avec le blog.
+const INFOS: { icon: LucideIcon; text: string }[] = [
+  { icon: MapPin, text: "Basé à Huisseau-sur-Cosson (41350), à 5 minutes de Blois" },
+  { icon: MessageCircle, text: "Réponse sous 24 h — souvent en moins d'une heure sur WhatsApp" },
+  { icon: Calculator, text: "Devis gratuit, tarif calculé en direct sur la page Formules" },
+  { icon: Car, text: "Déplacement offert dans un rayon de 30 km, frais automatiques au-delà" },
+  { icon: Speaker, text: "Matériel professionnel inclus : sonorisation, lumières, machine à fumée" },
+  { icon: Sparkles, text: "Options FX disponibles : étincelles froides, CO2, fumée lourde" },
+];
+
 export default function ContactPage() {
   return (
     <>
@@ -55,13 +74,18 @@ export default function ContactPage() {
           {/* Infos pratiques : contenu textuel riche (SEO) + réponses aux
               questions que les clients posent avant de nous contacter */}
           <h2 className="mt-12 text-xl font-medium">Infos pratiques</h2>
-          <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-            <li>Basé à Huisseau-sur-Cosson (41350), à 5 minutes de Blois</li>
-            <li>Réponse sous 24 h — souvent en moins d&apos;une heure sur WhatsApp</li>
-            <li>Devis gratuit, tarif calculé en direct sur la page Formules</li>
-            <li>Déplacement offert dans un rayon de 30 km, frais automatiques au-delà</li>
-            <li>Matériel professionnel inclus : sonorisation, lumières, machine à fumée</li>
-            <li>Options FX disponibles : étincelles froides, CO2, fumée lourde</li>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+            {INFOS.map(({ icon: Icon, text }) => (
+              <li
+                key={text}
+                className="flex items-start gap-3 rounded-xl border border-border bg-card/60 p-3.5"
+              >
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-accent/30 bg-accent/10 text-accent">
+                  <Icon size={18} strokeWidth={1.75} aria-hidden />
+                </span>
+                <span className="pt-1 text-sm leading-relaxed text-muted-foreground">{text}</span>
+              </li>
+            ))}
           </ul>
           <p className="mt-4 text-sm text-muted-foreground">
             Vous hésitez entre plusieurs formules ou vous ne savez pas quel
