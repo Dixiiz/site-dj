@@ -7,6 +7,7 @@ import { Camera, MapPin } from "lucide-react";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { GalerieVideos } from "@/components/galerie-videos";
 import {
   getCreditsBundle,
   getOrder,
@@ -234,23 +235,7 @@ export default async function GaleriePage() {
           <h2 className="mt-2 text-center text-xl font-medium tracking-tight sm:text-2xl">
             La piste de danse en action
           </h2>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {videos.map((video) => (
-              <figure key={video.name} className="overflow-hidden rounded-2xl border border-border">
-                <video
-                  src={video.url}
-                  poster={video.poster}
-                  controls
-                  preload="metadata"
-                  playsInline
-                  className="aspect-video w-full bg-background"
-                />
-                <figcaption className="px-3 py-2 text-xs text-muted-foreground">
-                  Prestation Propul&apos;Sound DJ
-                </figcaption>
-              </figure>
-            ))}
-          </div>
+          <GalerieVideos videos={videos} />
         </section>
       ) : null}
       </main>
