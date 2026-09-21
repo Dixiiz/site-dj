@@ -90,6 +90,39 @@ export async function saveOrder(folder: MediaFolder, names: string[]): Promise<{
   return { ok: true };
 }
 
+// ---------- Sélection « accueil » (stockée dans le bucket, _accueil.json) ----
+// Pour les vidéos showcase : liste des fichiers affichés dans le carrousel
+// « En action » de la page d'accueil. Fichier absent → tout est affiché
+// (comportement historique, rétrocompatible).
+export async function getHomeSelection(folder: MediaFolder): Promise<string[] | null> {
+  const supabase = createAdminClient();
+  const { data } = await supabase.storage.from(MEDIA_BUCKET).download(`${folder}/_accueil.json`);
+  if (!data) return null;
+  try {
+    const parsed = JSON.parse(await data.text());
+    return Array.isArray(parsed) ? parsed.map(String) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveHomeSelection(
+  folder: MediaFolder,
+  names: string[]
+): Promise<{ ok: boolean; error?: string }> {
+  await ensureMediaBucket();
+  const supabase = createAdminClient();
+  const body = JSON.stringify(names);
+  const { error } = await supabase.storage
+    .from(MEDIA_BUCKET)
+    .upload(`${folder}/_accueil.json`, body, {
+      contentType: "application/json",
+      upsert: true,
+    });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 // ---------- Crédits média (stockés dans le bucket, _credits.json) ----------
 // Associe des noms de fichiers à un photographe et/ou à un lieu.
 // Shape : { photographers: { "Jeanne Bastien": [fichiers...] }, lieux: { "Blois": [...] } }

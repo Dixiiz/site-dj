@@ -10,7 +10,7 @@ import { Gallery } from "@/components/gallery";
 import { HeroVideo } from "@/components/hero-video";
 import { VideoShowcase } from "@/components/video-showcase";
 import { TIKTOK_PROFILE_URL } from "@/config/tiktok";
-import { getOrder, listMedia } from "@/lib/site-media";
+import { getHomeSelection, getOrder, listMedia } from "@/lib/site-media";
 import { SITE_URL, SITE_NAME } from "@/lib/site-url";
 import Link from "next/link";
 
@@ -92,6 +92,16 @@ export default async function Home() {
     }
   } else {
     showcaseVideos = showcaseAll;
+  }
+  // Sélection « accueil » (cases à cocher dans Admin → Médias) : si une
+  // sélection est enregistrée, seules ces vidéos alimentent le carrousel
+  // « En action » (la galerie, elle, continue d'afficher toutes les vidéos).
+  const homeSelection = await getHomeSelection("videos/showcase").catch(() => null);
+  if (homeSelection !== null) {
+    const wanted = new Set(homeSelection);
+    showcaseVideos = showcaseVideos.filter((url) =>
+      wanted.has(decodeURIComponent(url.split("/").pop() ?? ""))
+    );
   }
   const heroSrc = storageHero ?? (hasHeroVideo ? "/videos/hero.mp4" : null);
 

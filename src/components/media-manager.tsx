@@ -45,6 +45,7 @@ export function MediaManager({
   deleteLocalAction,
   importLocalAction,
   orderAction,
+  homeToggle,
 }: {
   folder: string;
   items: MediaItem[];
@@ -55,6 +56,12 @@ export function MediaManager({
   deleteLocalAction: Action;
   importLocalAction: Action;
   orderAction: (folder: string, names: string[]) => Promise<{ ok: boolean; error?: string }>;
+  // Optionnel (vidéos showcase) : coche « accueil » par fichier.
+  // initial = null → fichier _accueil.json absent → tout affiché.
+  homeToggle?: {
+    initial: string[] | null;
+    action: (formData: FormData) => void | Promise<void>;
+  };
 }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -69,6 +76,31 @@ export function MediaManager({
     () => new Set(items.map((i) => `${i.origin}-${i.name}`))
   );
   const list = reordered ?? items;
+
+  // Case « accueil » (vidéos showcase) : état local optimiste, la server
+  // action enregistre dans le bucket et revalide la page d'accueil.
+  // initial null → tout coché (aucune sélection enregistrée).
+  const [homeVisible, setHomeVisible] = useState<Set<string> | null>(
+    () => (homeToggle ? new Set(homeToggle.initial ?? []) : null)
+  );
+  const isHomeVisible = (name: string) =>
+    homeVisible === null ? true : homeVisible.has(name);
+
+  const toggleHome = (name: string, visible: boolean) => {
+    if (!homeToggle) return;
+    setHomeVisible((cur) => {
+      const base = cur ?? new Set(list.map((m) => m.name));
+      const next = new Set(base);
+      if (visible) next.add(name);
+      else next.delete(name);
+      return next;
+    });
+    const fd = new FormData();
+    fd.set("folder", folder);
+    fd.set("name", name);
+    fd.set("visible", visible ? "1" : "0");
+    void homeToggle.action(fd);
+  };
 
   // Envoi fichier par fichier (une requête chacun) après compression :
   // évite de dépasser la limite de taille des server actions.
@@ -248,7 +280,27 @@ export function MediaManager({
                 </SubmitButton>
               </form>
             </div>
-            <p className="truncate bg-black/50 px-2 py-1 text-[10px] text-white/80">{item.name}</p>
+            <div className="flex items-center gap-1.5 bg-black/50 px-1.5 py-1">
+              {homeToggle ? (
+                <label
+                  className="flex shrink-0 cursor-pointer items-center gap-1 text-[9px] text-white/70"
+                  title={
+                    isHomeVisible(item.name)
+                      ? "Affichée dans le carrousel de l'accueil — décoche pour la retirer"
+                      : "Masquée de l'accueil — coche pour l'afficher"
+                  }
+                >
+                  <input
+                    type="checkbox"
+                    checked={isHomeVisible(item.name)}
+                    onChange={(e) => toggleHome(item.name, e.target.checked)}
+                    className="size-3 accent-emerald-500"
+                  />
+                  accueil
+                </label>
+              ) : null}
+              <span className="truncate text-[10px] text-white/80">{item.name}</span>
+            </div>
           </li>
           );
         })}

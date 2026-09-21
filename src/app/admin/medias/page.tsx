@@ -1,12 +1,14 @@
 import {
   deleteLocalMedia,
   deleteMedia,
+  getHomeSelection,
   getCreditsBundle,
   getOrder,
   importLocalToStorage,
   listLocalMedia,
   listMedia,
   saveCreditsSection,
+  saveHomeSelection,
   saveOrder,
   setPhotoCredit,
   type MediaCredits,
@@ -37,7 +39,7 @@ const FOLDERS: { key: MediaFolder; titre: string; hint: string; accept: string; 
   {
     key: "videos/showcase",
     titre: "Vidéos showcase",
-    hint: "Vidéos de la page Galerie (verticales ou horizontales — l'affichage s'adapte tout seul) et du carrousel « En action » de l'accueil (ordre = ordre d'affichage).",
+    hint: "Vidéos de la page Galerie (verticales ou horizontales — l'affichage s'adapte tout seul). Coche « accueil » sur celles à afficher dans le carrousel de la page d'accueil.",
     accept: "video/mp4,video/quicktime,video/webm",
     kind: "video",
   },
@@ -164,6 +166,30 @@ function makeSetPhotoCreditAction(folder: MediaFolder) {
   };
 }
 
+function makeSetHomeVisibleAction(folder: MediaFolder) {
+  return async (formData: FormData) => {
+ "use server";
+    if (!(await requireAdmin())) return;
+    const name = String(formData.get("name") ?? "");
+    const visible = String(formData.get("visible") ?? "") === "1";
+    if (!name) return;
+    const current = await getHomeSelection(folder).catch(() => null);
+    if (!visible && current === null) {
+      // Première désélection : on crée la liste = tout sauf ce fichier.
+      const all = await listMedia(folder).catch(() => [] as { name: string }[]);
+      await saveHomeSelection(folder, all.map((f) => f.name).filter((n) => n !== name));
+    } else {
+      const cur = current ?? [];
+      const next = visible
+        ? [...new Set([...cur, name])]
+        : cur.filter((n) => n !== name);
+      await saveHomeSelection(folder, next);
+    }
+    revalidatePath("/admin/medias");
+    revalidatePath("/");
+  };
+}
+
 async function saveOrderAction(folder: string, names: string[]) {
  "use server";
   if (!(await requireAdmin())) return { ok: false as const, error: "Non autorisé." };
@@ -176,7 +202,7 @@ async function saveOrderAction(folder: string, names: string[]) {
 }
 
 export default async function AdminMediasPage() {
-  const [sections, galerieCredits] = await Promise.all([
+  const [sections, galerieCredits, showcaseHome] = await Promise.all([
     Promise.all(
       FOLDERS.map(async (f) => ({ ...f, items: await mergedItems(f.key) }))
     ),
@@ -184,6 +210,7 @@ export default async function AdminMediasPage() {
       photographers: {} as MediaCredits,
       lieux: {} as MediaCredits,
     })),
+    getHomeSelection("videos/showcase").catch(() => null as string[] | null),
   ]);
 
   return (
@@ -217,6 +244,14 @@ export default async function AdminMediasPage() {
             deleteLocalAction={makeDeleteLocalAction(section.key)}
             importLocalAction={makeImportLocalAction(section.key)}
             orderAction={saveOrderAction}
+            homeToggle={
+              section.key === "videos/showcase"
+                ? {
+                    initial: showcaseHome,
+                    action: makeSetHomeVisibleAction(section.key),
+                  }
+                : undefined
+            }
           />
           {section.key === "galerie" ? (
             <>
