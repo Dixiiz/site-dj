@@ -33,7 +33,7 @@ try {
   await card.waitFor({ state: "visible", timeout: 10000 });
   const video = card.locator("video[data-pack-video]");
 
-  // Étape 2 : la vidéo est bien là, avec poster = photo du pack, sans boucle
+  // Étape 2 : la vidéo est bien là, sans ancienne photo en poster, sans boucle
   check("Vidéo présente sur la carte Deluxe", (await video.count()) === 1);
   const attrs = await video.evaluate((v) => ({
     src: v.getAttribute("src"),
@@ -41,17 +41,27 @@ try {
     loop: v.hasAttribute("loop"),
   }));
   check("Source vidéo = /videos/packs/deluxe.mp4", attrs.src === "/videos/packs/deluxe.mp4", attrs.src ?? "");
-  check("Poster = photo du pack (4.jpg)", (attrs.poster ?? "").includes("/images/packs/4.jpg"), attrs.poster ?? "");
+  check("Ancienne photo absente (pas de poster)", attrs.poster === null, `poster=${attrs.poster ?? "aucun"}`);
   check("Pas d'attribut loop (se fige à la fin)", !attrs.loop);
 
   // Étape 3 : au repos, rien ne joue, et la vidéo est bien le calque visible
+  // (on attend que la première image soit décodée → fondu depuis la photo floutée)
+  await page.waitForFunction(
+    () => {
+      const v = document.querySelector("video[data-pack-video]");
+      return v && getComputedStyle(v).opacity === "1";
+    },
+    { timeout: 10000 }
+  );
   const idle = await video.evaluate((v) => ({
     paused: v.paused,
     t: v.currentTime,
     opacity: getComputedStyle(v).opacity,
+    filter: getComputedStyle(v).filter,
   }));
   check("Figée au repos (pas de lecture)", idle.paused && idle.t === 0, `paused=${idle.paused}, t=${idle.t}`);
   check("Vidéo visible en permanence (première image affichée)", idle.opacity === "1", `opacity=${idle.opacity}`);
+  check("Pas de flou au repos", !idle.filter.includes("blur(") || /blur\(0px\)/.test(idle.filter), idle.filter);
 
   // Étape 4 : survol → la lecture démarre
   await card.hover();
@@ -86,14 +96,26 @@ try {
     `paused=${afterLeave.paused}, t=${afterLeave.t.toFixed(2)}`
   );
 
-  // Étape 7 : nouveau survol → rejoue depuis le début
+  // Étape 7 : nouveau survol → voile flou au redémarrage (masque la cassure),
+  // puis flou retiré et la scène rejoue depuis le début
   await card.hover();
+  await page.waitForTimeout(120);
+  const blurStart = await video.evaluate((v) => getComputedStyle(v).filter);
   await page.waitForTimeout(900);
-  const replay = await video.evaluate((v) => ({ paused: v.paused, t: v.currentTime }));
+  const blurEnd = await video.evaluate((v) => ({
+    filter: getComputedStyle(v).filter,
+    paused: v.paused,
+    t: v.currentTime,
+  }));
   check(
-    "Nouveau survol → rejoue depuis le début",
-    !replay.paused && replay.t < 1.5,
-    `paused=${replay.paused}, t=${replay.t.toFixed(2)}`
+    "Flou appliqué au redémarrage (masque la cassure)",
+    blurStart.includes("blur(") && !/blur\(0px\)/.test(blurStart),
+    blurStart
+  );
+  check(
+    "Flou retiré ensuite + rejoue depuis le début",
+    (!blurEnd.filter.includes("blur(") || /blur\(0px\)/.test(blurEnd.filter)) && !blurEnd.paused && blurEnd.t < 1.5,
+    `filter=${blurEnd.filter}, paused=${blurEnd.paused}, t=${blurEnd.t.toFixed(2)}`
   );
 } catch (error) {
   check("Diagnostic photo live Pack Deluxe", false, String(error).slice(0, 160));
