@@ -53,6 +53,17 @@ export function CustomRequestForm() {
         <Button type="submit" className="w-full" size="lg" disabled={pending}>
           {pending ? "Enregistrement…" : "Envoyer ma demande"}
         </Button>
+        <p className="text-center text-xs leading-relaxed text-muted-foreground">
+          Vos données (nom, e-mail, message) ne servent qu&apos;à vous répondre
+          et ne sont jamais vendues —{" "}
+          <a
+            href="/politique-de-confidentialite"
+            className="underline underline-offset-2 hover:text-accent"
+          >
+            politique de confidentialité
+          </a>
+          .
+        </p>
       </form>
     </FadeIn>
   );

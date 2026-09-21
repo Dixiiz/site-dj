@@ -47,14 +47,28 @@ async function mergedPhotos(): Promise<MediaItem[]> {
 }
 
 // Vidéos showcase (uploadées dans Admin → Médias) : stockage + repli local.
-async function mergedVideos(): Promise<MediaItem[]> {
+// On ne garde que les vraies vidéos (les .jpg du dossier servent de posters),
+// et on associe chaque vidéo à son poster éventuel « clip-1.mp4 → clip-1.jpg ».
+const VIDEO_RE = /\.(mp4|mov|webm)$/i;
+const IMAGE_RE = /\.(jpe?g|png|webp|avif)$/i;
+
+async function mergedVideos(): Promise<{ name: string; url: string; poster?: string }[]> {
   const [storage, local] = await Promise.all([
     listMedia("videos/showcase").then((files) =>
       files.map((f) => ({ ...f, origin: "storage" as const }))
     ),
     Promise.resolve(listLocalMedia("videos/showcase")),
   ]);
-  return [...storage, ...local.filter((l) => !storage.some((s) => s.name === l.name))];
+  const all = [...storage, ...local.filter((l) => !storage.some((s) => s.name === l.name))];
+  const posters = new Map(
+    all.filter((f) => IMAGE_RE.test(f.name)).map((f) => [f.name.replace(IMAGE_RE, "").toLowerCase(), f.url])
+  );
+  return all
+    .filter((f) => VIDEO_RE.test(f.name))
+    .map((f) => ({
+      ...f,
+      poster: posters.get(f.name.replace(VIDEO_RE, "").toLowerCase()),
+    }));
 }
 
 export default async function GaleriePage() {
@@ -225,6 +239,7 @@ export default async function GaleriePage() {
               <figure key={video.name} className="overflow-hidden rounded-2xl border border-border">
                 <video
                   src={video.url}
+                  poster={video.poster}
                   controls
                   preload="metadata"
                   playsInline

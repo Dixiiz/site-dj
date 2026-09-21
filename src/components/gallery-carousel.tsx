@@ -65,7 +65,7 @@ export function GalleryCarousel({ photos }: { photos: string[] }) {
               >
                 <Image
                   src={src}
-                  alt="Prestation Propul'Sound DJ"
+                  alt="Prestation DJ lors d'un mariage — Propul'Sound DJ"
                   fill
                   sizes="(max-width: 640px) 100vw, 33vw"
                   className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
@@ -112,7 +112,7 @@ export function GalleryCarousel({ photos }: { photos: string[] }) {
                 >
                   <Image
                     src={src}
-                    alt="Prestation Propul'Sound DJ"
+                    alt="Prestation DJ lors d'une soirée privée — Propul'Sound DJ"
                     fill
                     sizes="(max-width: 640px) 100vw, 33vw"
                     className="object-cover"

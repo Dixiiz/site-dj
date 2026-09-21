@@ -12,7 +12,7 @@ const sections = [
   {
     title: "Éditeur du site",
     content:
- "Propul'Sound DJ — Entreprise individuelle de prestation DJ & show lumière. Siège : Huisseau-sur-Cosson (41350). Directeur de la publication : le gérant. Contact : via le formulaire de la page Contact.",
+ "Propul'Sound DJ — Entreprise individuelle de prestation DJ & show lumière. Siège : 5 Clos de la Salamandre, 41350 Huisseau-sur-Cosson, France. SIRET : 932 220 791 00010. Directeur de la publication : le gérant. Contact : via le formulaire de la page Contact, par e-mail à propulsounddj@gmail.com ou au 06 74 85 07 69.",
   },
   {
     title: "Hébergement",
@@ -22,12 +22,12 @@ const sections = [
   {
     title: "Données personnelles (RGPD)",
     content:
- "Les informations transmises via les formulaires (nom, e-mail, téléphone, lieu et date de l'événement) sont utilisées uniquement pour traiter votre demande de devis ou votre message. Elles ne sont ni vendues, ni transmises à des tiers. Vous pouvez demander leur suppression à tout moment via la page Contact.",
+ "Les informations transmises via les formulaires (nom, e-mail, téléphone, lieu et date de l'événement) sont utilisées uniquement pour traiter votre demande de devis ou votre message. Elles ne sont ni vendues, ni transmises à des tiers. Vous pouvez demander leur suppression à tout moment via la page Contact. Détails complets dans notre politique de confidentialité.",
   },
   {
     title: "Cookies",
     content:
- "Ce site n'utilise pas de cookies publicitaires ni de traceurs nécessitant consentement. Les statistiques de fréquentation (Vercel Analytics) sont collectées de manière anonyme et sans cookie.",
+ "Ce site n'utilise pas de cookies publicitaires ni de traceurs nécessitant consentement. Les statistiques de fréquentation (Vercel Analytics) sont collectées de manière anonyme et sans cookie. Détails dans notre politique cookies.",
   },
   {
     title: "Propriété intellectuelle",
@@ -71,6 +71,27 @@ export default function MentionsLegalesPage() {
               className="text-accent underline underline-offset-4"
             >
               Contactez-nous
+            </Link>
+            . Voir aussi nos{" "}
+            <Link
+              href="/conditions-utilisation"
+              className="text-accent underline underline-offset-4"
+            >
+              conditions d&apos;utilisation et de vente
+            </Link>
+            , notre{" "}
+            <Link
+              href="/politique-de-confidentialite"
+              className="text-accent underline underline-offset-4"
+            >
+              politique de confidentialité
+            </Link>{" "}
+            et notre{" "}
+            <Link
+              href="/politique-cookies"
+              className="text-accent underline underline-offset-4"
+            >
+              politique cookies
             </Link>
             .
           </p>

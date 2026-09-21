@@ -1377,6 +1377,7 @@ export async function marquerAvisRecu(formData: FormData) {
       : `Avis validé pour « ${quote.customer_name} » — plus de relance ✓`,
   };
 }
+// Supprime l'acompte d'une soirée (bouton « ✕ Supprimer l'acompte ») :
 
 // Supprime l'acompte d'une soirée (bouton « ✕ Supprimer l'acompte ») :
 // retire les marqueurs [[acompte:]], [[acompte-net:]] et [[acompte-valide:]],

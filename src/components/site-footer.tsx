@@ -37,6 +37,15 @@ export function SiteFooter() {
         <Link href="/mentions-legales" className="text-xs transition-colors hover:text-accent">
           Mentions légales
         </Link>
+        <Link href="/conditions-utilisation" className="text-xs transition-colors hover:text-accent">
+          CGV
+        </Link>
+        <Link href="/politique-de-confidentialite" className="text-xs transition-colors hover:text-accent">
+          Confidentialité
+        </Link>
+        <Link href="/politique-cookies" className="text-xs transition-colors hover:text-accent">
+          Cookies
+        </Link>
       </div>
     </footer>
   );

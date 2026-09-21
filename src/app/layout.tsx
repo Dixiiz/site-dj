@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Providers } from "@/components/providers";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 import { RecoveryHashHandler } from "@/components/recovery-hash-handler";
+import { CookieInfoBanner } from "@/components/cookie-info-banner";
 import { SITE_URL, SITE_NAME } from "@/lib/site-url";
 import "./globals.css";
 
@@ -86,6 +87,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Établit la session quand un lien d'activation / de récupération
             revient avec des tokens dans le fragment d'URL (#) */}
         <RecoveryHashHandler />
+        <CookieInfoBanner />
         <WhatsAppButton />
         {/* Analytics (actif en production uniquement — le composant gère le dev lui-même) */}
         <Analytics />

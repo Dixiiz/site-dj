@@ -846,6 +846,19 @@ export function QuoteBookingForm({
             >
               {pending ? "Enregistrement…" : "Envoyer ma demande de devis"}
             </Button>
+            <p className="text-center text-xs leading-relaxed text-muted-foreground">
+              En envoyant ce formulaire, vous acceptez que vos données
+              (nom, e-mail, téléphone, détails de l&apos;événement) soient
+              utilisées uniquement pour traiter votre demande. Vos données ne
+              sont jamais vendues —{" "}
+              <a
+                href="/politique-de-confidentialite"
+                className="underline underline-offset-2 hover:text-accent"
+              >
+                politique de confidentialité
+              </a>
+              .
+            </p>
           </CardContent>
         </Card>
         </div>

@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site-url";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const pages = ["", "/formules", "/mariage", "/anniversaire", "/evenement-entreprise", "/comment-ca-se-passe", "/disponibilites", "/faq", "/contact", "/sur-mesure", "/galerie", "/avis", "/blog", "/blog/choisir-dj-mariage-blois", "/blog/playlist-mariage-2026", "/blog/dj-ou-playlist-spotify", "/blog/combien-coute-dj-anniversaire", "/blog/dj-soiree-entreprise-erreurs"];
+  const pages = ["", "/formules", "/mariage", "/anniversaire", "/evenement-entreprise", "/comment-ca-se-passe", "/disponibilites", "/faq", "/contact", "/sur-mesure", "/galerie", "/avis", "/blog", "/blog/choisir-dj-mariage-blois", "/blog/playlist-mariage-2026", "/blog/dj-ou-playlist-spotify", "/blog/combien-coute-dj-anniversaire", "/blog/dj-soiree-entreprise-erreurs", "/mentions-legales", "/conditions-utilisation", "/politique-de-confidentialite", "/politique-cookies"];
   const lastModified = new Date();
   return pages.map((path) => ({
     url: `${SITE_URL}${path}`,
