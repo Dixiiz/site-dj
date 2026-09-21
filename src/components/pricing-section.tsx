@@ -14,7 +14,8 @@ type Pack = {
   price: number; // centimes
   highlight?: "populaire" | "show";
   equipment: string[];
-  image: string; // aperçu scénographie (remplaçable via public/images/packs/)
+  image: string; // aperçu scénographie (remplaçable via public/images/packs/) — sert aussi de poster pour la vidéo
+  video?: string; // aperçu animé « photo live » : figé, se joue au survol jusqu'à la dernière image puis se refige
   baseMinutes: number; // durée de prestation incluse dans le prix de base
   extraRateCents: number; // tarif horaire au-delà de la base
   defaultStart: string;
@@ -110,6 +111,7 @@ const CATEGORIES: Category[] = [
         price: 116000,
         highlight: "populaire",
         image: "/images/packs/4.jpg",
+        video: "/videos/packs/deluxe.mp4",
         baseMinutes: 480,
         extraRateCents: 12000,
         defaultStart: "20:00",
@@ -284,6 +286,19 @@ function EquipmentLine({ item }: { item: string }) {
   );
 }
 
+// Effet « photo live » (à la manière d'une Live Photo iPhone) : la vidéo est
+// figée sur sa première image au repos, puis se lance depuis le début au
+// survol, joue jusqu'à sa dernière image et se refige — sans boucle ni pause
+// en sortie de survol. Un nouveau survol rejoue la scène depuis le début.
+function playPackVideo(event: { currentTarget: Element }) {
+  const video = event.currentTarget.querySelector(
+    "video[data-pack-video]"
+  ) as HTMLVideoElement | null;
+  if (!video) return;
+  video.currentTime = 0;
+  video.play().catch(() => {});
+}
+
 function PackCard({
   pack,
   selected,
@@ -301,6 +316,9 @@ function PackCard({
       role="button"
       tabIndex={0}
       aria-pressed={selected}
+      onMouseEnter={playPackVideo}
+      onFocus={playPackVideo}
+      onTouchStart={playPackVideo}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -317,13 +335,40 @@ function PackCard({
     >
       {/* Badge sur la photo : sélection ou mis en avant */}
       <div className="relative aspect-video w-full overflow-hidden">
-        <Image
-          src={pack.image}
-          alt={`Scénographie du ${pack.name}`}
-          fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-        />
+        {pack.video ? (
+          <>
+            {/* Photo de secours affichée pendant le chargement de la vidéo. */}
+            <Image
+              src={pack.image}
+              alt={`Scénographie du ${pack.name}`}
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+            />
+            {/* Effet « photo live » (Pack Deluxe) : la vidéo occupe le premier
+                plan et affiche sa première image figée au repos ; au survol
+                elle joue jusqu'à sa dernière image puis se refige — sans
+                boucle ni pause en sortie de survol. */}
+            <video
+              src={pack.video}
+              poster={pack.image}
+              muted
+              playsInline
+              preload="auto"
+              data-pack-video="1"
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+            />
+          </>
+        ) : (
+          <Image
+            src={pack.image}
+            alt={`Scénographie du ${pack.name}`}
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+          />
+        )}
         <span className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
         {selected ? (
           <span className="absolute bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-accent px-3 py-0.5 text-xs font-semibold text-background">
