@@ -41,7 +41,7 @@ try {
     loop: v.hasAttribute("loop"),
   }));
   check("Source vidéo = /videos/packs/deluxe.mp4", attrs.src === "/videos/packs/deluxe.mp4", attrs.src ?? "");
-  check("Ancienne photo absente (pas de poster)", attrs.poster === null, `poster=${attrs.poster ?? "aucun"}`);
+  check("Ancienne photo absente du visuel", (attrs.poster ?? "").includes("/videos/packs/deluxe.jpg"), `poster=${attrs.poster ?? "aucun"}`);
   check("Pas d'attribut loop (se fige à la fin)", !attrs.loop);
 
   // Étape 3 : au repos, rien ne joue, et la vidéo est bien le calque visible
@@ -96,26 +96,21 @@ try {
     `paused=${afterLeave.paused}, t=${afterLeave.t.toFixed(2)}`
   );
 
-  // Étape 7 : nouveau survol → voile flou au redémarrage (masque la cassure),
-  // puis flou retiré et la scène rejoue depuis le début
+  // Étape 7 : nouveau survol → rejoue depuis le début, sans aucun flou
+  // (l'affiche = première image de la vidéo, donc aucune cassure visible)
   await card.hover();
-  await page.waitForTimeout(120);
-  const blurStart = await video.evaluate((v) => getComputedStyle(v).filter);
   await page.waitForTimeout(900);
-  const blurEnd = await video.evaluate((v) => ({
-    filter: getComputedStyle(v).filter,
+  const replay = await video.evaluate((v) => ({
     paused: v.paused,
     t: v.currentTime,
+    filter: getComputedStyle(v).filter,
   }));
   check(
-    "Flou appliqué au redémarrage (masque la cassure)",
-    blurStart.includes("blur(") && !/blur\(0px\)/.test(blurStart),
-    blurStart
-  );
-  check(
-    "Flou retiré ensuite + rejoue depuis le début",
-    (!blurEnd.filter.includes("blur(") || /blur\(0px\)/.test(blurEnd.filter)) && !blurEnd.paused && blurEnd.t < 1.5,
-    `filter=${blurEnd.filter}, paused=${blurEnd.paused}, t=${blurEnd.t.toFixed(2)}`
+    "Nouveau survol → rejoue depuis le début, sans flou",
+    !replay.paused &&
+      replay.t < 1.5 &&
+      (!replay.filter.includes("blur(") || /blur\(0px\)/.test(replay.filter)),
+    `paused=${replay.paused}, t=${replay.t.toFixed(2)}, filter=${replay.filter}`
   );
 } catch (error) {
   check("Diagnostic photo live Pack Deluxe", false, String(error).slice(0, 160));

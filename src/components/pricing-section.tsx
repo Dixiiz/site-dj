@@ -297,21 +297,17 @@ function PackCard({
   onSelect: () => void;
   previousEquipment: string[] | null;
 }) {
-  // Effet « photo live » : la vidéo affiche sa première image figée au repos,
-  // se joue au survol jusqu'à sa dernière image puis se refige. Un voile flou
-  // bref au (re)démarrage masque la cassure entre la dernière image figée et
-  // la première image de la scène.
+  // Effet « photo live » (façon vidéos des options FX) : la vidéo affiche sa
+  // première image en permanence (poster extrait de la vidéo), se joue au
+  // survol jusqu'à sa dernière image puis se refige. Un nouveau survol rejoue
+  // la scène depuis le début — sans boucle ni pause en sortie de survol.
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [videoReady, setVideoReady] = useState(false);
-  const [restartBlur, setRestartBlur] = useState(false);
 
   const startLivePreview = () => {
     const video = videoRef.current;
     if (!video) return;
-    setRestartBlur(true);
     video.currentTime = 0;
     video.play().catch(() => {});
-    window.setTimeout(() => setRestartBlur(false), 350);
   };
 
   return (
@@ -341,32 +337,29 @@ function PackCard({
       <div className="relative aspect-video w-full overflow-hidden">
         {pack.video ? (
           <>
-            {/* Photo de secours, floutée, affichée uniquement pendant le
-                chargement de la vidéo (l'ancienne visuel ne doit plus être
-                reconnaissable une fois la vidéo prête). */}
+            {/* Photo de secours (référencement/lecteurs d'écran) — masquée par
+                le poster de la vidéo dès qu'il s'affiche. */}
             <Image
               src={pack.image}
               alt={`Scénographie du ${pack.name}`}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              className="object-cover blur-md transition-transform duration-700 ease-out group-hover:scale-105"
+              className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
             />
-            {/* Effet « photo live » (Pack Deluxe) : premier plan figé sur la
-                première image ; au survol, la scène joue jusqu'à sa dernière
-                image puis se refige — sans boucle ni pause en sortie. Le voile
-                flou au redémarrage dissimule la cassure du retour au début. */}
+            {/* Effet « photo live » (Pack Deluxe) : la première image de la
+                vidéo est extraite en .jpg à côté du fichier (deluxe.mp4 →
+                deluxe.jpg) et sert de poster — visible instantanément, sans
+                cassure au redémarrage. */}
             <video
               ref={videoRef}
               src={pack.video}
+              poster={pack.video.replace(/\.mp4$/i, ".jpg")}
               muted
               playsInline
               preload="auto"
               data-pack-video="1"
               aria-hidden="true"
-              onLoadedData={() => setVideoReady(true)}
-              className={`absolute inset-0 h-full w-full object-cover transition-[filter,opacity,transform] duration-300 ease-out group-hover:scale-105 ${
-                videoReady ? (restartBlur ? "blur-lg" : "") : "opacity-0 blur-xl"
-              }`}
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
             />
           </>
         ) : (
