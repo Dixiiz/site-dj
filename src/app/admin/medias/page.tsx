@@ -16,6 +16,7 @@ import {
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { MediaManager } from "@/components/media-manager";
+import { CollapsibleSection } from "@/components/collapsible-section";
 import { GalerieCredits } from "@/components/galerie-credits";
 
 const FOLDERS: { key: MediaFolder; titre: string; hint: string; accept: string; kind: "image" | "video" }[] = [
@@ -36,7 +37,7 @@ const FOLDERS: { key: MediaFolder; titre: string; hint: string; accept: string; 
   {
     key: "videos/showcase",
     titre: "Vidéos showcase",
-    hint: "Vidéos verticales de la section « En action » (ordre = ordre d'affichage).",
+    hint: "Vidéos de la page Galerie (verticales ou horizontales — l'affichage s'adapte tout seul) et du carrousel « En action » de l'accueil (ordre = ordre d'affichage).",
     accept: "video/mp4,video/quicktime,video/webm",
     kind: "video",
   },
@@ -196,25 +197,27 @@ export default async function AdminMediasPage() {
       <p className="max-w-2xl text-sm text-muted-foreground">
         Ajoutez, supprimez et réordonnez les photos et vidéos du site public. Les
         modifications sont visibles après rechargement de la page publique.
+        Cliquez sur une section ci-dessous pour la déplier.
       </p>
 
       {sections.map((section) => (
-        <section key={section.key} className="rounded-xl border border-border p-5">
-          <h2 className="font-medium">{section.titre}</h2>
-          <p className="mt-1 text-xs text-muted-foreground">{section.hint}</p>
-          <div className="mt-3">
-            <MediaManager
-              folder={section.key}
-              items={section.items}
-              accept={section.accept}
-              kind={section.kind}
-              uploadAction={makeUploadAction(section.key)}
-              deleteStorageAction={makeDeleteStorageAction(section.key)}
-              deleteLocalAction={makeDeleteLocalAction(section.key)}
-              importLocalAction={makeImportLocalAction(section.key)}
-              orderAction={saveOrderAction}
-            />
-          </div>
+        <CollapsibleSection
+          key={section.key}
+          title={section.titre}
+          hint={section.hint}
+          badge={`${section.items.length} fichier${section.items.length > 1 ? "s" : ""}`}
+        >
+          <MediaManager
+            folder={section.key}
+            items={section.items}
+            accept={section.accept}
+            kind={section.kind}
+            uploadAction={makeUploadAction(section.key)}
+            deleteStorageAction={makeDeleteStorageAction(section.key)}
+            deleteLocalAction={makeDeleteLocalAction(section.key)}
+            importLocalAction={makeImportLocalAction(section.key)}
+            orderAction={saveOrderAction}
+          />
           {section.key === "galerie" ? (
             <>
               <GalerieCredits
@@ -226,7 +229,7 @@ export default async function AdminMediasPage() {
               />
             </>
           ) : null}
-        </section>
+        </CollapsibleSection>
       ))}
     </main>
   );

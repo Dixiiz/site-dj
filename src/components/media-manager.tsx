@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import type { MediaItem } from "@/lib/site-media";
 import { SubmitButton } from "@/components/submit-button";
+import { UploadDropzone } from "@/components/upload-dropzone";
 
 type Action = (formData: FormData) => void | Promise<void>;
 
@@ -58,7 +59,6 @@ export function MediaManager({
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [, startTransition] = useTransition();
-  const fileRef = useRef<HTMLInputElement>(null);
   const dragIndex = useRef<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
   // Réordonnancement local (null = ordre serveur tel quel).
@@ -68,13 +68,11 @@ export function MediaManager({
   const [initialNames] = useState<Set<string>>(
     () => new Set(items.map((i) => `${i.origin}-${i.name}`))
   );
-
   const list = reordered ?? items;
 
   // Envoi fichier par fichier (une requête chacun) après compression :
   // évite de dépasser la limite de taille des server actions.
-  async function handleUpload() {
-    const files = [...(fileRef.current?.files ?? [])].filter((f) => f.size > 0);
+  async function runUpload(files: File[]) {
     if (files.length === 0) return;
     setBusy(true);
     let ok = 0;
@@ -96,7 +94,6 @@ export function MediaManager({
         ? `${ok} fichier(s) envoyé(s) ✓`
         : `${ok} envoyé(s), ${failed} en échec (réessaie les fichiers restants).`
     );
-    if (fileRef.current) fileRef.current.value = "";
     // Repart de l'ordre serveur (qui inclut les nouveaux fichiers).
     setReordered(null);
     setBusy(false);
@@ -123,32 +120,25 @@ export function MediaManager({
 
   return (
     <div>
-      {/* Upload : compression navigateur + envoi un fichier par requête */}
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          ref={fileRef}
-          type="file"
-          multiple
-          accept={accept}
-          disabled={busy}
-          className="text-xs text-muted-foreground file:mr-2 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-xs file:text-foreground"
-        />
-        <button
-          type="button"
-          onClick={handleUpload}
-          disabled={busy}
-          className={`rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 ${
-            busy ? "animate-pulse cursor-wait opacity-90" : ""
-          }`}
-        >
-          {busy ? "Envoi…" : "Envoyer"}
-        </button>
-        {busy ? <span className="text-xs text-muted-foreground">…</span> : null}
-      </div>
+      {/* Upload : zone évidente (clic ou glisser-déposer) + envoi un fichier
+          par requête après compression navigateur des images */}
+      <UploadDropzone
+        accept={accept}
+        disabled={busy}
+        onFiles={(fl) => void runUpload([...fl].filter((f) => f.size > 0))}
+      />
+
+      {busy ? (
+        <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="inline-block size-2 animate-pulse rounded-full bg-accent" />
+          Envoi en cours…
+        </p>
+      ) : null}
 
       <p className="mt-2 text-[11px] text-muted-foreground/70">
-        Les images sont compressées automatiquement (max 2400 px, JPEG 85 %)
-        avant l&apos;envoi — tu peux en sélectionner plusieurs d&apos;un coup.
+        {kind === "image"
+          ? "Les images sont compressées automatiquement (max 2400 px, JPEG 85 %) avant l'envoi."
+          : "Les vidéos ne sont pas compressées : privilégie des .mp4 (H.264) de moins de 100 Mo."}
       </p>
 
       <p className="mt-2 text-[11px] text-muted-foreground/70">
@@ -212,7 +202,12 @@ export function MediaManager({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={item.url} alt={item.name} className="aspect-[4/3] w-full object-cover" />
             ) : (
-              <video src={item.url} className="aspect-[4/3] w-full object-cover" muted preload="metadata" />
+              <video
+                src={item.url}
+                className="aspect-[4/3] w-full bg-black object-contain"
+                muted
+                preload="metadata"
+              />
             )}
             <span
               className={`absolute left-1.5 top-1.5 rounded px-1.5 py-0.5 text-[9px] font-medium ${
