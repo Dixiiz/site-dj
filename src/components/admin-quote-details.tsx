@@ -1,6 +1,7 @@
 import { QuoteStatusSelect } from "@/components/quote-status-select";
 import { AdminQuoteEdit } from "@/components/admin-quote-edit";
 import { formatEuros } from "@/lib/money";
+import { computeExtraHours, formatExtraHours } from "@/lib/booking-extra";
 import type { SelectedOption } from "@/lib/types";
 
 type Quote = {
@@ -60,6 +61,9 @@ export function AdminQuoteDetails({
 }) {
   const extras = (quote.extra_fee_cents ?? 0) + (quote.travel_fee_cents ?? 0);
   const parsed = parseNotes(quote.notes);
+  // Heures supplémentaires : notes du client d'abord, sinon recalcul depuis
+  // les horaires du devis (anciens devis sans mention dans les notes).
+  const computedExtraHours = computeExtraHours(quote);
   const payees = (schedule ?? []).filter((s) => s.status === "payee").length;
   const totalSchedule = (schedule ?? []).length;
 
@@ -189,8 +193,14 @@ export function AdminQuoteDetails({
         <Row
           label="Heures supplémentaires"
           value={
-            parsed.extraHours
-              ? `${parsed.extraHours}${parsed.extraFee ? ` (${parsed.extraFee} €)` : ""}`
+            // N'affiche les heures supplémentaires QUE si un supplément est
+            // réellement facturé (extra_fee_cents > 0).
+            (quote.extra_fee_cents ?? 0) > 0
+              ? parsed.extraHours
+                ? `${parsed.extraHours}${parsed.extraFee ? ` (${parsed.extraFee} €)` : ""}`
+                : computedExtraHours
+                  ? `${formatExtraHours(computedExtraHours)} (${formatEuros(quote.extra_fee_cents ?? 0)})`
+                  : formatEuros(quote.extra_fee_cents ?? 0)
               : null
           }
         />

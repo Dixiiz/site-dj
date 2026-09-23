@@ -93,7 +93,7 @@ export default async function DevisPage({
       .order("created_at", { ascending: true }),
     supabase
       .from("rdv_requests")
-      .select("id, quote_id, proposed_at, availability, status")
+      .select("id, quote_id, proposed_at, availability, status, origin")
       .order("created_at", { ascending: true }),
   ]);
   const quotes = quotesRes.data;
@@ -110,7 +110,7 @@ export default async function DevisPage({
   // ouvrir un devis n'effectue AUCUNE requête (contenu déjà dans la page).
   type TrackRow = { id: string; moment: string; title: string; artist: string | null; kind: string; preview_url: string | null; artwork_url: string | null };
   type FileRowLite = { id: string; name: string; mime_type: string | null; size_bytes: number | null; moment: string | null; doc_kind: string; from_admin: boolean; signed_name: string | null };
-  type RdvRowLite = { id: string; proposed_at: string | null; availability: string | null; status: string };
+  type RdvRowLite = { id: string; proposed_at: string | null; availability: string | null; status: string; origin: string | null };
   const tracksByQuote = new Map<string, TrackRow[]>();
   const filesByQuote = new Map<string, FileRowLite[]>();
   const rdvsByQuote = new Map<string, RdvRowLite[]>();

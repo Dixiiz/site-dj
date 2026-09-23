@@ -2229,6 +2229,241 @@ export async function proposeRdvAvailability(formData: FormData) {
   return { ok: true as const, message: "Disponibilités envoyées ✓" };
 }
 
+// L'admin propose directement un (ou plusieurs) créneau(x) au client, qui
+// l'accepte, le refuse ou contre-propose depuis son espace (clientRdvResponse).
+export async function adminProposeRdv(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  // 1 à 3 créneaux proposés (datetime-local).
+  const slots = [1, 2, 3]
+    .map((i) => String(formData.get(`slot${i}`) ?? "").trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  if (slots.length === 0) {
+    return { ok: false as const, error: "Choisis au moins une date et une heure." };
+  }
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("customer_email, customer_name")
+    .eq("id", quoteId)
+    .single();
+  if (!quote) return { ok: false as const, error: "Devis introuvable." };
+
+  // Une nouvelle proposition remplace la précédente si le client n'a pas répondu.
+  await supabase
+    .from("rdv_requests")
+    .update({ status: "refuse" })
+    .eq("quote_id", quoteId)
+    .eq("origin", "admin")
+    .eq("status", "propose");
+
+  const { error } = await supabase.from("rdv_requests").insert(
+    slots.map((slot) => ({
+      quote_id: quoteId,
+      proposed_at: new Date(slot).toISOString(),
+      status: "propose" as const,
+      origin: "admin" as const,
+    }))
+  );
+  if (error) {
+    console.error("[rdv] Erreur insertion proposition admin:", error.message);
+    return { ok: false as const, error: "Échec de l'enregistrement. Vérifie que la colonne « origin » de rdv_requests existe (SQL de migration)." };
+  }
+
+  // Pastille « contenu non lu » côté client.
+  await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
+
+  // E-mail au client : créneaux à accepter, refuser ou déplacer.
+  try {
+    const { Resend } = await import("resend");
+    const apiKey = process.env.RESEND_API_KEY;
+    if (apiKey && quote.customer_email) {
+      const { EMAIL_FROM, buildEmailHtml, buildEmailText } = await import("@/lib/emails");
+      const slotsFr = slots
+        .map((s) =>
+          new Date(s).toLocaleString("fr-FR", {
+            weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+          })
+        )
+        .map((s) => `• ${s}`);
+      const emailData = {
+        title: "Je te propose un RDV téléphonique !",
+        intro: `Bonjour ${quote.customer_name ?? ""},<br/><br/>Pour préparer ta soirée, je te propose de t'appeler à l'un de ces moments :`,
+        sections: [{ lines: slotsFr }],
+        button: {
+          label: "Accepter ou proposer un autre moment",
+          href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}#rdv`)}`,
+        },
+        footer:
+          "Aucun créneau ne te convient ? Tu peux en proposer un autre depuis ton espace client.",
+      };
+      const resend = new Resend(apiKey);
+      await resend.emails.send({
+        from: EMAIL_FROM,
+        replyTo: process.env.NOTIF_EMAIL,
+        to: quote.customer_email,
+        subject: "Proposition de RDV téléphonique — Propul'Sound DJ",
+        html: buildEmailHtml(emailData),
+        text: buildEmailText(emailData),
+      });
+    }
+  } catch (err) {
+    console.error("[rdv] Echec e-mail client (proposition):", err);
+  }
+
+  revalidatePath("/admin/devis");
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  return { ok: true as const, message: "Proposition envoyée au client ✓" };
+}
+
+// Le client répond à une proposition de l'admin : il accepte le créneau,
+// refuse tout court, ou refuse ET contre-propose une autre date et heure.
+export async function clientRdvResponse(formData: FormData) {
+  const { createAuthClient } = await import("@/lib/supabase/server");
+  const auth = await createAuthClient();
+  const { data: { user } } = await auth.auth.getUser();
+  if (!user?.email) return { ok: false as const, error: "Non autorisé." };
+
+  const rdvId = String(formData.get("rdv_id") ?? "");
+  const decision = String(formData.get("decision") ?? ""); // accepte | refuse
+  const counter = String(formData.get("counter_datetime") ?? "").trim();
+  if (!rdvId || !["accepte", "refuse"].includes(decision)) {
+    return { ok: false as const, error: "Requête invalide." };
+  }
+
+  const supabase = createAdminClient();
+  const { data: rdv } = await supabase
+    .from("rdv_requests")
+    .select("id, quote_id, proposed_at")
+    .eq("id", rdvId)
+    .single();
+  if (!rdv) return { ok: false as const, error: "Proposition introuvable." };
+
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("id, customer_email, customer_name")
+    .eq("id", rdv.quote_id)
+    .single();
+  if (!quote || quote.customer_email?.toLowerCase() !== user.email.toLowerCase()) {
+    return { ok: false as const, error: "Non autorisé." };
+  }
+
+  if (decision === "accepte") {
+    // Le créneau choisi devient le RDV validé ; les autres demandes en
+    // attente (toutes origines) sont automatiquement refusées.
+    await supabase.from("rdv_requests").update({ status: "valide" }).eq("id", rdvId);
+    await supabase
+      .from("rdv_requests")
+      .update({ status: "refuse" })
+      .eq("quote_id", rdv.quote_id)
+      .eq("status", "propose");
+  } else {
+    // Refus : toutes les propositions de l'admin encore en attente.
+    await supabase
+      .from("rdv_requests")
+      .update({ status: "refuse" })
+      .eq("quote_id", rdv.quote_id)
+      .eq("origin", "admin")
+      .eq("status", "propose");
+    // Contre-proposition éventuelle : créneau daté choisi par le client, que
+    // Maxime confirmera ensuite depuis l'admin (adminRdvDecision).
+    if (counter) {
+      await supabase.from("rdv_requests").insert({
+        quote_id: rdv.quote_id,
+        proposed_at: new Date(counter).toISOString(),
+        status: "propose",
+        origin: "client",
+      });
+    }
+  }
+
+  // Notification admin (push + e-mail).
+  const when = rdv.proposed_at
+    ? new Date(rdv.proposed_at).toLocaleString("fr-FR", {
+        weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+      })
+    : "le créneau proposé";
+  const counterFr = counter
+    ? new Date(counter).toLocaleString("fr-FR", {
+        weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+      })
+    : null;
+  const { notifyAdmin } = await import("@/lib/admin-notify");
+  await notifyAdmin({
+    title:
+      decision === "accepte"
+        ? "RDV accepté par le client !"
+        : counter
+          ? "RDV refusé — contre-proposition reçue"
+          : "RDV refusé par le client",
+    body:
+      decision === "accepte"
+        ? `${quote.customer_name ?? quote.customer_email} a accepté l'appel du ${when}.`
+        : `${quote.customer_name ?? quote.customer_email} a refusé ${when}${counterFr ? ` et contre-propose : ${counterFr}` : ""}.`,
+    url: `/admin/devis?focus=${rdv.quote_id}`,
+    email: {
+      subject:
+        decision === "accepte"
+          ? `RDV accepté — ${when}`
+          : `RDV refusé${counterFr ? " — contre-proposition" : ""}`,
+      html: `<p><strong>${quote.customer_name ?? quote.customer_email}</strong> ${
+        decision === "accepte"
+          ? `a <strong>accepté</strong> le RDV téléphonique du <strong>${when}</strong>.`
+          : `a <strong>refusé</strong> ${when}.${counterFr ? ` Il contre-propose : <strong>${counterFr}</strong>.` : ""}`
+      }</p><p><a href="${SITE_URL}/admin/devis?focus=${rdv.quote_id}">Ouvrir le devis dans l'admin</a></p>`,
+    },
+  });
+
+  // E-mail de confirmation au client quand il accepte (récap du RDV).
+  if (decision === "accepte" && quote.customer_email) {
+    try {
+      const { Resend } = await import("resend");
+      const apiKey = process.env.RESEND_API_KEY;
+      if (apiKey) {
+        const { EMAIL_FROM, buildEmailHtml, buildEmailText } = await import("@/lib/emails");
+        const emailData = {
+          title: "Ton RDV téléphonique est confirmé !",
+          intro: `Bonjour,<br/><br/>C'est confirmé : je t'appelle le <strong>${when}</strong>.<br/><br/>Prépare tes questions, on fait le point sur ta soirée !`,
+          sections: [{ lines: ["Ajoute-le à ton calendrier depuis ton espace client."] }],
+          button: {
+            label: "Voir dans mon espace",
+            href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${rdv.quote_id}#rdv`)}`,
+          },
+        };
+        const resend = new Resend(apiKey);
+        await resend.emails.send({
+          from: EMAIL_FROM,
+          replyTo: process.env.NOTIF_EMAIL,
+          to: quote.customer_email,
+          subject: "RDV téléphonique confirmé — Propul'Sound DJ",
+          html: buildEmailHtml(emailData),
+          text: buildEmailText(emailData),
+        });
+      }
+    } catch (err) {
+      console.error("[rdv] Echec e-mail client (acceptation):", err);
+    }
+  }
+
+  revalidatePath("/admin/devis");
+  revalidatePath(`/mon-espace/devis/${rdv.quote_id}`);
+  return {
+    ok: true as const,
+    message:
+      decision === "accepte"
+        ? "RDV confirmé ✓"
+        : counter
+          ? "Créneaux refusés — ta contre-proposition a été envoyée ✓"
+          : "Créneaux refusés ✓",
+  };
+}
+
 // Le client sauvegarde la timeline de sa soirée (horaires cérémonie,
 // cocktail, repas, dessert, ouverture de bal…) — stockée en JSON dans quotes.
 export async function saveClientTimeline(formData: FormData) {

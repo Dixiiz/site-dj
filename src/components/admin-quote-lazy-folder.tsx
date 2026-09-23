@@ -12,7 +12,7 @@ export type TrackRow = {
 export type FileRowLite = {
   id: string; name: string; mime_type: string | null; size_bytes: number | null; moment: string | null; doc_kind: string; from_admin: boolean; signed_name: string | null;
 };
-export type RdvRowLite = { id: string; proposed_at: string | null; availability: string | null; status: string };
+export type RdvRowLite = { id: string; proposed_at: string | null; availability: string | null; status: string; origin: string | null };
 
 // Dossier complet du devis : les données arrivent EN PROPS (requêtes groupées
 // au rendu de la page, pour tous les devis d'un coup). Ouvrir un devis ne

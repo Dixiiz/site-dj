@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { PDFDocument, PDFForm } from "pdf-lib";
+import { computeExtraHours, formatExtraHours } from "@/lib/booking-extra";
 
 /**
  * Remplit un modèle de devis PDF (créé dans Word avec des champs de formulaire)
@@ -83,8 +84,15 @@ export async function fillDevisTemplate(
  "travel",
         `Déplacement (${str(quote.travel_distance_km)} km A/R) : ${eur(quote.travel_fee_cents)}`
       );
-    if (Number(quote.extra_fee_cents) > 0)
-      set("extra_hours", `Heures supplémentaires : ${eur(quote.extra_fee_cents)}`);
+    if (Number(quote.extra_fee_cents) > 0) {
+      const hours = computeExtraHours(quote as never);
+      set(
+        "extra_hours",
+        quote.extra_fee_label
+          ? `${String(quote.extra_fee_label).trim()} : ${eur(quote.extra_fee_cents)}`
+          : `Heures supplémentaires${hours ? ` (${formatExtraHours(hours)})` : ""} : ${eur(quote.extra_fee_cents)}`
+      );
+    }
     set("total", eur(quote.total_cents));
     if (typeof quote.devis_conditions === "string" && quote.devis_conditions)
       set("conditions", quote.devis_conditions);

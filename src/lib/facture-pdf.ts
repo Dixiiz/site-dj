@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFImage } from "pdf-lib";
 import type { DevisQuoteData } from "./devis-pdf";
+import { computeExtraHours, formatExtraHours } from "@/lib/booking-extra";
 
 export type FactureQuoteData = DevisQuoteData;
 
@@ -169,10 +170,13 @@ export async function buildFacturePdf(
   }
   if ((quote.extra_fee_cents ?? 0) > 0) {
     const fee = quote.extra_fee_cents! / 100;
-    rows.push([
-      `Heures supplémentaires${quote.extra_hours ? ` (${quote.extra_hours} h)` : ""}`,
- "1", fmt(fee), fmt(fee),
-    ]);
+    // Même calcul que le devis : colonne enregistrée, sinon recalcul depuis
+    // les horaires (pour les devis créés avant l'enregistrement des heures).
+    const hours = computeExtraHours(quote);
+    const label =
+      quote.extra_fee_label?.trim() ||
+      `Heures supplémentaires${hours ? ` (${formatExtraHours(hours)})` : ""}`;
+    rows.push([label, "1", fmt(fee), fmt(fee)]);
   }
   for (const adj of opts.adjustments ?? []) {
     if (!adj.label || !adj.amount_cents) continue;

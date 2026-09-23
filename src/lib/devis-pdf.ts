@@ -3,6 +3,7 @@
 import fs from "fs";
 import path from "path";
 import { PDFDocument, StandardFonts, rgb, PDFFont, PDFImage } from "pdf-lib";
+import { computeExtraHours, formatExtraHours, formatExtraQty } from "@/lib/booking-extra";
 
 export type DevisQuoteData = {
   acompte_required?: boolean | null;
@@ -13,6 +14,7 @@ export type DevisQuoteData = {
   event_date?: string | null;
   start_time?: string | null;
   end_time?: string | null;
+  notes?: string | null;
   event_location?: string | null;
   formula_name?: string | null;
   formula_price_cents?: number | null;
@@ -194,14 +196,17 @@ export async function buildDevisPdf(
     ]);
   }
   if ((quote.extra_fee_cents ?? 0) > 0) {
+    // Nombre d'heures supplémentaires : colonne enregistrée, sinon recalcul
+    // depuis les horaires du devis (anciens devis créés avant l'enregistrement).
+    const extraHours = computeExtraHours(quote);
     // Libellé personnalisé (ex : « Péage ») sinon « Heures supplémentaires ».
     const label =
       quote.extra_fee_label?.trim() ||
-      `Heures supplémentaires${quote.extra_hours ? ` (${quote.extra_hours} h)` : ""}`;
+      `Heures supplémentaires${extraHours ? ` (${formatExtraHours(extraHours)})` : ""}`;
     rows.push([
       label,
-      quote.extra_hours && !quote.extra_fee_label ? String(quote.extra_hours) : "",
-      fmt(quote.extra_fee_cents! / 100 / (quote.extra_hours && !quote.extra_fee_label ? quote.extra_hours : 1)),
+      extraHours && !quote.extra_fee_label ? formatExtraQty(extraHours) : "",
+      fmt(quote.extra_fee_cents! / 100 / (extraHours && !quote.extra_fee_label ? extraHours : 1)),
       fmt(quote.extra_fee_cents! / 100),
     ]);
   }

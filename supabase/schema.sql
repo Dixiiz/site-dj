@@ -152,6 +152,9 @@ on conflict (slot_date, start_time) do nothing;
 -- client — était référencé dans le code mais jamais créé en base.
 alter table quotes add column if not exists extra_fee_cents integer not null default 0;
 alter table quotes add column if not exists extra_fee_label text;
+-- Nombre d'heures supplémentaires (heures entamées au-delà du pack, calculées
+-- côté serveur à la création du devis ; affiché sur les PDF et l'espace client).
+alter table quotes add column if not exists extra_hours integer;
 
 -- Migration : abonnements aux notifications push de l'admin (Web Push).
 -- Un endpoint = un navigateur/apparail ayant accepté les notifications.
@@ -161,6 +164,20 @@ create table if not exists push_subscriptions (
   auth text not null,
   created_at timestamptz not null default now()
 );
+
+-- RDV téléphoniques : le client ou l'admin propose, l'autre répond (accepte /
+-- refuse / contre-propose). La table a été créée via le dashboard Supabase ;
+-- ce bloc la recrée si absente et ajoute l'origine de la proposition.
+create table if not exists rdv_requests (
+  id uuid primary key default gen_random_uuid(),
+  quote_id uuid references quotes(id) on delete cascade,
+  proposed_at timestamptz,
+  availability text,
+  status text not null default 'propose',
+  origin text not null default 'client',
+  created_at timestamptz not null default now()
+);
+alter table rdv_requests add column if not exists origin text not null default 'client';
 
 -- Migration : acompte optionnel par devis. L'admin peut décider, devis par
 -- devis, de ne pas demander d'acompte de réservation (défaut : demandé).

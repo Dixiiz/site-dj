@@ -550,6 +550,8 @@ export async function submitQuoteAndBooking(formData: FormData) {
       selected_options: selected,
       travel_distance_km: confirmedTravelDistanceKm,
       travel_fee_cents: confirmedTravelFeeCents,
+      extra_fee_cents,
+      extra_hours,
       total_cents,
       status: "nouveau",
     })

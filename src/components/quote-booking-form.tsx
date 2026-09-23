@@ -307,7 +307,9 @@ export function QuoteBookingForm({
   const extraHours = useMemo(() => {
     if (normalizedEndMinutes == null || invalidOrder) return 0;
     const past = normalizedEndMinutes - startMinutes - includedMinutes;
-    return past > 0 ? Math.ceil(past / 30) * 0.5 : 0;
+    // Même règle que la facturation serveur (submitQuote) : chaque heure
+    // entamée est due — l'estimation affichée doit correspondre au devis.
+    return past > 0 ? Math.ceil(past / 60) : 0;
   }, [normalizedEndMinutes, startMinutes, includedMinutes, invalidOrder]);
   const extraFeeCents = extraHours * extraRateCents;
 

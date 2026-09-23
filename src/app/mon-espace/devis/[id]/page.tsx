@@ -20,6 +20,7 @@ import { ClientDetailsEditor } from "@/components/client-details-editor";
 import { ClientPlaylistEditor } from "@/components/client-playlist-editor";
 import { ClientQuoteMessages } from "@/components/client-quote-messages";
 import { PACK_IMAGES } from "@/components/pricing-section";
+import { computeExtraHours, formatExtraHours } from "@/lib/booking-extra";
 import { SignaturePad } from "@/components/signature-pad";
 import { SubmitButton } from "@/components/submit-button";
 import PaymentPanel, { type ScheduleRow } from "@/components/payment-panel";
@@ -136,19 +137,23 @@ export default async function ClientQuotePage({
   const pendingDetails = (quote.pending_details ?? null) as PendingQuoteDetails | null;
   const editable = optionsEditable(quote.status) && !pendingOptions && !pendingDetails;
   const confirmed = quote.status === "confirme";
-  // Créneaux de RDV téléphonique proposés par le client.
+  // Créneaux de RDV téléphonique (proposés par le client ou par Maxime).
   // (La table rdv_requests doit exister — SQL fourni ; repli silencieux sinon.)
-  let rdvRequests: { id: string; proposed_at: string | null; availability: string | null; status: string }[] = [];
+  type RdvRow = { id: string; proposed_at: string | null; availability: string | null; status: string; origin: string | null };
+  let rdvRequests: RdvRow[] = [];
   try {
     const { data: rdv } = await supabase
       .from("rdv_requests")
-      .select("id, proposed_at, availability, status")
+      .select("id, proposed_at, availability, status, origin")
       .eq("quote_id", id)
       .order("created_at", { ascending: true });
-    rdvRequests = (rdv ?? []) as { id: string; proposed_at: string | null; availability: string | null; status: string }[];
+    rdvRequests = (rdv ?? []) as RdvRow[];
   } catch {
     rdvRequests = [];
   }
+  // Libellé des heures supplémentaires : nombre d'heures recalculé depuis les
+  // horaires du devis si la colonne dédiée est absente (anciens devis).
+  const extraHoursShown = computeExtraHours(quote);
   // Le client voit son dossier : on efface le drapeau « contenu non lu ».
   // (Indispensable pour que les notifications e-mail de messagerie
   // fonctionnent à nouveau lors d'un prochain message.)
@@ -282,7 +287,10 @@ export default async function ClientQuotePage({
           ) : null}
           {(quote.extra_fee_cents ?? 0) > 0 ? (
             <div className="flex justify-between gap-4 text-muted-foreground">
-              <span>{quote.extra_fee_label ?? "Supplément"}</span>
+              <span>
+                {quote.extra_fee_label ??
+                  `Heures supplémentaires${extraHoursShown ? ` (${formatExtraHours(extraHoursShown)})` : ""}`}
+              </span>
               <span>{formatEuros(quote.extra_fee_cents)}</span>
             </div>
           ) : null}
