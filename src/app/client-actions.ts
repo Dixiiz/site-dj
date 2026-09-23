@@ -2464,6 +2464,113 @@ export async function clientRdvResponse(formData: FormData) {
   };
 }
 
+// L'admin modifie (déplace) ou supprime une de ses propositions de RDV.
+// Déplacer un créneau déjà accepté le remet en attente de confirmation du
+// client ; supprimer un RDV validé l'annule (e-mail au client).
+export async function adminEditRdv(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+
+  const rdvId = String(formData.get("rdv_id") ?? "");
+  const mode = String(formData.get("mode") ?? ""); // modifier | supprimer
+  const rdvDatetime = String(formData.get("rdv_datetime") ?? "").trim();
+  if (!rdvId || !["modifier", "supprimer"].includes(mode)) {
+    return { ok: false as const, error: "Requête invalide." };
+  }
+
+  const supabase = createAdminClient();
+  const { data: rdv } = await supabase
+    .from("rdv_requests")
+    .select("id, quote_id, proposed_at, status")
+    .eq("id", rdvId)
+    .single();
+  if (!rdv) return { ok: false as const, error: "Proposition introuvable." };
+
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("customer_email, customer_name")
+    .eq("id", rdv.quote_id)
+    .single();
+
+  const fmtFr = (iso: string) =>
+    new Date(iso).toLocaleString("fr-FR", {
+      weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+    });
+  const revalidate = () => {
+    revalidatePath("/admin/devis");
+    revalidatePath(`/mon-espace/devis/${rdv.quote_id}`);
+  };
+
+  // E-mail client (best effort) via le canal centralisé.
+  const emailClient = async (email: {
+    subject: string;
+    html: string;
+  }) => {
+    try {
+      const { Resend } = await import("resend");
+      const apiKey = process.env.RESEND_API_KEY;
+      if (apiKey && quote?.customer_email) {
+        const { EMAIL_FROM } = await import("@/lib/emails");
+        const resend = new Resend(apiKey);
+        await resend.emails.send({
+          from: EMAIL_FROM,
+          replyTo: process.env.NOTIF_EMAIL,
+          to: quote.customer_email,
+          ...email,
+        });
+      }
+    } catch (err) {
+      console.error("[rdv] Echec e-mail client (modification):", err);
+    }
+  };
+
+  if (mode === "modifier") {
+    if (!rdvDatetime) {
+      return { ok: false as const, error: "Choisis d'abord la nouvelle date et l'heure." };
+    }
+    const wasValide = rdv.status === "valide";
+    const whenIso = new Date(rdvDatetime).toISOString();
+    // Un créneau déjà accepté repasse en attente : le client doit re-confirmer.
+    await supabase
+      .from("rdv_requests")
+      .update({ proposed_at: whenIso, status: "propose" })
+      .eq("id", rdvId);
+    const when = fmtFr(whenIso);
+    await emailClient({
+      subject: wasValide
+        ? `Le RDV téléphonique est déplacé — ${when}`
+        : `Créneau de RDV mis à jour — ${when}`,
+      html: `<p>Bonjour ${quote?.customer_name ?? ""},</p><p>${
+        wasValide
+          ? `Je dois déplacer notre appel : il n'aura pas lieu au moment prévu, mais <strong>${when}</strong>. Merci de re-confirmer depuis ton espace client.`
+          : `Petite mise à jour : je te propose finalement de t'appeler le <strong>${when}</strong> (en remplacement du créneau précédent).`
+      }</p><p><a href="${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${rdv.quote_id}#rdv`)}">Répondre dans mon espace client</a></p><p>— Maxime, Propul'Sound DJ</p>`,
+    });
+    revalidate();
+    return {
+      ok: true as const,
+      message: wasValide
+        ? "RDV déplacé — le client doit re-confirmer ✓"
+        : "Créneau modifié ✓",
+    };
+  }
+
+  // Suppression.
+  const wasValide = rdv.status === "valide";
+  await supabase.from("rdv_requests").delete().eq("id", rdvId);
+  if (wasValide) {
+    await emailClient({
+      subject: "RDV téléphonique annulé",
+      html: `<p>Bonjour ${quote?.customer_name ?? ""},</p><p>Je dois annuler le point téléphonique prévu. Désolé ! Proposons-en un autre : choisis un moment qui t'arrange depuis ton espace client, ou réponds à ce message.</p><p><a href="${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${rdv.quote_id}#rdv`)}">Ouvrir mon espace client</a></p><p>— Maxime, Propul'Sound DJ</p>`,
+    });
+  }
+  revalidate();
+  return {
+    ok: true as const,
+    message: wasValide ? "RDV annulé — client prévenu ✓" : "Créneau supprimé ✓",
+  };
+}
+
 // Le client sauvegarde la timeline de sa soirée (horaires cérémonie,
 // cocktail, repas, dessert, ouverture de bal…) — stockée en JSON dans quotes.
 export async function saveClientTimeline(formData: FormData) {

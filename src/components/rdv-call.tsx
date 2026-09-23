@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import {
+  adminEditRdv,
   adminProposeRdv,
   adminRdvDecision,
   clientRdvResponse,
@@ -205,6 +206,7 @@ export function AdminRdvRequests({
                 ) : (
                   <span className="text-xs text-orange-300">en attente de réponse</span>
                 )}
+                <AdminRdvRowActions rdv={r} />
               </li>
             ))}
           </ul>
@@ -261,6 +263,55 @@ export function AdminRdvRequests({
         </ul>
       ) : null}
     </div>
+  );
+}
+
+// ISO (UTC) -> format valeur d'un <input type="datetime-local"> en heure locale.
+function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// Modifier (déplacer) ou supprimer un créneau proposé au client. Un créneau
+// déjà accepté qui est déplacé repasse « en attente de réponse » ; le supprimer
+// annule le RDV validé (e-mail automatique au client).
+function AdminRdvRowActions({ rdv }: { rdv: RdvRow }) {
+  const input =
+    "rounded-md border border-border bg-background px-2 py-1 text-xs outline-none focus:border-accent";
+  return (
+    <form
+      action={async (fd: FormData) => {
+        await adminEditRdv(fd);
+      }}
+      className="ml-auto flex flex-wrap items-center gap-1.5"
+    >
+      <input type="hidden" name="rdv_id" value={rdv.id} />
+      <input type="hidden" name="mode" value="modifier" />
+      {rdv.proposed_at ? (
+        <input
+          type="datetime-local"
+          name="rdv_datetime"
+          defaultValue={toLocalInput(rdv.proposed_at)}
+          className={input}
+        />
+      ) : null}
+      <button
+        type="submit"
+        className="rounded-md border border-accent/50 bg-accent/10 px-2 py-1 text-xs text-accent transition-colors hover:bg-accent/20"
+      >
+        Modifier
+      </button>
+      <button
+        type="submit"
+        formNoValidate
+        name="mode"
+        value="supprimer"
+        className="rounded-md border border-red-500/40 px-2 py-1 text-xs text-red-400 transition-colors hover:bg-red-500/10"
+      >
+        {rdv.status === "valide" ? "Annuler le RDV" : "Supprimer"}
+      </button>
+    </form>
   );
 }
 
