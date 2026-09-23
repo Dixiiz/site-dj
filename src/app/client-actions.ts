@@ -2506,22 +2506,27 @@ export async function adminEditRdv(formData: FormData) {
     revalidatePath(`/mon-espace/devis/${rdv.quote_id}`);
   };
 
-  // E-mail client (best effort) via le canal centralisé.
+  // E-mail client (best effort), même charte que les autres e-mails du site.
+  const espaceHref = `${SITE_URL}/connexion?next=${encodeURIComponent(
+    `/mon-espace/devis/${rdv.quote_id}#rdv`
+  )}`;
   const emailClient = async (email: {
     subject: string;
-    html: string;
+    data: Parameters<typeof import("@/lib/emails")["buildEmailHtml"]>[0];
   }) => {
     try {
       const { Resend } = await import("resend");
       const apiKey = process.env.RESEND_API_KEY;
       if (apiKey && quote?.customer_email) {
-        const { EMAIL_FROM } = await import("@/lib/emails");
+        const { EMAIL_FROM, buildEmailHtml, buildEmailText } = await import("@/lib/emails");
         const resend = new Resend(apiKey);
         await resend.emails.send({
           from: EMAIL_FROM,
           replyTo: process.env.NOTIF_EMAIL,
           to: quote.customer_email,
-          ...email,
+          subject: email.subject,
+          html: buildEmailHtml(email.data),
+          text: buildEmailText(email.data),
         });
       }
     } catch (err) {
@@ -2545,11 +2550,28 @@ export async function adminEditRdv(formData: FormData) {
       subject: wasValide
         ? `Le RDV téléphonique est déplacé — ${when}`
         : `Créneau de RDV mis à jour — ${when}`,
-      html: `<p>Bonjour ${quote?.customer_name ?? ""},</p><p>${
-        wasValide
-          ? `Je dois déplacer notre appel : il n'aura pas lieu au moment prévu, mais <strong>${when}</strong>. Merci de re-confirmer depuis ton espace client.`
-          : `Petite mise à jour : je te propose finalement de t'appeler le <strong>${when}</strong> (en remplacement du créneau précédent).`
-      }</p><p><a href="${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${rdv.quote_id}#rdv`)}">Répondre dans mon espace client</a></p><p>— Maxime, Propul'Sound DJ</p>`,
+      data: {
+        title: wasValide ? "Le RDV téléphonique est déplacé" : "Le créneau du RDV a été mis à jour",
+        intro: `Bonjour ${quote?.customer_name ?? ""},<br/><br/>${
+          wasValide
+            ? `Je dois déplacer notre appel : il n'aura pas lieu au moment prévu, mais <strong>${when}</strong>.`
+            : `Petite mise à jour : je te propose finalement de t'appeler le <strong>${when}</strong>, en remplacement du créneau précédent.`
+        }`,
+        sections: [
+          {
+            lines: [
+              wasValide
+                ? "Merci de <strong>re-confirmer</strong> ce nouveau créneau — ou d'en <strong>proposer un autre</strong> — depuis ton espace client."
+                : "Tu peux <strong>accepter</strong> ce créneau, le <strong>refuser</strong>, ou en <strong>proposer un autre</strong> depuis ton espace client.",
+            ],
+          },
+        ],
+        button: {
+          label: wasValide ? "Re-confirmer dans mon espace client" : "Répondre dans mon espace client",
+          href: espaceHref,
+        },
+        footer: "— Maxime, Propul'Sound DJ",
+      },
     });
     revalidate();
     return {
@@ -2566,7 +2588,22 @@ export async function adminEditRdv(formData: FormData) {
   if (wasValide) {
     await emailClient({
       subject: "RDV téléphonique annulé",
-      html: `<p>Bonjour ${quote?.customer_name ?? ""},</p><p>Je dois annuler le point téléphonique prévu. Désolé ! Proposons-en un autre : choisis un moment qui t'arrange depuis ton espace client, ou réponds à ce message.</p><p><a href="${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${rdv.quote_id}#rdv`)}">Ouvrir mon espace client</a></p><p>— Maxime, Propul'Sound DJ</p>`,
+      data: {
+        title: "RDV téléphonique annulé",
+        intro: `Bonjour ${quote?.customer_name ?? ""},<br/><br/>Je dois annuler le point téléphonique prévu. Désolé pour la gêne !`,
+        sections: [
+          {
+            lines: [
+              "Proposons-en un autre : choisis un moment qui t'arrange depuis ton espace client, ou réponds simplement à cet e-mail.",
+            ],
+          },
+        ],
+        button: {
+          label: "Ouvrir mon espace client",
+          href: espaceHref,
+        },
+        footer: "— Maxime, Propul'Sound DJ",
+      },
     });
   }
   revalidate();
