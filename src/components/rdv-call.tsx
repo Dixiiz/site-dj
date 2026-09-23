@@ -100,7 +100,7 @@ function RdvProposalReply({ proposals }: { proposals: RdvRow[] }) {
     const fd = new FormData();
     fd.set("rdv_id", rdvId);
     fd.set("decision", decision);
-    if (withCounter) fd.set("counter_datetime", counter);
+    if (withCounter) fd.set("counter_datetime", localInputToIso(counter));
     startTransition(async () => {
       const res = await clientRdvResponse(fd);
       if (res && !res.ok) setError(res.error ?? "Erreur.");
@@ -229,6 +229,8 @@ export function AdminRdvRequests({
               ) : (
                 <form
                   action={async (fd: FormData) => {
+                    const v = String(fd.get("rdv_datetime") ?? "").trim();
+                    if (v) fd.set("rdv_datetime", localInputToIso(v));
                     await adminRdvDecision(fd);
                   }}
                   className="mt-2 flex flex-wrap items-center gap-2"
@@ -273,6 +275,14 @@ function toLocalInput(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// Valeur datetime-local (naïve, interprétée dans le fuseau du navigateur) ->
+// ISO UTC explicite. Indispensable : le serveur Vercel tourne en UTC, s'il
+// réinterprétait l'heure naïve il décalerait tout de +2 h pour la France.
+function localInputToIso(value: string): string {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? value : d.toISOString();
+}
+
 // Modifier (déplacer) ou supprimer un créneau proposé au client. Un créneau
 // déjà accepté qui est déplacé repasse « en attente de réponse » ; le supprimer
 // annule le RDV validé (e-mail automatique au client).
@@ -282,6 +292,10 @@ function AdminRdvRowActions({ rdv }: { rdv: RdvRow }) {
   return (
     <form
       action={async (fd: FormData) => {
+        if (String(fd.get("mode")) === "modifier") {
+          const v = String(fd.get("rdv_datetime") ?? "").trim();
+          if (v) fd.set("rdv_datetime", localInputToIso(v));
+        }
         await adminEditRdv(fd);
       }}
       className="ml-auto flex flex-wrap items-center gap-1.5"
@@ -323,6 +337,10 @@ function AdminRdvPropose({ quoteId }: { quoteId: string }) {
   return (
     <form
       action={async (fd: FormData) => {
+        for (const i of [1, 2, 3]) {
+          const v = String(fd.get(`slot${i}`) ?? "").trim();
+          if (v) fd.set(`slot${i}`, localInputToIso(v));
+        }
         await adminProposeRdv(fd);
       }}
       className="mt-3 flex flex-wrap items-end gap-2"

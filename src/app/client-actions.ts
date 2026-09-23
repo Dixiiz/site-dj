@@ -2123,6 +2123,7 @@ export async function adminRdvDecision(formData: FormData) {
         if (decision === "valide") {
           const when = new Date(whenIso).toLocaleString("fr-FR", {
             weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+            timeZone: "Europe/Paris",
           });
           const emailData = {
             title: "Ton RDV téléphonique est confirmé !",
@@ -2289,6 +2290,7 @@ export async function adminProposeRdv(formData: FormData) {
         .map((s) =>
           new Date(s).toLocaleString("fr-FR", {
             weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+            timeZone: "Europe/Paris",
           })
         )
         .map((s) => `• ${s}`);
@@ -2387,11 +2389,13 @@ export async function clientRdvResponse(formData: FormData) {
   const when = rdv.proposed_at
     ? new Date(rdv.proposed_at).toLocaleString("fr-FR", {
         weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+        timeZone: "Europe/Paris",
       })
     : "le créneau proposé";
   const counterFr = counter
     ? new Date(counter).toLocaleString("fr-FR", {
         weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+        timeZone: "Europe/Paris",
       })
     : null;
   const { notifyAdmin } = await import("@/lib/admin-notify");
@@ -2495,6 +2499,7 @@ export async function adminEditRdv(formData: FormData) {
   const fmtFr = (iso: string) =>
     new Date(iso).toLocaleString("fr-FR", {
       weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+      timeZone: "Europe/Paris",
     });
   const revalidate = () => {
     revalidatePath("/admin/devis");
