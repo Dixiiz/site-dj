@@ -270,6 +270,90 @@ export default async function AdminDashboard({
   // (attribuées au mois de leur date limite).
   const caMois = caMoisQuotes + urssafEcheances + urssafAcomptes + urssafSoldesEnLigne;
 
+  // CA à venir : confirmé, pas encore joué.
+  const caAVenir = upcoming.reduce((sum, q) => sum + montant(q), 0);
+
+  // Soirées terminées (toutes périodes) dont le solde reste à valider :
+  // visible dans le détail de la carte, pour ne rien oublier.
+  // Les devis avec échéancier en sont exclus : leur argent est suivi
+  // échéance par échéance (voir « Soldes à valider » / échéanciers).
+  const aValiderToutes = allConfirmed
+    .filter(
+      (q) =>
+        (q.event_date ?? "") <= todayIso &&
+        !soldeValide(q) &&
+        !echeancierQuoteIds.has(q.id)
+    );
+  // Soldes réglés en ligne : déjà comptés automatiquement dans l'URSSAF
+  // (bucket urssafSoldesEnLigne) — ils restent listés pour mémoire/avis mais
+  // ne sont plus « à encaisser ».
+  const soldesAEncaisser = aValiderToutes.filter((q) => !soldeEnLigneDe(q));
+  const soldeAValiderToutes = soldesAEncaisser.reduce((sum, q) => sum + soldeDe(q), 0);
+
+  const prochaines = upcoming.slice(0, 5);
+  const aujourdhui = now.toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  /* SUITE-RENDU */
+
+  // ---- Statistiques : CA URSSAF par mois + entonnoir de conversion ----
+  const totalPct = (part: number, total: number) =>
+    total > 0 ? Math.round((part / total) * 100) : null;
+
+  // ---- Statistiques : CA URSSAF par mois + entonnoir de conversion ----
+  const MONTH_LABELS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+  const monthly = Array.from({ length: 12 }, (_, m) => {
+    const prefix = `${year}-${String(m + 1).padStart(2, "0")}`;
+    const soldes = allConfirmed
+      .filter((q) => (q.event_date ?? "").startsWith(prefix) && soldeValide(q) && !echeancierQuoteIds.has(q.id))
+      .reduce((sum, q) => sum + soldeDe(q), 0);
+    const echeances = echeancesValidees
+      .filter((e) => e.dueDate.startsWith(prefix))
+      .reduce((sum, e) => sum + netEcheance(e.quoteId, e.numero, e.amountCents), 0);
+    // Acomptes reçus ce mois et validés URSSAF (base nette de frais Stripe).
+    const acomptes = acomptesValides
+      .filter((q) => String(q.acompte_paid_at ?? "").startsWith(prefix))
+      .reduce((sum, q) => sum + acompteNetDe(q), 0);
+    return { label: MONTH_LABELS[m], cents: soldes + echeances + acomptes };
+  });
+  const allQuotes = allQuotesRes.data ?? [];
+  const countStatus = (...statuses: string[]) =>
+    allQuotes.filter((q) => statuses.includes(q.status ?? "")).length;
+  const funnel = [
+    { label: "Demandes reçues", count: allQuotes.length, hint: "devis + sur mesure" },
+    {
+      label: "En cours de discussion",
+      count: countStatus("nouveau", "contacte", "attente_signature", "attente_acompte"),
+    },
+    {
+      label: "Confirmées",
+      count: countStatus("confirme"),
+      hint:
+        totalPct(countStatus("confirme"), allQuotes.length) === null
+          ? undefined
+          : `${totalPct(countStatus("confirme"), allQuotes.length)} % du total`,
+    },
+    {
+      label: "Refusées / annulées",
+      count: countStatus("refuse", "annule"),
+    },
+  ];
+
+  // Données des cartes et panneaux de détail (rendu instantané côté client).
+  const mapDetailRow = (q: (typeof upcoming)[number]) => ({
+    id: q.id,
+    customerName: q.customer_name,
+    formulaName: q.formula_name,
+    eventLocation: q.event_location ?? "",
+    eventDate: q.event_date ?? "",
+    totalCents: montant(q),
+    notes: String(q.notes ?? ""),
+    status: q.status ?? "",
+  });
+
   // ---- Anciennes périodes URSSAF : détail mois par mois ----
   // Un mois fait partie des « périodes » dès qu'il contient au moins un
   // encaissement validé, réglé en ligne, un acompte validé ou une échéance
@@ -361,89 +445,6 @@ export default async function AdminDashboard({
     };
   }
 
-  // CA à venir : confirmé, pas encore joué.
-  const caAVenir = upcoming.reduce((sum, q) => sum + montant(q), 0);
-
-  // Soirées terminées (toutes périodes) dont le solde reste à valider :
-  // visible dans le détail de la carte, pour ne rien oublier.
-  // Les devis avec échéancier en sont exclus : leur argent est suivi
-  // échéance par échéance (voir « Soldes à valider » / échéanciers).
-  const aValiderToutes = allConfirmed
-    .filter(
-      (q) =>
-        (q.event_date ?? "") <= todayIso &&
-        !soldeValide(q) &&
-        !echeancierQuoteIds.has(q.id)
-    );
-  // Soldes réglés en ligne : déjà comptés automatiquement dans l'URSSAF
-  // (bucket urssafSoldesEnLigne) — ils restent listés pour mémoire/avis mais
-  // ne sont plus « à encaisser ».
-  const soldesAEncaisser = aValiderToutes.filter((q) => !soldeEnLigneDe(q));
-  const soldeAValiderToutes = soldesAEncaisser.reduce((sum, q) => sum + soldeDe(q), 0);
-
-  const prochaines = upcoming.slice(0, 5);
-  const aujourdhui = now.toLocaleDateString("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  /* SUITE-RENDU */
-
-  // ---- Statistiques : CA URSSAF par mois + entonnoir de conversion ----
-  const totalPct = (part: number, total: number) =>
-    total > 0 ? Math.round((part / total) * 100) : null;
-
-  // ---- Statistiques : CA URSSAF par mois + entonnoir de conversion ----
-  const MONTH_LABELS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
-  const monthly = Array.from({ length: 12 }, (_, m) => {
-    const prefix = `${year}-${String(m + 1).padStart(2, "0")}`;
-    const soldes = allConfirmed
-      .filter((q) => (q.event_date ?? "").startsWith(prefix) && soldeValide(q) && !echeancierQuoteIds.has(q.id))
-      .reduce((sum, q) => sum + soldeDe(q), 0);
-    const echeances = echeancesValidees
-      .filter((e) => e.dueDate.startsWith(prefix))
-      .reduce((sum, e) => sum + netEcheance(e.quoteId, e.numero, e.amountCents), 0);
-    // Acomptes reçus ce mois et validés URSSAF (base nette de frais Stripe).
-    const acomptes = acomptesValides
-      .filter((q) => String(q.acompte_paid_at ?? "").startsWith(prefix))
-      .reduce((sum, q) => sum + acompteNetDe(q), 0);
-    return { label: MONTH_LABELS[m], cents: soldes + echeances + acomptes };
-  });
-  const allQuotes = allQuotesRes.data ?? [];
-  const countStatus = (...statuses: string[]) =>
-    allQuotes.filter((q) => statuses.includes(q.status ?? "")).length;
-  const funnel = [
-    { label: "Demandes reçues", count: allQuotes.length, hint: "devis + sur mesure" },
-    {
-      label: "En cours de discussion",
-      count: countStatus("nouveau", "contacte", "attente_signature", "attente_acompte"),
-    },
-    {
-      label: "Confirmées",
-      count: countStatus("confirme"),
-      hint:
-        totalPct(countStatus("confirme"), allQuotes.length) === null
-          ? undefined
-          : `${totalPct(countStatus("confirme"), allQuotes.length)} % du total`,
-    },
-    {
-      label: "Refusées / annulées",
-      count: countStatus("refuse", "annule"),
-    },
-  ];
-
-  // Données des cartes et panneaux de détail (rendu instantané côté client).
-  const mapDetailRow = (q: (typeof upcoming)[number]) => ({
-    id: q.id,
-    customerName: q.customer_name,
-    formulaName: q.formula_name,
-    eventLocation: q.event_location ?? "",
-    eventDate: q.event_date ?? "",
-    totalCents: montant(q),
-    notes: String(q.notes ?? ""),
-    status: q.status ?? "",
-  });
   const details = {
     "ca-annee": {
       titre: `CA signé ${year} — détail des événements`,
