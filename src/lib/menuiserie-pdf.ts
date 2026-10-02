@@ -43,14 +43,14 @@ const ENTREPRISE = {
   bic: "CMCIFR2A",
 };
 
-// Charte colorée alignée sur le logo bleu (#3682AE) et le bleu du site (#21619A).
+// Charte bois d'origine ; le logo est décliné en version brune (logo-menuiserie.png).
 const C = {
-  bleu: rgb(0.129, 0.380, 0.604), // #21619A — bandeau, pavé total
-  bleuClair: rgb(0.914, 0.945, 0.969), // #E9F1F7 — fonds de blocs
-  accent: rgb(0.212, 0.510, 0.682), // #3682AE — bleu du logo (titres, accent)
-  gris: rgb(0.42, 0.45, 0.48), // texte secondaire
-  grisLigne: rgb(0.647, 0.698, 0.729), // #A5B2BA — filets du tableau (gris du logo)
-  texte: rgb(0.12, 0.15, 0.19), // anthracite
+  brun: rgb(0.29, 0.19, 0.11), // brun bois foncé — bandeau, pavé total
+  brunClair: rgb(0.92, 0.87, 0.8), // beige clair — fonds de blocs
+  accent: rgb(0.62, 0.4, 0.18), // brun caramel — titres, accent
+  gris: rgb(0.45, 0.45, 0.47), // texte secondaire
+  grisLigne: rgb(0.78, 0.74, 0.68), // filets du tableau
+  texte: rgb(0.12, 0.11, 0.1),
   blanc: rgb(1, 1, 1),
 };
 
@@ -79,25 +79,25 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
 
   // ============ BANDEAU D'EN-TÊTE (pleine largeur, bleu du site) ============
   const headH = 96;
-  page.drawRectangle({ x: 0, y: H - headH, width: W, height: headH, color: C.bleu });
+  page.drawRectangle({ x: 0, y: H - headH, width: W, height: headH, color: C.brun });
   t(ENTREPRISE.nom, M, H - 34, 20, b, C.blanc);
   t(ENTREPRISE.enseigne, M, H - 50, 10, b, rgb(0.78, 0.87, 0.94));
-  t(ENTREPRISE.activite, M, H - 66, 8.5, r, C.bleuClair);
+  t(ENTREPRISE.activite, M, H - 66, 8.5, r, C.brunClair);
   t(
     `${ENTREPRISE.adresse} · ${ENTREPRISE.ville} · ${ENTREPRISE.atelier}`,
-    M, H - 78, 7.5, r, C.bleuClair,
+    M, H - 78, 7.5, r, C.brunClair,
   );
   t(
     `${ENTREPRISE.telephone} · ${ENTREPRISE.email} · SIRET ${ENTREPRISE.siret}`,
-    M, H - 89, 7.5, r, C.bleuClair,
+    M, H - 89, 7.5, r, C.brunClair,
   );
-  // Logo bleu du site (transparence conservée) — réduit et ignoré s'il est absent.
+  // Logo menuiserie (déclinaison brune du logo, transparence conservée).
   try {
-    const logoBytes = fs.readFileSync(path.join(process.cwd(), "public", "logo-bleu-transparent.png"));
+    const logoBytes = fs.readFileSync(path.join(process.cwd(), "public", "logo-menuiserie.png"));
     const logo = await doc1.embedPng(logoBytes);
-    // Le logo est haut (2452×4000) : on le cale sur la hauteur du bandeau.
+    // Le logo est haut (981×1600) : on le cale sur la hauteur du bandeau.
     const lh = 72;
-    const lw = (2452 / 4000) * lh;
+    const lw = (981 / 1600) * lh;
     page.drawImage(logo, {
       x: W - M - lw - 8,
       y: H - headH + (headH - lh) / 2,
@@ -124,7 +124,7 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
   const boxH = 92;
   page.drawRectangle({
     x: M, y: y - boxH, width: CW * 0.52, height: boxH,
-    borderColor: C.grisLigne, borderWidth: 0.8, color: C.bleuClair,
+    borderColor: C.grisLigne, borderWidth: 0.8, color: C.brunClair,
   });
   t("CLIENT", M + 12, y - 16, 8, b, C.accent);
   t(doc.clientNom || "-", M + 12, y - 34, 11, b, C.texte);
@@ -162,7 +162,7 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
 
   // ============ TABLEAU DES LIGNES ============
   const drawTableHead = (p: PDFPage) => {
-    p.drawRectangle({ x: M, y: y - 20, width: CW, height: 20, color: C.bleu });
+    p.drawRectangle({ x: M, y: y - 20, width: CW, height: 20, color: C.brun });
     p.drawText("DÉSIGNATION", { x: M + 10, y: y - 14, size: 8.5, font: b, color: C.blanc });
     const qte = "QTÉ";
     p.drawText(qte, { x: M + CW - 190 - tw(qte, 8.5, b), y: y - 14, size: 8.5, font: b, color: C.blanc });
@@ -178,10 +178,10 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
   for (const ligne of doc.lignes) {
     // Saut de page propre si le tableau déborde
     if (y < 210) {
-      page.drawRectangle({ x: 0, y: 12, width: W, height: 3, color: C.bleu });
+      page.drawRectangle({ x: 0, y: 12, width: W, height: 3, color: C.brun });
       page = doc1.addPage([W, H]);
       y = H - M - 40;
-      page.drawText(`Suite — ${doc.numero}`, { x: M, y: H - 24, size: 10, font: b, color: C.bleu });
+      page.drawText(`Suite — ${doc.numero}`, { x: M, y: H - 24, size: 10, font: b, color: C.brun });
       drawTableHead(page);
     }
     const qteTxt = String(ligne.quantite).replace(".", ",");
@@ -223,9 +223,9 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
 
   // ============ TOTAL (pavé sombre) ============
   const bx = M + CW - 260;
-  page.drawRectangle({ x: bx, y: y - 10, width: 260, height: 34, color: C.bleu });
+  page.drawRectangle({ x: bx, y: y - 10, width: 260, height: 34, color: C.brun });
   const totLabel = doc.type === "facture" ? "TOTAL À RÉGLER" : "TOTAL HT";
-  page.drawText(totLabel, { x: bx + 12, y: y + 1, size: 11, font: b, color: C.bleuClair });
+  page.drawText(totLabel, { x: bx + 12, y: y + 1, size: 11, font: b, color: C.brunClair });
   const totalTxt2 = fmt(total / 100);
   page.drawText(totalTxt2, { x: bx + 260 - 12 - tw(totalTxt2, 11.5, b), y: y + 1, size: 11.5, font: b, color: C.blanc });
   y -= 44;
@@ -247,7 +247,7 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
     page.drawRectangle({ x: M, y: y - 3, width: 3, height: 11, color: C.accent });
     page.drawText(
       doc.type === "devis" ? "CONDITIONS" : "RÈGLEMENT",
-      { x: M + 10, y, size: 10.5, font: b, color: C.bleu },
+      { x: M + 10, y, size: 10.5, font: b, color: C.brun },
     );
     y -= 17;
   };
@@ -278,7 +278,7 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
   const yTopB = y - boxB;
   page.drawRectangle({
     x: M, y: yTopB, width: CW, height: boxB,
-    borderColor: C.grisLigne, borderWidth: 0.8, color: C.bleuClair,
+    borderColor: C.grisLigne, borderWidth: 0.8, color: C.brunClair,
   });
   page.drawText("COORDONNÉES BANCAIRES", { x: M + 12, y: yTopB + boxB - 14, size: 8, font: b, color: C.accent });
   page.drawText("Titulaire : SOULAINE Maxime", { x: M + 12, y: yTopB + boxB - 28, size: 8.5, font: b, color: C.texte });
@@ -300,7 +300,7 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
   });
 
   // Pied de page
-  page.drawRectangle({ x: 0, y: 12, width: W, height: 3, color: C.bleu });
+  page.drawRectangle({ x: 0, y: 12, width: W, height: 3, color: C.brun });
 
   return doc1.save();
 }
