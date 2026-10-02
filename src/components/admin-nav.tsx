@@ -6,6 +6,7 @@ import { useRef } from "react";
 import {
   CalendarDays,
   FileText,
+  Hammer,
   Home,
   Images,
   LogOut,
@@ -21,6 +22,7 @@ const LINKS = [
   { href: "/admin", label: "Accueil", icon: Home },
   { href: "/admin/devis", label: "Devis", icon: FileText },
   { href: "/admin/factures", label: "Factures", icon: ReceiptText },
+  { href: "/admin/menuiserie", label: "Menuiserie", icon: Hammer },
   { href: "/admin/planning", label: "Planning", icon: CalendarDays },
   { href: "/admin/medias", label: "Médias", icon: Images },
   { href: "/admin/comptes", label: "Comptes", icon: Users },

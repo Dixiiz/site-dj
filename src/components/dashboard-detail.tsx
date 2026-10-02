@@ -25,6 +25,27 @@ type DetailData = {
   solde?: boolean;
 };
 
+const MOIS_NOMS = [
+  "janvier",
+  "février",
+  "mars",
+  "avril",
+  "mai",
+  "juin",
+  "juillet",
+  "août",
+  "septembre",
+  "octobre",
+  "novembre",
+  "décembre",
+];
+
+/** « 2025-08 » → « août 2025 ». */
+function libelleMois(mois: string) {
+  const [annee, m] = mois.split("-");
+  return `${MOIS_NOMS[Number(m) - 1] ?? mois} ${annee ?? ""}`.trim();
+}
+
 /**
  * Cartes du tableau de bord + panneaux de détail. Ouverture INSTANTANÉE
  * côté client (pas de navigation serveur) : la section s'affiche en
@@ -35,6 +56,7 @@ export function DashboardDetail({
   cards1,
   cards2,
   details,
+  detailsUrssaf,
   echeanciersPanel,
   soldeRecusPanel,
 }: {
@@ -42,6 +64,8 @@ export function DashboardDetail({
   cards1: CardDef[];
   cards2: CardDef[];
   details: Record<string, DetailData | undefined>;
+  /** Détails URSSAF des anciennes périodes, clé « urssaf:AAAA-MM ». */
+  detailsUrssaf?: Record<string, DetailData | undefined>;
   /** Panneau « Échéances en cours » (rendu serveur). */
   echeanciersPanel: ReactNode;
   /** Panneau « paiements d'échéancier reçus à confirmer » (rendu serveur). */
@@ -49,12 +73,20 @@ export function DashboardDetail({
 }) {
   const [vue, setVue] = useState<string | null>(initialVue ?? null);
   const toggle = (v: string) => setVue((cur) => (cur === v ? null : v));
-  const detail = vue ? details[vue] : undefined;
-  const inBlock1 = cards1.some((c) => c.vue === vue);
+  // Vue spéciale « détail d'une ancienne période URSSAF » (urssaf:AAAA-MM) :
+  // les données sont précalculées côté serveur dans detailsUrssaf.
+  const estDetailMois = vue?.startsWith("urssaf:") ?? false;
+  const detail = vue ? (details[vue] ?? (estDetailMois ? detailsUrssaf?.[vue] : undefined)) : undefined;
+  const inBlock1 = cards1.some((c) => c.vue === vue) || estDetailMois;
+  const montreSelecteurMois =
+    (vue === "urssaf" || estDetailMois) && Object.keys(detailsUrssaf ?? {}).length > 0;
+  // La carte URSSAF reste surlignée quand on consulte un ancien mois.
+  const estCarteActive = (card: CardDef) =>
+    vue === card.vue || (card.vue === "urssaf" && estDetailMois);
 
   const heroClass = (card: CardDef) =>
     `rounded-2xl border p-6 text-left transition-colors ${
-      vue === card.vue
+      estCarteActive(card)
         ? "border-accent ring-1 ring-accent"
         : card.accentLabel
           ? "border-accent/40 bg-gradient-to-br from-accent/15 to-accent/5 hover:border-accent"
@@ -63,7 +95,7 @@ export function DashboardDetail({
 
   const defaultClass = (card: CardDef) =>
     `rounded-xl border p-5 text-left transition-colors ${
-      vue === card.vue
+      estCarteActive(card)
         ? "border-accent ring-1 ring-accent"
         : "border-border bg-card hover:border-accent/50"
     }`;
@@ -100,7 +132,33 @@ export function DashboardDetail({
           rows={detail.rows}
           solde={detail.solde}
           onClose={() => setVue(null)}
-        />
+        >
+          {montreSelecteurMois ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground">Anciennes périodes :</span>
+              {Object.keys(detailsUrssaf ?? {})
+                .sort((a, b) => b.localeCompare(a))
+                .slice(0, 12)
+                .map((cle) => {
+                  const mois = cle.replace(/^urssaf:/, "");
+                  return (
+                    <button
+                      key={cle}
+                      type="button"
+                      onClick={() => setVue(cle)}
+                      className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                        vue === cle
+                          ? "border-accent bg-accent/10 text-accent"
+                          : "border-border text-muted-foreground hover:border-accent/50 hover:text-accent"
+                      }`}
+                    >
+                      {libelleMois(mois)}
+                    </button>
+                  );
+                })}
+            </div>
+          ) : null}
+        </CaDetailPanel>
       ) : null}
 
       {/* BLOC 2 : détails (cliquables → détail) */}

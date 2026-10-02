@@ -270,6 +270,97 @@ export default async function AdminDashboard({
   // (attribuées au mois de leur date limite).
   const caMois = caMoisQuotes + urssafEcheances + urssafAcomptes + urssafSoldesEnLigne;
 
+  // ---- Anciennes périodes URSSAF : détail mois par mois ----
+  // Un mois fait partie des « périodes » dès qu'il contient au moins un
+  // encaissement validé, réglé en ligne, un acompte validé ou une échéance
+  // d'échéancier confirmée — exactement les mêmes ingrédients que la carte
+  // du mois courant, appliqués à un autre préfixe AAAA-MM.
+  const entreesDuMois = (prefix: string) => {
+    const encaisseMois = allConfirmed.filter(
+      (q) =>
+        (q.event_date ?? "").startsWith(prefix) &&
+        (q.event_date ?? "") <= todayIso &&
+        soldeValide(q) &&
+        !soldeEnLigneDe(q) &&
+        !echeancierQuoteIds.has(q.id)
+    );
+    const lignes: Array<
+      ReturnType<typeof mapDetailRow> & {
+        afficheCents?: number;
+        type?: "solde" | "acompte" | "echeance";
+        soldeEnLigneLe?: string | null;
+      }
+    > = [
+      // Soldes validés après soirée — montant = solde réel (pas le total).
+      ...encaisseMois.map((q) => ({
+        ...mapDetailRow(q),
+        afficheCents: soldeDe(q),
+        type: "solde" as const,
+      })),
+      // Soldes réglés EN LIGNE ce mois (carte ou virement confirmé) :
+      // comptés automatiquement, base nette de frais Stripe.
+      ...allConfirmed
+        .filter((q) => {
+          const d = soldeEnLigneDe(q);
+          return d && d.startsWith(prefix) && !echeancierQuoteIds.has(q.id);
+        })
+        .map((q) => ({
+          ...mapDetailRow(q),
+          afficheCents: soldeEnLigneNetDe(q),
+          type: "solde" as const,
+          soldeEnLigneLe: soldeEnLigneDe(q),
+        })),
+      // Acomptes reçus ce mois et validés URSSAF (base nette).
+      ...acomptesValides
+        .filter((q) => String(q.acompte_paid_at ?? "").startsWith(prefix))
+        .map((q) => ({
+          ...mapDetailRow(q),
+          afficheCents: acompteNetDe(q),
+          type: "acompte" as const,
+          formulaName: "Acompte — net après frais Stripe",
+          eventDate: String(q.acompte_paid_at ?? "").slice(0, 10),
+          eventLocation: "",
+        })),
+      // Échéances d'échéancier confirmées ce mois (base nette).
+      ...echeancesValidees
+        .filter((e) => e.dueDate.startsWith(prefix))
+        .map((e) => ({
+          ...mapDetailRow({
+            id: e.quoteId,
+            customer_name: e.client,
+            formula_name: "",
+            event_date: e.dueDate,
+            event_location: null,
+            total_cents: 0,
+            notes: "",
+            status: "confirme",
+            created_at: "",
+            acompte_paid_at: null,
+            acompte_required: null,
+          }),
+          afficheCents: netEcheance(e.quoteId, e.numero, e.amountCents),
+          type: "echeance" as const,
+          formulaName: `Échéancier ${e.numero}/${e.totalEcheances} — net après frais Stripe`,
+          eventLocation: "",
+        })),
+    ];
+    return lignes;
+  };
+
+  // Détails URSSAF des 12 derniers mois écoulés (hors mois courant, déjà
+  // accessible via la carte), uniquement ceux qui contiennent des entrées.
+  const detailsUrssaf: Record<string, { titre: string; rows: ReturnType<typeof entreesDuMois> }> = {};
+  for (let i = 1; i <= 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const prefix = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const rows = entreesDuMois(prefix);
+    if (rows.length === 0) continue;
+    detailsUrssaf[`urssaf:${prefix}`] = {
+      titre: `CA ${prefix} (URSSAF) — encaissements validés (nets de frais Stripe)`,
+      rows,
+    };
+  }
+
   // CA à venir : confirmé, pas encore joué.
   const caAVenir = upcoming.reduce((sum, q) => sum + montant(q), 0);
 
@@ -491,6 +582,7 @@ export default async function AdminDashboard({
           { vue: "devis", href: "/admin/devis", label: "Devis en attente", value: String(devisAttente ?? 0), hint: "à relancer ou traiter" },
         ]}
         details={details}
+        detailsUrssaf={detailsUrssaf}
         echeanciersPanel={
           <div className="animate-in fade-in slide-in-from-bottom-2 space-y-3 rounded-xl border border-border bg-card p-5 duration-300">
             <div className="flex items-center justify-between gap-2">

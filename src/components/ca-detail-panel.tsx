@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { deleteQuote } from "@/app/actions";
@@ -59,11 +59,14 @@ export function CaDetailPanel({
   rows,
   solde = false,
   onClose: onCloseProp,
+  children,
 }: {
   titre: string;
   rows: DetailRow[];
   solde?: boolean;
   onClose?: () => void;
+  /** Contenu optionnel affiché sous le titre (ex. sélecteur d'anciennes périodes). */
+  children?: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pending, startTransition] = useTransition();
@@ -154,6 +157,7 @@ export function CaDetailPanel({
           ✕ Fermer
         </button>
       </div>
+      {children}
 
       {rows.length === 0 ? (
         <p className="mt-3 text-sm text-muted-foreground">
