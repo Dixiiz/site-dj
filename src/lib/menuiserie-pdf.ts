@@ -216,6 +216,14 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
     y -= rowH;
   }
 
+  // Saut de page si la partie basse (total, conditions, signatures) déborde.
+  if (y < 360) {
+    page.drawRectangle({ x: 0, y: 12, width: W, height: 3, color: C.brun });
+    page = doc1.addPage([W, H]);
+    y = H - M - 40;
+    page.drawText(`Suite — ${doc.numero}`, { x: M, y: H - 24, size: 10, font: b, color: C.brun });
+  }
+
   y -= 14;
   const tvaTxt = "TVA non applicable, article 293 B du CGI";
   page.drawText(tvaTxt, { x: M + CW - 10 - tw(tvaTxt, 8, r), y, size: 8, font: r, color: C.gris });
@@ -286,7 +294,65 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
   const bicTxt = `BIC : ${ENTREPRISE.bic}`;
   page.drawText(bicTxt, { x: M + CW - 12 - tw(bicTxt, 8.5, r), y: yTopB + boxB - 40, size: 8.5, font: r, color: C.texte });
 
-  y = yTopB - 20;
+  y = yTopB - 22;
+
+  // ============ SIGNATURES (comme sur les devis DJ) ============
+  // Case prestataire (avec la signature de Maxime) + case client
+  // « Bon pour accord » à remplir par le client (date + signature).
+  const halfW = (CW - 16) / 2;
+  const boxS = 64;
+  const yTopS = y - boxS;
+
+  // Case PRESTATAIRE (gauche) : identité + signature incrustée
+  page.drawRectangle({
+    x: M, y: yTopS, width: halfW, height: boxS,
+    borderColor: C.grisLigne, borderWidth: 0.8, color: C.brunClair,
+  });
+  page.drawText("PRESTATAIRE", { x: M + 12, y: yTopS + boxS - 14, size: 8, font: b, color: C.accent });
+  page.drawText("SOULAINE Maxime — Propul'Sound · Atelier Soulaine", {
+    x: M + 12, y: yTopS + boxS - 27, size: 8, font: b, color: C.texte,
+  });
+  page.drawText("5 Clos de la Salamandre, 41350 Huisseau-sur-Cosson", {
+    x: M + 12, y: yTopS + boxS - 38, size: 7.5, font: r, color: C.gris,
+  });
+  page.drawText("SIRET 932 220 791 00010", {
+    x: M + 12, y: yTopS + boxS - 48, size: 7.5, font: r, color: C.gris,
+  });
+  try {
+    const sigBytes = fs.readFileSync(path.join(process.cwd(), "public", "images", "signature-soulaine.jpg"));
+    const sigImg = await doc1.embedJpg(sigBytes);
+    const sigW = 88;
+    const sigH = Math.min((sigImg.height / sigImg.width) * sigW, 22);
+    page.drawImage(sigImg, { x: M + halfW - sigW - 12, y: yTopS + 8, width: sigW, height: sigH });
+  } catch {
+    // signature absente : on affiche juste la mention
+    page.drawText("Signature :", { x: M + halfW - 70, y: yTopS + 14, size: 8, font: r, color: C.gris });
+  }
+
+  // Case CLIENT — BON POUR ACCORD (droite) : à remplir par le client
+  const rxS = M + halfW + 16;
+  page.drawRectangle({
+    x: rxS, y: yTopS, width: halfW, height: boxS,
+    borderColor: C.grisLigne, borderWidth: 0.8, color: C.brunClair,
+  });
+  const clientLabel = doc.type === "devis" ? "CLIENT — BON POUR ACCORD" : "CLIENT — RECONNAISSANCE DE DETTE";
+  page.drawText(clientLabel, { x: rxS + 12, y: yTopS + boxS - 14, size: 8, font: b, color: C.accent });
+  page.drawText(`${doc.clientNom}`, { x: rxS + 12, y: yTopS + boxS - 30, size: 8, font: b, color: C.texte });
+  page.drawText("Date : ____ / ____ / ________", {
+    x: rxS + 12, y: yTopS + 20, size: 8.5, font: r, color: C.texte,
+  });
+  page.drawText("Signature (précédée de « Bon pour accord ») :", {
+    x: rxS + 12, y: yTopS + 10, size: 7.5, font: r, color: C.gris,
+  });
+  // Ligne de signature
+  page.drawLine({
+    start: { x: rxS + 12, y: yTopS + 4 },
+    end: { x: rxS + halfW - 12, y: yTopS + 4 },
+    thickness: 0.6,
+    color: C.grisLigne,
+  });
+
+  y = yTopS - 20;
   const villeNom = ENTREPRISE.ville.replace(/^\d+\s*/, "");
   page.drawText(
     `${titre === "FACTURE" ? "Facture" : "Devis"} établi à ${villeNom}, le ${new Date().toLocaleDateString("fr-FR")}.`,
