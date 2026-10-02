@@ -81,7 +81,7 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
   const headH = 96;
   page.drawRectangle({ x: 0, y: H - headH, width: W, height: headH, color: C.bleu });
   t(ENTREPRISE.nom, M, H - 34, 20, b, C.blanc);
-  t(`par ${ENTREPRISE.enseigne}`, M, H - 50, 10, b, rgb(0.78, 0.87, 0.94));
+  t(ENTREPRISE.enseigne, M, H - 50, 10, b, rgb(0.78, 0.87, 0.94));
   t(ENTREPRISE.activite, M, H - 66, 8.5, r, C.bleuClair);
   t(
     `${ENTREPRISE.adresse} · ${ENTREPRISE.ville} · ${ENTREPRISE.atelier}`,
