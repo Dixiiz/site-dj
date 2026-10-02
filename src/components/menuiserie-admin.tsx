@@ -5,8 +5,8 @@ import { toast } from "sonner";
 import { formatEuros } from "@/lib/money";
 
 // Interface admin « Menuiserie » : onglets Devis / Factures / Clients,
-// création de documents, génération PDF, envoi e-mail, statuts,
-// conversion devis → facture.
+// création de documents et génération PDF (envoi et signature gérés
+// manuellement par l'admin — aucun e-mail automatique).
 
 export type MenuiserieLine = {
   designation: string;
@@ -259,31 +259,6 @@ export function MenuiserieAdmin({
     const url = json.url as string | null;
     if (url) window.open(url, "_blank");
     else toast.error("Lien de téléchargement indisponible.");
-  }
-
-  async function envoyerParEmail(doc: MenuiserieDoc) {
-    const to = window.prompt(
-      `Adresse e-mail pour l'envoi de ${doc.numero} :`,
-      doc.client_email ?? "",
-    );
-    if (!to) return;
-    setBusyId(doc.id);
-    const { ok, json } = await api("/api/admin/menuiserie/send", {
-      method: "POST",
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ id: doc.id, email: to }),
-    });
-    setBusyId(null);
-    if (!ok) {
-      toast.error(String(json.error ?? "Échec de l'envoi de l'e-mail."));
-      return;
-    }
-    setDocs((cur) =>
-      cur.map((d) =>
-        d.id === doc.id && d.statut === "brouillon" ? { ...d, statut: "envoye" } : d,
-      ),
-    );
-    toast.success(String(json.message ?? "Document envoyé."));
   }
 
   async function convertirEnFacture(doc: MenuiserieDoc) {
@@ -618,10 +593,7 @@ export function MenuiserieAdmin({
                     {/* Actions du document */}
                     <div className="flex flex-wrap items-center gap-2">
                       <button type="button" onClick={() => genererPdf(doc)} disabled={busyId === doc.id} className={btnCls}>
-                        {busyId === doc.id ? "…" : "PDF"}
-                      </button>
-                      <button type="button" onClick={() => envoyerParEmail(doc)} disabled={busyId === doc.id} className={btnCls}>
-                        Envoyer par e-mail
+                        {busyId === doc.id ? "…" : "Générer le PDF"}
                       </button>
                       {estDevis ? (
                         <>

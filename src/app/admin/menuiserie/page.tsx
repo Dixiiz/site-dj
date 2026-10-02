@@ -42,8 +42,9 @@ export default async function MenuiseriePage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Menuiserie — Devis &amp; Factures</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Génère un devis ou une facture PDF (charte dédiée), clique pour l&apos;envoyer par e-mail,
-          suis son statut. Numérotation indépendante : DEV-2026-001 / FAC-2026-001.
+          Crée un devis ou une facture et génère le PDF (charte Propul&apos;Sound — Atelier
+          Soulaine). À toi de l&apos;imprimer ou de l&apos;envoyer au client : il imprime et signe.
+          Numérotation indépendante : DEV-2026-001 / FAC-2026-001.
         </p>
       </div>
       <MenuiserieAdmin
