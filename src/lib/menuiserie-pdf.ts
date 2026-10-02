@@ -27,12 +27,15 @@ export type MenuiserieDocData = {
   lignes: MenuiserieLine[];
 };
 
-// ===== Identité de l'entreprise (menuiserie) — personnalise ici =====
+// ===== Identité de l'entreprise (menuiserie) =====
+// Enseigne Propul'Sound, atelier menuiserie « Atelier Soulaine ».
 const ENTREPRISE = {
-  nom: "Soulaine Menuiserie",
+  nom: "Propul'Sound",
+  enseigne: "Atelier Soulaine",
   activite: "Menuiserie & Agencement sur mesure",
   adresse: "5 Clos de la Salamandre",
   ville: "41350 Huisseau-sur-Cosson",
+  atelier: "Atelier : 1 rue Docteur Minot, 41160 Morée",
   telephone: "06 74 85 07 69",
   email: "propulsounddj@gmail.com",
   siret: "93222079100010",
@@ -40,13 +43,14 @@ const ENTREPRISE = {
   bic: "CMCIFR2A",
 };
 
+// Charte colorée alignée sur le logo bleu (#3682AE) et le bleu du site (#21619A).
 const C = {
-  brun: rgb(0.29, 0.19, 0.11), // brun bois foncé
-  brunClair: rgb(0.92, 0.87, 0.8), // beige clair
-  accent: rgb(0.62, 0.4, 0.18), // brun caramel
-  gris: rgb(0.45, 0.45, 0.47),
-  grisLigne: rgb(0.78, 0.74, 0.68),
-  texte: rgb(0.12, 0.11, 0.1),
+  bleu: rgb(0.129, 0.380, 0.604), // #21619A — bandeau, pavé total
+  bleuClair: rgb(0.914, 0.945, 0.969), // #E9F1F7 — fonds de blocs
+  accent: rgb(0.212, 0.510, 0.682), // #3682AE — bleu du logo (titres, accent)
+  gris: rgb(0.42, 0.45, 0.48), // texte secondaire
+  grisLigne: rgb(0.647, 0.698, 0.729), // #A5B2BA — filets du tableau (gris du logo)
+  texte: rgb(0.12, 0.15, 0.19), // anthracite
   blanc: rgb(1, 1, 1),
 };
 
@@ -73,33 +77,46 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
   const right = (txt: string, xRight: number, size: number, font: PDFFont) =>
     xRight - tw(txt, size, font);
 
-  // ============ BANDEAU D'EN-TÊTE (pleine largeur, brun bois) ============
+  // ============ BANDEAU D'EN-TÊTE (pleine largeur, bleu du site) ============
   const headH = 96;
-  page.drawRectangle({ x: 0, y: H - headH, width: W, height: headH, color: C.brun });
-  t(ENTREPRISE.nom, M, H - 38, 20, b, C.blanc);
-  t(ENTREPRISE.activite, M, H - 56, 9.5, r, C.brunClair);
-  t(`${ENTREPRISE.adresse} · ${ENTREPRISE.ville}`, M, H - 72, 8.5, r, C.brunClair);
+  page.drawRectangle({ x: 0, y: H - headH, width: W, height: headH, color: C.bleu });
+  t(ENTREPRISE.nom, M, H - 34, 20, b, C.blanc);
+  t(`par ${ENTREPRISE.enseigne}`, M, H - 50, 10, b, rgb(0.78, 0.87, 0.94));
+  t(ENTREPRISE.activite, M, H - 66, 8.5, r, C.bleuClair);
+  t(
+    `${ENTREPRISE.adresse} · ${ENTREPRISE.ville} · ${ENTREPRISE.atelier}`,
+    M, H - 78, 7.5, r, C.bleuClair,
+  );
   t(
     `${ENTREPRISE.telephone} · ${ENTREPRISE.email} · SIRET ${ENTREPRISE.siret}`,
-    M, H - 84, 8.5, r, C.brunClair,
+    M, H - 89, 7.5, r, C.bleuClair,
   );
-  // Logo éventuel (public/logo-menuiserie.png) — ignoré silencieusement s'il est absent
+  // Logo bleu du site (transparence conservée) — réduit et ignoré s'il est absent.
   try {
-    const logoBytes = fs.readFileSync(path.join(process.cwd(), "public", "logo-menuiserie.png"));
+    const logoBytes = fs.readFileSync(path.join(process.cwd(), "public", "logo-bleu-transparent.png"));
     const logo = await doc1.embedPng(logoBytes);
-    const ls = 62;
-    page.drawImage(logo, { x: W - M - ls - 90, y: H - headH + (headH - ls) / 2, width: ls, height: ls });
+    // Le logo est haut (2452×4000) : on le cale sur la hauteur du bandeau.
+    const lh = 72;
+    const lw = (2452 / 4000) * lh;
+    page.drawImage(logo, {
+      x: W - M - lw - 8,
+      y: H - headH + (headH - lh) / 2,
+      width: lw,
+      height: lh,
+    });
   } catch {
-    // pas de logo menuiserie : on affiche juste la pastille du type
+    // pas de logo : on affiche juste la pastille du type
   }
-  // Pastille du type de document
+  // Pastille du type de document, à GAUCHE du logo (pas de chevauchement).
   const label = titre;
   const lw = tw(label, 20, b);
+  const logoLh = 72;
+  const logoLw = (2452 / 4000) * logoLh;
   page.drawRectangle({
-    x: W - M - lw - 26, y: H - headH + 22, width: lw + 26, height: 30,
+    x: W - M - logoLw - 16 - lw - 26, y: H - headH + 22, width: lw + 26, height: 30,
     color: C.accent,
   });
-  t(label, W - M - lw - 13, H - headH + 31, 20, b, C.blanc);
+  t(label, W - M - logoLw - 16 - lw - 13, H - headH + 31, 20, b, C.blanc);
 
   let y = H - headH - 30;
 
@@ -107,7 +124,7 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
   const boxH = 92;
   page.drawRectangle({
     x: M, y: y - boxH, width: CW * 0.52, height: boxH,
-    borderColor: C.grisLigne, borderWidth: 0.8, color: C.brunClair,
+    borderColor: C.grisLigne, borderWidth: 0.8, color: C.bleuClair,
   });
   t("CLIENT", M + 12, y - 16, 8, b, C.accent);
   t(doc.clientNom || "-", M + 12, y - 34, 11, b, C.texte);
@@ -145,7 +162,7 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
 
   // ============ TABLEAU DES LIGNES ============
   const drawTableHead = (p: PDFPage) => {
-    p.drawRectangle({ x: M, y: y - 20, width: CW, height: 20, color: C.brun });
+    p.drawRectangle({ x: M, y: y - 20, width: CW, height: 20, color: C.bleu });
     p.drawText("DÉSIGNATION", { x: M + 10, y: y - 14, size: 8.5, font: b, color: C.blanc });
     const qte = "QTÉ";
     p.drawText(qte, { x: M + CW - 190 - tw(qte, 8.5, b), y: y - 14, size: 8.5, font: b, color: C.blanc });
@@ -161,10 +178,10 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
   for (const ligne of doc.lignes) {
     // Saut de page propre si le tableau déborde
     if (y < 210) {
-      page.drawRectangle({ x: 0, y: 12, width: W, height: 3, color: C.brun });
+      page.drawRectangle({ x: 0, y: 12, width: W, height: 3, color: C.bleu });
       page = doc1.addPage([W, H]);
       y = H - M - 40;
-      page.drawText(`Suite — ${doc.numero}`, { x: M, y: H - 24, size: 10, font: b, color: C.brun });
+      page.drawText(`Suite — ${doc.numero}`, { x: M, y: H - 24, size: 10, font: b, color: C.bleu });
       drawTableHead(page);
     }
     const qteTxt = String(ligne.quantite).replace(".", ",");
@@ -206,19 +223,31 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
 
   // ============ TOTAL (pavé sombre) ============
   const bx = M + CW - 260;
-  page.drawRectangle({ x: bx, y: y - 10, width: 260, height: 34, color: C.brun });
+  page.drawRectangle({ x: bx, y: y - 10, width: 260, height: 34, color: C.bleu });
   const totLabel = doc.type === "facture" ? "TOTAL À RÉGLER" : "TOTAL HT";
-  page.drawText(totLabel, { x: bx + 12, y: y + 1, size: 11, font: b, color: C.brunClair });
+  page.drawText(totLabel, { x: bx + 12, y: y + 1, size: 11, font: b, color: C.bleuClair });
   const totalTxt2 = fmt(total / 100);
   page.drawText(totalTxt2, { x: bx + 260 - 12 - tw(totalTxt2, 11.5, b), y: y + 1, size: 11.5, font: b, color: C.blanc });
   y -= 44;
+
+  // Détail acompte / solde (base : acompte de 40 % à la commande).
+  const acompteCents = Math.round((total * 40) / 100);
+  const detailTxt =
+    doc.type === "devis"
+      ? `Acompte à la commande (40 %) : ${fmt(acompteCents / 100)} — Solde à la réception des travaux : ${fmt((total - acompteCents) / 100)}`
+      : `Acompte réglé à la commande (40 %) : ${fmt(acompteCents / 100)} — Solde à régler : ${fmt((total - acompteCents) / 100)}`;
+  page.drawText(detailTxt, {
+    x: M + CW - 10 - tw(detailTxt, 8.5, r),
+    y, size: 8.5, font: r, color: C.accent,
+  });
+  y -= 22;
 
   // ============ CONDITIONS ============
   const section = () => {
     page.drawRectangle({ x: M, y: y - 3, width: 3, height: 11, color: C.accent });
     page.drawText(
       doc.type === "devis" ? "CONDITIONS" : "RÈGLEMENT",
-      { x: M + 10, y, size: 10.5, font: b, color: C.brun },
+      { x: M + 10, y, size: 10.5, font: b, color: C.bleu },
     );
     y -= 17;
   };
@@ -236,8 +265,8 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
   };
   const conditionsTxt =
     doc.type === "devis"
-      ? "Devis valable jusqu'à la date indiquée ci-dessus. Acompte de 30 % à la commande, solde à la réception des travaux. Prix ferme et définitif, TVA non applicable (art. 293 B du CGI)."
-      : "Facture payable par virement bancaire à réception. En cas de retard de paiement, pénalités au taux légal en vigueur et indemnité forfaitaire de recouvrement de 40 € (art. L441-10 du code de commerce). TVA non applicable (art. 293 B du CGI).";
+      ? "Devis valable jusqu'à la date indiquée ci-dessus. Acompte de 40 % à la commande, solde à la réception des travaux. Prix ferme et définitif, TVA non applicable (art. 293 B du CGI)."
+      : "Facture payable par virement bancaire à réception. Acompte de 40 % réglé à la commande, solde dû à la réception des travaux. En cas de retard de paiement, pénalités au taux légal en vigueur et indemnité forfaitaire de recouvrement de 40 € (art. L441-10 du code de commerce). TVA non applicable (art. 293 B du CGI).";
   for (const l of wrap(conditionsTxt, 9, r, CW - 20)) {
     page.drawText(l, { x: M + 10, y, size: 9, font: r, color: C.texte });
     y -= 12;
@@ -249,7 +278,7 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
   const yTopB = y - boxB;
   page.drawRectangle({
     x: M, y: yTopB, width: CW, height: boxB,
-    borderColor: C.grisLigne, borderWidth: 0.8, color: C.brunClair,
+    borderColor: C.grisLigne, borderWidth: 0.8, color: C.bleuClair,
   });
   page.drawText("COORDONNÉES BANCAIRES", { x: M + 12, y: yTopB + boxB - 14, size: 8, font: b, color: C.accent });
   page.drawText("Titulaire : SOULAINE Maxime", { x: M + 12, y: yTopB + boxB - 28, size: 8.5, font: b, color: C.texte });
@@ -263,9 +292,15 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
     `${titre === "FACTURE" ? "Facture" : "Devis"} établi à ${villeNom}, le ${new Date().toLocaleDateString("fr-FR")}.`,
     { x: M, y, size: 8, font: r, color: C.gris },
   );
+  // Signature d'enseigne
+  const signTxt = `${ENTREPRISE.nom} — ${ENTREPRISE.enseigne}`;
+  page.drawText(signTxt, {
+    x: M + CW - 10 - tw(signTxt, 8, b),
+    y, size: 8, font: b, color: C.accent,
+  });
 
   // Pied de page
-  page.drawRectangle({ x: 0, y: 12, width: W, height: 3, color: C.brun });
+  page.drawRectangle({ x: 0, y: 12, width: W, height: 3, color: C.bleu });
 
   return doc1.save();
 }

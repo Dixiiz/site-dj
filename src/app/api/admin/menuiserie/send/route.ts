@@ -66,17 +66,17 @@ export async function POST(request: Request) {
     await resend.emails.send({
       from: EMAIL_FROM,
       to,
-      subject: `${typeLabel} ${doc.numero} — Soulaine Menuiserie`,
+      subject: `${typeLabel} ${doc.numero} — Propul'Sound · Atelier Soulaine`,
       html: `<div style="font-family:Arial,sans-serif;color:#1a1a1f;max-width:560px;margin:0 auto;padding:24px;">
         <p>Bonjour,</p>
         <p>Veuillez trouver ci-joint votre ${typeLabel.toLowerCase()} <strong>${doc.numero}</strong>.</p>
         ${downloadUrl ? `<p style="margin:28px 0;">
-          <a href="${downloadUrl}" style="background:#5a3117;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Télécharger le ${typeLabel.toLowerCase()} PDF</a>
+          <a href="${downloadUrl}" style="background:#21619A;color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block;">Télécharger le ${typeLabel.toLowerCase()} PDF</a>
         </p>` : ""}
         <p style="color:#737373;font-size:13px;">Ce lien est valable 7 jours. Si besoin, demandez-nous un nouveau lien.</p>
-        <p style="color:#737373;font-size:13px;">À très bientôt,<br/>Maxime — Soulaine Menuiserie</p>
+        <p style="color:#737373;font-size:13px;">À très bientôt,<br/>Maxime — Propul'Sound · Atelier Soulaine</p>
       </div>`,
-      text: `Bonjour,\n\nVotre ${typeLabel.toLowerCase()} ${doc.numero} est disponible ici (lien valable 7 jours) :\n${downloadUrl ?? "(voir pièce jointe)"}\n\nÀ très bientôt,\nMaxime — Soulaine Menuiserie`,
+      text: `Bonjour,\n\nVotre ${typeLabel.toLowerCase()} ${doc.numero} est disponible ici (lien valable 7 jours) :\n${downloadUrl ?? "(voir pièce jointe)"}\n\nÀ très bientôt,\nMaxime — Propul'Sound · Atelier Soulaine`,
       attachments: [
         {
           filename: `${typeLabel} ${doc.numero}.pdf`,
