@@ -297,16 +297,17 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
   y = yTopB - 22;
 
   // ============ SIGNATURES (comme sur les devis DJ) ============
-  // Case prestataire (avec la signature de Maxime) + case client
-  // « Bon pour accord » à remplir par le client (date + signature).
+  // Cases blanches : la signature incrustée se fond dedans (pas de détourage
+  // nécessaire) et c'est plus lisible à l'impression. Zones séparées :
+  // identité en haut, signature en bas à droite au-dessus de son filet.
   const halfW = (CW - 16) / 2;
-  const boxS = 64;
+  const boxS = 74;
   const yTopS = y - boxS;
 
-  // Case PRESTATAIRE (gauche) : identité + signature incrustée
+  // Case PRESTATAIRE (gauche) : identité + signature incrustée en bas à droite
   page.drawRectangle({
     x: M, y: yTopS, width: halfW, height: boxS,
-    borderColor: C.grisLigne, borderWidth: 0.8, color: C.brunClair,
+    borderColor: C.grisLigne, borderWidth: 0.8, color: C.blanc,
   });
   page.drawText("PRESTATAIRE", { x: M + 12, y: yTopS + boxS - 14, size: 8, font: b, color: C.accent });
   page.drawText("SOULAINE Maxime — Propul'Sound · Atelier Soulaine", {
@@ -316,38 +317,52 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
     x: M + 12, y: yTopS + boxS - 38, size: 7.5, font: r, color: C.gris,
   });
   page.drawText("SIRET 932 220 791 00010", {
-    x: M + 12, y: yTopS + boxS - 48, size: 7.5, font: r, color: C.gris,
+    x: M + 12, y: yTopS + boxS - 49, size: 7.5, font: r, color: C.gris,
+  });
+  // Filet de signature (bas droit), signature au-dessus, jamais de chevauchement :
+  // identité occupe le haut (≥ 25 pt du bas), la signature ≤ 22 pt au-dessus du filet.
+  const sigLineY = yTopS + 10;
+  page.drawLine({
+    start: { x: M + halfW - 118, y: sigLineY },
+    end: { x: M + halfW - 12, y: sigLineY },
+    thickness: 0.6,
+    color: C.grisLigne,
   });
   try {
     const sigBytes = fs.readFileSync(path.join(process.cwd(), "public", "images", "signature-soulaine.jpg"));
     const sigImg = await doc1.embedJpg(sigBytes);
-    const sigW = 88;
-    const sigH = Math.min((sigImg.height / sigImg.width) * sigW, 22);
-    page.drawImage(sigImg, { x: M + halfW - sigW - 12, y: yTopS + 8, width: sigW, height: sigH });
+    const sigW = 90;
+    const sigH = Math.min((sigImg.height / sigImg.width) * sigW, 20);
+    page.drawImage(sigImg, {
+      x: M + halfW - 12 - sigW,
+      y: sigLineY + 3,
+      width: sigW,
+      height: sigH,
+    });
   } catch {
-    // signature absente : on affiche juste la mention
-    page.drawText("Signature :", { x: M + halfW - 70, y: yTopS + 14, size: 8, font: r, color: C.gris });
+    // signature absente : mention à la place
+    page.drawText("Signature :", { x: M + halfW - 118, y: sigLineY + 4, size: 8, font: r, color: C.gris });
   }
 
   // Case CLIENT — BON POUR ACCORD (droite) : à remplir par le client
   const rxS = M + halfW + 16;
   page.drawRectangle({
     x: rxS, y: yTopS, width: halfW, height: boxS,
-    borderColor: C.grisLigne, borderWidth: 0.8, color: C.brunClair,
+    borderColor: C.grisLigne, borderWidth: 0.8, color: C.blanc,
   });
   const clientLabel = doc.type === "devis" ? "CLIENT — BON POUR ACCORD" : "CLIENT — RECONNAISSANCE DE DETTE";
   page.drawText(clientLabel, { x: rxS + 12, y: yTopS + boxS - 14, size: 8, font: b, color: C.accent });
-  page.drawText(`${doc.clientNom}`, { x: rxS + 12, y: yTopS + boxS - 30, size: 8, font: b, color: C.texte });
+  page.drawText(doc.clientNom, { x: rxS + 12, y: yTopS + boxS - 27, size: 8, font: b, color: C.texte });
   page.drawText("Date : ____ / ____ / ________", {
-    x: rxS + 12, y: yTopS + 20, size: 8.5, font: r, color: C.texte,
+    x: rxS + 12, y: yTopS + 28, size: 8.5, font: r, color: C.texte,
   });
   page.drawText("Signature (précédée de « Bon pour accord ») :", {
-    x: rxS + 12, y: yTopS + 10, size: 7.5, font: r, color: C.gris,
+    x: rxS + 12, y: yTopS + 15, size: 7.5, font: r, color: C.gris,
   });
   // Ligne de signature
   page.drawLine({
-    start: { x: rxS + 12, y: yTopS + 4 },
-    end: { x: rxS + halfW - 12, y: yTopS + 4 },
+    start: { x: rxS + 12, y: yTopS + 10 },
+    end: { x: rxS + halfW - 12, y: yTopS + 10 },
     thickness: 0.6,
     color: C.grisLigne,
   });
