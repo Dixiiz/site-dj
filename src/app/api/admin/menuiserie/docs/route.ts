@@ -119,7 +119,29 @@ export async function PATCH(request: Request) {
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   const id = String(body?.id ?? "");
   const statut = String(body?.statut ?? "");
+  const urssaf = body?.urssaf;
   const autorises = ["brouillon", "envoye", "accepte", "refuse", "paye"];
+
+  // Bascule URSSAF : coche « déclaré » (+ mois de déclaration AAAA-MM).
+  if (id && urssaf !== undefined) {
+    const declare = Boolean(urssaf);
+    const mois = String(body?.urssaf_mois ?? "").trim();
+    if (declare && !/^\d{4}-\d{2}$/.test(mois)) {
+      return NextResponse.json(
+        { error: "Mois de déclaration invalide (format attendu AAAA-MM)." },
+        { status: 400 },
+      );
+    }
+    const supabase = createAdminClient();
+    const { error } = await supabase
+      .from("menuiserie_docs")
+      .update({ urssaf_declare: declare, urssaf_mois: declare ? mois : null })
+      .eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    revalidatePath("/admin/menuiserie");
+    return NextResponse.json({ ok: true });
+  }
+
   if (!id || !autorises.includes(statut)) {
     return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
   }

@@ -41,9 +41,22 @@ CREATE TABLE IF NOT EXISTS menuiserie_docs (
 CREATE INDEX IF NOT EXISTS idx_menuiserie_docs_type ON menuiserie_docs (type);
 CREATE INDEX IF NOT EXISTS idx_menuiserie_docs_statut ON menuiserie_docs (statut);
 
--- Colonne ajoutée après coup : téléphone du client sur le document
--- (idempotent : sans effet si la table vient d'être créée avec la colonne).
+-- Suivi URSSAF : coche « déclaré » par document (+ mois de déclaration).
+-- À exécuter dans le SQL Editor de Supabase (idempotent).
 ALTER TABLE menuiserie_docs ADD COLUMN IF NOT EXISTS client_telephone TEXT NOT NULL DEFAULT '';
+ALTER TABLE menuiserie_docs ADD COLUMN IF NOT EXISTS urssaf_declare BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE menuiserie_docs ADD COLUMN IF NOT EXISTS urssaf_mois TEXT DEFAULT NULL;
+
+-- Suppression d'un document même s'il est lié (devis ↔ facture) :
+-- la liaison est informative, elle ne doit pas empêcher la suppression.
+ALTER TABLE menuiserie_docs DROP CONSTRAINT IF EXISTS menuiserie_docs_devis_source_fkey;
+ALTER TABLE menuiserie_docs DROP CONSTRAINT IF EXISTS menuiserie_docs_facture_lien_fkey;
+ALTER TABLE menuiserie_docs
+  ADD CONSTRAINT menuiserie_docs_devis_source_fkey
+  FOREIGN KEY (devis_source) REFERENCES menuiserie_docs(id) ON DELETE SET NULL;
+ALTER TABLE menuiserie_docs
+  ADD CONSTRAINT menuiserie_docs_facture_lien_fkey
+  FOREIGN KEY (facture_lien) REFERENCES menuiserie_docs(id) ON DELETE SET NULL;
 
 -- ============================================================
 -- FIN MIGRATION MENUISERIE

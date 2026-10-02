@@ -32,6 +32,9 @@ export type MenuiserieDoc = {
   devis_source: string | null;
   facture_lien: string | null;
   created_at: string;
+  /** Suivi URSSAF : encaissement déclaré ? + mois de déclaration (AAAA-MM). */
+  urssaf_declare?: boolean;
+  urssaf_mois?: string | null;
 };
 
 export type MenuiserieClient = {
@@ -74,6 +77,17 @@ const btnCls =
   "rounded-lg border border-accent/40 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/10 disabled:opacity-50";
 const btnDangerCls =
   "rounded-lg border border-red-500/40 px-3 py-1.5 text-xs text-red-400 transition-colors hover:bg-red-500/10 disabled:opacity-50";
+
+const MOIS_NOMS = [
+  "janvier", "février", "mars", "avril", "mai", "juin",
+  "juillet", "août", "septembre", "octobre", "novembre", "décembre",
+];
+/** « 2026-09 » → « sept. 2026 ». */
+function libelleMois(mois: string) {
+  const [a, m] = mois.split("-");
+  const nom = MOIS_NOMS[Number(m) - 1];
+  return nom ? `${nom.slice(0, 4)}. ${a}` : mois;
+}
 
 export function MenuiserieAdmin({
   docsInitial,
@@ -359,6 +373,48 @@ export function MenuiserieAdmin({
 
   /* SUITE-RENDU */
 
+  // Bascule « déclaré URSSAF » sur une facture (le CA compte quand la
+  // facture est payée) : pose ou retire la coche + le mois de déclaration.
+  async function basculerUrssaf(doc: MenuiserieDoc) {
+    const cible = !doc.urssaf_declare;
+    let mois = doc.urssaf_mois ?? "";
+    if (cible) {
+      const now = new Date();
+      const defaut = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      const saisie = window.prompt(
+        `Mois de déclaration URSSAF pour ${doc.numero} (AAAA-MM) :`,
+        mois || defaut,
+      );
+      if (saisie === null) return;
+      mois = saisie.trim();
+      if (!/^\d{4}-\d{2}$/.test(mois)) {
+        toast.error("Format attendu : AAAA-MM (ex. 2026-10).");
+        return;
+      }
+    }
+    setBusyId(doc.id);
+    const { ok, json } = await api("/api/admin/menuiserie/docs", {
+      method: "PATCH",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ id: doc.id, urssaf: cible, urssaf_mois: mois }),
+    });
+    setBusyId(null);
+    if (!ok) {
+      toast.error(String(json.error ?? "Échec de la mise à jour URSSAF."));
+      return;
+    }
+    setDocs((cur) =>
+      cur.map((d) =>
+        d.id === doc.id ? { ...d, urssaf_declare: cible, urssaf_mois: cible ? mois : null } : d,
+      ),
+    );
+    toast.success(
+      cible
+        ? `${doc.numero} marqué déclaré URSSAF (${libelleMois(mois)})`
+        : `${doc.numero} retiré de la déclaration URSSAF`,
+    );
+  }
+
   const ongletLabel =
     onglet === "devis" ? "Devis" : onglet === "factures" ? "Factures" : "Clients";
   const nbOnglet =
@@ -523,6 +579,102 @@ export function MenuiserieAdmin({
         </section>
       ) : null}
 
+      {/* URSSAF — ce que je déclare : factures payées, groupées par mois de déclaration */}
+      {onglet === "factures" ? (
+        (() => {
+          const payees = factures.filter((f) => f.statut === "paye");
+          const aDecl = payees.filter((f) => !f.urssaf_declare);
+          const parMois = new Map<string, MenuiserieDoc[]>();
+          for (const f of payees) {
+            if (!f.urssaf_declare) continue;
+            const cle = f.urssaf_mois ?? "(sans mois)";
+            const liste = parMois.get(cle) ?? [];
+            liste.push(f);
+            parMois.set(cle, liste);
+          }
+          const moisTries = [...parMois.keys()].sort((a, b) => b.localeCompare(a));
+          return (
+            <section className="space-y-4 rounded-xl border border-accent/40 bg-card p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="font-medium">URSSAF — ce que je déclare</h2>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full border border-orange-500/60 bg-orange-500/10 px-3 py-1 text-orange-300">
+                    À déclarer : {aDecl.length} ({formatEuros(aDecl.reduce((s, f) => s + f.total_cents, 0))})
+                  </span>
+                  {moisTries.map((mois) => {
+                    const liste = parMois.get(mois) ?? [];
+                    return (
+                      <span key={mois} className="rounded-full border border-green-500/60 bg-green-500/10 px-3 py-1 text-green-400">
+                        {mois === "(sans mois)" ? mois : libelleMois(mois)} : {liste.length} ({formatEuros(liste.reduce((s, f) => s + f.total_cents, 0))})
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+              {payees.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Aucune facture payée pour le moment : les montants apparaîtront ici quand une facture sera marquée « Payé ».
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {aDecl.length > 0 ? (
+                    <div className="rounded-lg border border-orange-500/40 bg-orange-500/5 p-3">
+                      <p className="text-xs font-medium text-orange-300">
+                        Encaissements à déclarer ({aDecl.length})
+                      </p>
+                      <ul className="mt-2 space-y-1 text-sm">
+                        {aDecl.map((f) => (
+                          <li key={f.id} className="flex flex-wrap items-center justify-between gap-2">
+                            <span>
+                              {f.numero} — {f.client_nom}
+                            </span>
+                            <span className="flex items-center gap-3">
+                              <span className="font-medium">{formatEuros(f.total_cents)}</span>
+                              <button type="button" onClick={() => basculerUrssaf(f)} disabled={busyId === f.id} className={btnCls}>
+                                Déclarer
+                              </button>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-green-400">
+                      Tout est déclaré, rien à rattraper.
+                    </p>
+                  )}
+                  {moisTries.map((mois) => {
+                    const liste = parMois.get(mois) ?? [];
+                    return (
+                      <div key={mois} className="rounded-lg border border-border p-3">
+                        <p className="text-xs font-medium text-muted-foreground">
+                          {mois === "(sans mois)" ? "Sans mois" : libelleMois(mois)} — déclaré ({liste.length})
+                        </p>
+                        <ul className="mt-2 space-y-1 text-sm">
+                          {liste.map((f) => (
+                            <li key={f.id} className="flex flex-wrap items-center justify-between gap-2">
+                              <span>
+                                {f.numero} — {f.client_nom}
+                              </span>
+                              <span className="flex items-center gap-3">
+                                <span className="font-medium">{formatEuros(f.total_cents)}</span>
+                                <button type="button" onClick={() => basculerUrssaf(f)} disabled={busyId === f.id} className={btnCls}>
+                                  Annuler
+                                </button>
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          );
+        })()
+      ) : null}
+
       {/* Liste des devis / factures */}
       {onglet !== "clients" ? (
         <section className="rounded-xl border border-border bg-card">
@@ -557,6 +709,11 @@ export function MenuiserieAdmin({
                           {!estDevis && doc.devis_source ? (
                             <span className="text-xs text-muted-foreground">
                               depuis le devis
+                            </span>
+                          ) : null}
+                          {!estDevis && doc.urssaf_declare ? (
+                            <span className="rounded-full border border-green-500/60 bg-green-500/10 px-2 py-0.5 text-xs text-green-400">
+                              ✓ URSSAF{doc.urssaf_mois ? ` · ${libelleMois(doc.urssaf_mois)}` : ""}
                             </span>
                           ) : null}
                         </div>
@@ -610,9 +767,26 @@ export function MenuiserieAdmin({
                           ) : null}
                         </>
                       ) : (
-                        <button type="button" onClick={() => changerStatut(doc, "paye")} disabled={busyId === doc.id || doc.statut === "paye"} className={btnCls}>
-                          Payé
-                        </button>
+                        <>
+                          <button type="button" onClick={() => changerStatut(doc, "paye")} disabled={busyId === doc.id || doc.statut === "paye"} className={btnCls}>
+                            Payé
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => basculerUrssaf(doc)}
+                            disabled={busyId === doc.id}
+                            className={
+                              doc.urssaf_declare
+                                ? "rounded-lg border border-green-500/60 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/20 disabled:opacity-50"
+                                : btnCls
+                            }
+                            title={doc.urssaf_declare ? "Cliquer pour retirer de la déclaration" : "Marquer cet encaissement comme déclaré à l'URSSAF"}
+                          >
+                            {doc.urssaf_declare
+                              ? `✓ Déclaré${doc.urssaf_mois ? ` · ${libelleMois(doc.urssaf_mois)}` : ""}`
+                              : "URSSAF : à déclarer"}
+                          </button>
+                        </>
                       )}
                       <button type="button" onClick={() => supprimerDocument(doc)} disabled={busyId === doc.id} className={btnDangerCls}>
                         Supprimer
