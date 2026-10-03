@@ -89,6 +89,79 @@ function libelleMois(mois: string) {
   return nom ? `${nom.slice(0, 4)}. ${a}` : mois;
 }
 
+function abrevie(cents: number) {
+  if (cents >= 1_000_00) return `${(cents / 1_000_00).toFixed(1).replace(".", ",")} k€`;
+  return `${Math.round(cents / 100)} €`;
+}
+
+type BarreMois = { cle: string; label: string; declare: number; restant: number };
+
+/** Graphique URSSAF : encaissements (factures payées) des 12 derniers mois,
+ * barres empilées vert = déclaré, orange = à déclarer. */
+function UrssafGraph({ payees }: { payees: MenuiserieDoc[] }) {
+  const now = new Date();
+  const mois: BarreMois[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    mois.push({
+      cle: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      label: MOIS_NOMS[d.getMonth()].slice(0, 3),
+      declare: 0,
+      restant: 0,
+    });
+  }
+  const index = new Map(mois.map((m, i) => [m.cle, i]));
+  for (const f of payees) {
+    const i = index.get((f.date_edition ?? "").slice(0, 7));
+    if (i === undefined) continue;
+    if (f.urssaf_declare) mois[i].declare += f.total_cents;
+    else mois[i].restant += f.total_cents;
+  }
+  const max = Math.max(1, ...mois.map((m) => m.declare + m.restant));
+  return (
+    <div>
+      <div className="flex h-40 items-end gap-1.5">
+        {mois.map((m) => {
+          const total = m.declare + m.restant;
+          return (
+            <div
+              key={m.cle}
+              className="flex h-full flex-1 flex-col items-center justify-end gap-1"
+              title={`${libelleMois(m.cle)} — encaissé : ${formatEuros(total)} · déclaré : ${formatEuros(m.declare)} · à déclarer : ${formatEuros(m.restant)}`}
+            >
+              {total > 0 ? (
+                <span className="text-[9px] leading-none text-muted-foreground">{abrevie(total)}</span>
+              ) : null}
+              <div
+                className="flex w-full flex-col-reverse overflow-hidden rounded-t"
+                style={{ height: `${Math.max(total > 0 ? 6 : 2, (total / max) * 100)}%` }}
+              >
+                {total === 0 ? (
+                  <div className="w-full bg-muted" style={{ height: "100%" }} />
+                ) : (
+                  <>
+                    <div className="w-full bg-green-500/80" style={{ height: `${(m.declare / total) * 100}%` }} />
+                    <div className="w-full bg-orange-500/80" style={{ height: `${(m.restant / total) * 100}%` }} />
+                  </>
+                )}
+              </div>
+              <span className="text-[10px] text-muted-foreground">{m.label}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-2 flex items-center justify-center gap-4 text-[11px] text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block size-2 rounded-sm bg-green-500/80" /> Déclaré
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block size-2 rounded-sm bg-orange-500/80" /> À déclarer
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function MenuiserieAdmin({
   docsInitial,
   clientsInitial,
@@ -593,6 +666,17 @@ export function MenuiserieAdmin({
             parMois.set(cle, liste);
           }
           const moisTries = [...parMois.keys()].sort((a, b) => b.localeCompare(a));
+          // Totaux sur la fenêtre du graphique (12 derniers mois).
+          const now = new Date();
+          const clesMois = new Set<string>();
+          for (let i = 0; i < 12; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            clesMois.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+          }
+          const dans12Mois = payees.filter((f) => clesMois.has((f.date_edition ?? "").slice(0, 7)));
+          const totalEncaisse = dans12Mois.reduce((s, f) => s + f.total_cents, 0);
+          const totalDecl = dans12Mois.filter((f) => f.urssaf_declare).reduce((s, f) => s + f.total_cents, 0);
+          const totalADecl = totalEncaisse - totalDecl;
           return (
             <section className="space-y-4 rounded-xl border border-accent/40 bg-card p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -611,6 +695,21 @@ export function MenuiserieAdmin({
                   })}
                 </div>
               </div>
+              {/* Totaux sur 12 mois */}
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[
+                  { label: "Encaissé (12 mois)", valeur: totalEncaisse, cls: "border-border" },
+                  { label: "À déclarer", valeur: totalADecl, cls: "border-orange-500/50" },
+                  { label: "Déjà déclaré", valeur: totalDecl, cls: "border-green-500/50" },
+                ].map((c) => (
+                  <div key={c.label} className={`rounded-xl border ${c.cls} p-4`}>
+                    <p className="text-xs text-muted-foreground">{c.label}</p>
+                    <p className="mt-1 text-xl font-semibold">{formatEuros(c.valeur)}</p>
+                  </div>
+                ))}
+              </div>
+              {/* Graphique mensuel : vert = déclaré, orange = à déclarer */}
+              <UrssafGraph payees={payees} />
               {payees.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   Aucune facture payée pour le moment : les montants apparaîtront ici quand une facture sera marquée « Payé ».
