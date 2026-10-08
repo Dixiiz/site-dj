@@ -5,14 +5,13 @@ import {
   BookOpen,
   CreditCard,
   FileText,
-  Hammer,
   Mail,
   MessageSquare,
   Receipt,
   TrendingUp,
   Users,
 } from "lucide-react";
-import { MenuiserieDashboardBloc } from "@/components/menuiserie-dashboard-bloc";
+import { CaPerimetreSelect } from "@/components/ca-perimetre-select";
 import { DashboardDetail } from "@/components/dashboard-detail";
 import { ValidateEcheanceButton } from "@/components/validate-echeance-button";
 import { ValidateAcompteButton } from "@/components/validate-acompte-button";
@@ -39,9 +38,13 @@ const STATUT_LABEL: Record<string, string> = {
 export default async function AdminDashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ vue?: string }>;
+  searchParams: Promise<{ vue?: string; ca?: string }>;
 }) {
-  const { vue } = await searchParams;
+  const { vue, ca } = await searchParams;
+  // Périmètre des CA affichés : « tous » (DJ + Menuiserie, même entreprise),
+  // « dj » ou « menuiserie ». Rubriques URSSAF distinctes affichées en détail.
+  const avecDj = ca !== "menuiserie";
+  const avecMenu = ca !== "dj";
   const supabase = createAdminClient();
   const now = new Date();
   const year = now.getFullYear();
@@ -73,11 +76,10 @@ export default async function AdminDashboard({
       .order("due_date", { ascending: true }),
     // Tous les devis (léger) : entonnoir de conversion des statistiques.
     supabase.from("quotes").select("id, status"),
-    // Factures menuiserie (CA distinct : rubrique URSSAF « vente de biens »).
+    // Documents menuiserie (CA fusionné : rubrique URSSAF « vente de biens »).
     supabase
       .from("menuiserie_docs")
-      .select("id, numero, client_nom, type, total_cents, statut, date_edition, urssaf_declare, urssaf_mois")
-      .eq("type", "facture")
+      .select("id, numero, client_nom, type, total_cents, statut, date_edition, urssaf_declare, urssaf_mois, facture_lien")
       .order("date_edition", { ascending: false }),
   ]);
   const confirmed = confirmedRes.data;
@@ -307,6 +309,60 @@ export default async function AdminDashboard({
   });
   /* SUITE-RENDU */
 
+  // ---- CA Menuiserie (même entreprise ; rubrique URSSAF distincte :
+  // « vente de biens et marchandises » vs « prestation de services » DJ) ----
+  type MenuiserieDocRow = {
+    id: string;
+    numero: string;
+    client_nom: string;
+    type: string;
+    total_cents: number;
+    statut: string;
+    date_edition: string;
+    urssaf_declare: boolean | null;
+    urssaf_mois: string | null;
+    facture_lien: string | null;
+  };
+  const menuDocs = (menuiserieRes.data ?? []) as MenuiserieDocRow[];
+  const menuFactures = menuDocs.filter((f) => f.type === "facture");
+  // Encaissé = facture marquée « paye » (même règle que le module Menuiserie).
+  const menuPayees = menuFactures.filter((f) => f.statut === "paye");
+  // À déclarer : payées mais pas encore basculées « déclaré URSSAF ».
+  const menuADeclarer = menuPayees.filter((f) => !f.urssaf_declare);
+  const menuADeclarerCents = menuADeclarer.reduce((s, f) => s + f.total_cents, 0);
+  // Encaissé d'un mois = factures payées éditées ce mois.
+  const menuCentsDuMois = (prefix: string) =>
+    menuPayees
+      .filter((f) => (f.date_edition ?? "").startsWith(prefix))
+      .reduce((s, f) => s + f.total_cents, 0);
+  const menuCaMois = menuCentsDuMois(monthPrefix);
+  // CA facturé de l'année : factures émises (hors brouillons).
+  const menuFactureAnnee = menuFactures
+    .filter(
+      (f) => f.statut !== "brouillon" && (f.date_edition ?? "").startsWith(String(year)),
+    )
+    .reduce((s, f) => s + f.total_cents, 0);
+  // CA à venir menuiserie : devis acceptés pas encore convertis en facture.
+  const menuDevisAcceptes = menuDocs.filter(
+    (f) => f.type === "devis" && f.statut === "accepte" && !f.facture_lien,
+  );
+  const menuCaAVenir = menuDevisAcceptes.reduce((s, f) => s + f.total_cents, 0);
+  // Totaux affichés selon le périmètre choisi (?ca=dj | menuiserie | tous).
+  const caAnneeAffiche = (avecDj ? caAnnee : 0) + (avecMenu ? menuFactureAnnee : 0);
+  const caMoisAffiche = (avecDj ? caMois : 0) + (avecMenu ? menuCaMois : 0);
+  const caAVenirAffiche = (avecDj ? caAVenir : 0) + (avecMenu ? menuCaAVenir : 0);
+  // Ligne de détail générique pour les panneaux CA.
+  const menuRow = (f: MenuiserieDocRow, label: string) => ({
+    id: f.id,
+    customerName: f.client_nom,
+    formulaName: label,
+    eventLocation: "",
+    eventDate: (f.date_edition ?? "").slice(0, 10),
+    totalCents: f.total_cents,
+    notes: "",
+    status: f.statut,
+  });
+
   // ---- Statistiques : CA URSSAF par mois + entonnoir de conversion ----
   const totalPct = (part: number, total: number) =>
     total > 0 ? Math.round((part / total) * 100) : null;
@@ -325,7 +381,11 @@ export default async function AdminDashboard({
     const acomptes = acomptesValides
       .filter((q) => String(q.acompte_paid_at ?? "").startsWith(prefix))
       .reduce((sum, q) => sum + acompteNetDe(q), 0);
-    return { label: MONTH_LABELS[m], cents: soldes + echeances + acomptes };
+    return {
+      label: MONTH_LABELS[m],
+      dj: avecDj ? soldes + echeances + acomptes : 0,
+      menu: avecMenu ? menuCentsDuMois(prefix) : 0,
+    };
   });
   const allQuotes = allQuotesRes.data ?? [];
   const countStatus = (...statuses: string[]) =>
@@ -349,66 +409,6 @@ export default async function AdminDashboard({
       count: countStatus("refuse", "annule"),
     },
   ];
-
-  // ---- CA Menuiserie (rubrique URSSAF DISTINCTE : « vente de biens et
-  // marchandises », pas « prestation de services » comme les soirées DJ) ----
-  type MenuiserieFacture = {
-    id: string;
-    numero: string;
-    client_nom: string;
-    total_cents: number;
-    statut: string;
-    date_edition: string;
-    urssaf_declare: boolean | null;
-    urssaf_mois: string | null;
-  };
-  const menuFactures = (menuiserieRes.data ?? []) as MenuiserieFacture[];
-  // Encaissé = facture marquée « paye » (même règle que le module Menuiserie).
-  const menuPayees = menuFactures.filter((f) => f.statut === "paye");
-  // À déclarer : payées mais pas encore basculées « déclaré URSSAF ».
-  const menuADeclarer = menuPayees.filter((f) => !f.urssaf_declare);
-  const menuADeclarerCents = menuADeclarer.reduce((s, f) => s + f.total_cents, 0);
-  // Déjà déclaré, regroupé par mois de déclaration (urssaf_mois).
-  const menuDeclareParMois = new Map<string, { cents: number; nb: number }>();
-  for (const f of menuPayees) {
-    if (!f.urssaf_declare) continue;
-    const cle = f.urssaf_mois ?? "(sans mois)";
-    const cur = menuDeclareParMois.get(cle) ?? { cents: 0, nb: 0 };
-    cur.cents += f.total_cents;
-    cur.nb += 1;
-    menuDeclareParMois.set(cle, cur);
-  }
-  // Graphique 12 derniers mois (barres empilées, mois d'édition de la
-  // facture) : vert = déjà déclaré URSSAF, orange = payé mais à déclarer.
-  const menuMoisGraph = Array.from({ length: 12 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
-    const prefix = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const duMois = menuPayees.filter((f) => (f.date_edition ?? "").startsWith(prefix));
-    return {
-      label: MONTH_LABELS[d.getMonth()],
-      declare: duMois.filter((f) => f.urssaf_declare).reduce((s, f) => s + f.total_cents, 0),
-      aDeclarer: duMois.filter((f) => !f.urssaf_declare).reduce((s, f) => s + f.total_cents, 0),
-    };
-  });
-  const menuEncaisse12Mois = menuMoisGraph.reduce(
-    (s, m) => s + m.declare + m.aDeclarer,
-    0,
-  );
-  const menuDeclare12Mois = menuMoisGraph.reduce((s, m) => s + m.declare, 0);
-  // CA facturé de l'année : toutes les factures émises (hors brouillons).
-  const menuFactureAnnee = menuFactures
-    .filter(
-      (f) => f.statut !== "brouillon" && (f.date_edition ?? "").startsWith(String(year)),
-    )
-    .reduce((s, f) => s + f.total_cents, 0);
-  const menuMoisLibelle = (mois: string) => {
-    if (mois === "(sans mois)") return mois;
-    const [a, m] = mois.split("-");
-    const noms = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
-    const nom = noms[Number(m) - 1];
-    return nom ? `${nom} ${a}` : mois;
-  };
-  const menuMaxGraph = Math.max(1, ...menuMoisGraph.map((m) => m.declare + m.aDeclarer));
 
   // Données des cartes et panneaux de détail (rendu instantané côté client).
   const mapDetailRow = (q: (typeof upcoming)[number]) => ({
@@ -516,9 +516,21 @@ export default async function AdminDashboard({
   const details = {
     "ca-annee": {
       titre: `CA signé ${year} — détail des événements`,
-      rows: allConfirmed
-        .filter((q) => (q.event_date ?? "").startsWith(String(year)))
-        .map(mapDetailRow),
+      rows: [
+        ...allConfirmed
+          .filter((q) => (q.event_date ?? "").startsWith(String(year)))
+          .map(mapDetailRow),
+        // Factures Menuiserie de l'année (rubrique « vente de biens »).
+        ...(avecMenu
+          ? menuFactures
+              .filter(
+                (f) =>
+                  f.statut !== "brouillon" &&
+                  (f.date_edition ?? "").startsWith(String(year)),
+              )
+              .map((f) => menuRow(f, `Menuiserie — facture ${f.numero} (vente de biens)`))
+          : []),
+      ],
     },
     urssaf: {
       titre: `CA ${monthPrefix} (URSSAF) — encaissements validés (nets de frais Stripe)`,
@@ -572,6 +584,12 @@ export default async function AdminDashboard({
             afficheCents: netEcheance(e.quoteId, e.numero, e.amountCents),
             type: "echeance" as const,
           })),
+        // Factures Menuiserie payées ce mois (rubrique « vente de biens »).
+        ...(avecMenu
+          ? menuPayees
+              .filter((f) => (f.date_edition ?? "").startsWith(monthPrefix))
+              .map((f) => menuRow(f, `Menuiserie (vente de biens) — facture ${f.numero}`))
+          : []),
       ],
       solde: true,
     },
@@ -590,7 +608,15 @@ export default async function AdminDashboard({
     },
     "ca-avenir": {
       titre: "CA à venir — soirées restantes",
-      rows: upcoming.map(mapDetailRow),
+      rows: [
+        ...upcoming.map(mapDetailRow),
+        // Devis Menuiserie acceptés pas encore facturés.
+        ...(avecMenu
+          ? menuDevisAcceptes.map((f) =>
+              menuRow(f, `Menuiserie — devis ${f.numero} accepté (non facturé)`),
+            )
+          : []),
+      ],
     },
   };
 
@@ -611,14 +637,18 @@ export default async function AdminDashboard({
           <AdminPushButton vapidPublicKey={process.env.VAPID_PUBLIC_KEY ?? ""} />
         </div>
 
+      <CaPerimetreSelect value={ca ?? "tous"} />
+
       <DashboardDetail
         initialVue={vue}
         cards1={[
           {
             vue: "ca-annee",
             label: `CA signé ${year} — cliquer pour le détail`,
-            value: eur(caAnnee),
-            hint: `${allConfirmed.length} événement(s) confirmé(s) cette année`,
+            value: eur(caAnneeAffiche),
+            hint: avecMenu
+              ? `${allConfirmed.length} événement(s) DJ + factures Menuiserie (${eur(menuFactureAnnee)}) cette année`
+              : `${allConfirmed.length} événement(s) confirmé(s) cette année`,
             hero: true,
             accentLabel: true,
             icon: <TrendingUp className="size-4" aria-hidden />,
@@ -626,8 +656,8 @@ export default async function AdminDashboard({
           {
             vue: "urssaf",
             label: "CA encaissé ce mois — à déclarer (URSSAF)",
-            value: eur(caMois),
-            hint: `${encaisse.length} soirée(s) validée(s) · ${
+            value: eur(caMoisAffiche),
+            hint: `${avecMenu && menuADeclarerCents > 0 ? `Menuiserie à déclarer : ${eur(menuADeclarerCents)} (vente de biens) · ` : ""}${avecMenu && menuCaMois > 0 ? `dont Menuiserie ${eur(menuCaMois)} ce mois · ` : ""}${encaisse.length} soirée(s) validée(s) · ${
               urssafAcomptes > 0
                 ? `${acomptesValides.filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix)).length} acompte(s) validé(s) · `
                 : ""
@@ -647,7 +677,7 @@ export default async function AdminDashboard({
         cards2={[
           { vue: "echeanciers", label: "Échéances en cours", value: String(echeancesDuMois.length), hint: "échéance(s) à recevoir ce mois-ci — clic pour le détail" },
           { vue: "solde", label: "Soldes à valider", value: eur(soldeAValiderToutes + soldesDeclaresAConfirmer.reduce((s, q) => s + soldeDe(q), 0) + echeancesAConfirmer.reduce((s, e) => s + netEcheance(e.quoteId, e.numero, e.amountCents), 0) + acomptesAValider.reduce((s, q) => s + acompteNetDe(q), 0)), hint: `${soldesAEncaisser.length + soldesDeclaresAConfirmer.length} solde(s) + ${echeancesAConfirmer.length} échéance(s) + ${acomptesAValider.length} acompte(s) — valider pour compter dans l'URSSAF (soldes réglés en ligne : comptés automatiquement)` },
-          { vue: "ca-avenir", label: "CA à venir (déjà signé)", value: eur(caAVenir), hint: `${upcoming.length} soirée(s) confirmée(s) restante(s)` },
+          { vue: "ca-avenir", label: "CA à venir (déjà signé)", value: eur(caAVenirAffiche), hint: `${avecMenu && menuDevisAcceptes.length > 0 ? `${menuDevisAcceptes.length} devis Menuiserie accepté(s) · ` : ""}${upcoming.length} soirée(s) confirmée(s) restante(s)` },
           { vue: "devis", href: "/admin/devis", label: "Devis en attente", value: String(devisAttente ?? 0), hint: "à relancer ou traiter" },
         ]}
         details={details}
@@ -976,172 +1006,6 @@ export default async function AdminDashboard({
           )}
         </section>
       </div>
-
-      {/* ── CA Menuiserie — rubrique URSSAF DISTINCTE (vente de biens) ──
-          Séparé du CA DJ : autre taux/plafond URSSAF, autre couleur (ambre
-          « bois »), coche pour afficher ou masquer tout le bloc. */}
-      <MenuiserieDashboardBloc>
-        <section className="space-y-5 rounded-xl border border-amber-700/40 bg-card p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 className="flex items-center gap-2 font-medium">
-                <Hammer className="size-4 text-amber-600" aria-hidden />
-                CA Menuiserie — Atelier Soulaine
-              </h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Rubrique URSSAF distincte : <strong>vente de biens et marchandises</strong> (les
-                soirées DJ sont en « prestation de services »). Déclare les deux séparément.
-              </p>
-            </div>
-          </div>
-
-          {/* Cartes chiffres clés menuiserie */}
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-amber-700/50 bg-amber-500/10 p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-amber-600">
-                À déclarer URSSAF
-              </p>
-              <p className="mt-1 text-2xl font-semibold">{eur(menuADeclarerCents)}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {menuADeclarer.length === 0
-                  ? "rien à déclarer ✓"
-                  : `${menuADeclarer.length} facture(s) payée(s) non déclarée(s)`}
-              </p>
-            </div>
-            <div className="rounded-xl border border-border bg-background/40 p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Encaissé — 12 derniers mois
-              </p>
-              <p className="mt-1 text-2xl font-semibold">{eur(menuEncaisse12Mois)}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                dont {eur(menuDeclare12Mois)} déjà déclaré{menuDeclare12Mois > 0 ? " ✓" : ""}
-              </p>
-            </div>
-            <div className="rounded-xl border border-border bg-background/40 p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                CA facturé {year}
-              </p>
-              <p className="mt-1 text-2xl font-semibold">{eur(menuFactureAnnee)}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                factures émises cette année (hors brouillons)
-              </p>
-            </div>
-          </div>
-
-          {/* Graphique 12 mois — barres empilées, couleurs menuiserie */}
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-medium">Encaissements par mois — {year}</h3>
-              <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <span className="inline-block size-2 rounded-sm bg-green-600/80" /> Déjà déclaré
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="inline-block size-2 rounded-sm bg-orange-500/80" /> À déclarer
-                </span>
-              </div>
-            </div>
-            <div className="mt-3 flex h-32 items-end gap-1.5">
-              {menuMoisGraph.map((m, i) => {
-                const total = m.declare + m.aDeclarer;
-                return (
-                  <div
-                    key={`${m.label}-${i}`}
-                    className="flex h-full flex-1 flex-col items-center justify-end gap-1"
-                    title={`${m.label} : déclaré ${formatEuros(m.declare)} · à déclarer ${formatEuros(m.aDeclarer)}`}
-                  >
-                    {total > 0 ? (
-                      <span className="text-[9px] leading-none text-muted-foreground">
-                        {total >= 1_000_00
-                          ? `${(total / 1_000_00).toFixed(1).replace(".", ",")} k€`
-                          : `${Math.round(total / 100)} €`}
-                      </span>
-                    ) : null}
-                    <div
-                      className="flex w-full flex-col-reverse overflow-hidden rounded-t"
-                      style={{ height: `${Math.max(total > 0 ? 6 : 2, (total / menuMaxGraph) * 100)}%` }}
-                    >
-                      {total === 0 ? (
-                        <div className="w-full bg-muted" style={{ height: "100%" }} />
-                      ) : (
-                        <>
-                          <div
-                            className="w-full bg-green-600/80"
-                            style={{ height: `${(m.declare / total) * 100}%` }}
-                          />
-                          <div
-                            className="w-full bg-orange-500/80"
-                            style={{ height: `${(m.aDeclarer / total) * 100}%` }}
-                          />
-                        </>
-                      )}
-                    </div>
-                    <span className="text-[10px] text-muted-foreground">{m.label}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Détail dépliable : quoi déclarer exactement */}
-          <details className="rounded-lg border border-amber-700/40">
-            <summary className="cursor-pointer list-none px-4 py-2.5 text-sm font-medium text-amber-600 [&::-webkit-details-marker]:hidden">
-              Détail des factures — à déclarer / déjà déclaré
-            </summary>
-            <div className="space-y-4 border-t border-amber-700/30 px-4 py-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-orange-500">
-                  À déclarer ({menuADeclarer.length}) — {eur(menuADeclarerCents)}
-                </p>
-                {menuADeclarer.length === 0 ? (
-                  <p className="mt-1 text-sm text-muted-foreground">Tout est déclaré ✓</p>
-                ) : (
-                  <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
-                    {menuADeclarer.map((f) => (
-                      <li key={f.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                        <div className="min-w-0">
-                          <span className="font-medium">{f.numero}</span>
-                          <span className="text-muted-foreground"> · {f.client_nom}</span>
-                          <span className="block text-xs text-muted-foreground">
-                            payée · éditée le{" "}
-                            {f.date_edition
-                              ? new Date(`${f.date_edition}T12:00:00`).toLocaleDateString("fr-FR")
-                              : "?"}
-                          </span>
-                        </div>
-                        <span className="shrink-0 font-medium">{eur(f.total_cents)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              {menuDeclareParMois.size > 0 ? (
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-green-600">
-                    Déjà déclaré
-                  </p>
-                  <ul className="mt-2 space-y-1 text-sm">
-                    {[...menuDeclareParMois.entries()]
-                      .sort((a, b) => b[0].localeCompare(a[0]))
-                      .map(([mois, v]) => (
-                        <li key={mois} className="flex items-center justify-between gap-3">
-                          <span className="text-muted-foreground">
-                            {menuMoisLibelle(mois)} — {v.nb} facture(s)
-                          </span>
-                          <span className="font-medium text-green-600">{eur(v.cents)}</span>
-                        </li>
-                      ))}
-                  </ul>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Le mois de déclaration se règle dans le module Menuiserie (bascule URSSAF sur
-                    chaque facture).
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          </details>
-        </section>
-      </MenuiserieDashboardBloc>
 
       {/* Statistiques : CA mensuel + conversion */}
       <AdminStats year={year} months={monthly} funnel={funnel} />
