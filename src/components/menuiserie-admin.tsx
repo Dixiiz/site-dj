@@ -28,6 +28,8 @@ export type MenuiserieDoc = {
   date_validite: string | null;
   lignes: MenuiserieLine[];
   total_cents: number;
+  /** Acompte de 40 % inclus ? (défaut : true). false = paiement intégral. */
+  acompte_inclus?: boolean;
   statut: string;
   devis_source: string | null;
   facture_lien: string | null;
@@ -191,6 +193,9 @@ export function MenuiserieAdmin({
   const [lignes, setLignes] = useState<LigneForm[]>([
     { designation: "", quantite: "1", prix: "" },
   ]);
+  // Acompte de 40 % à la commande : coché par défaut, décochable si le client
+  // paie tout d'un coup (aucune déduction d'acompte sur la facture).
+  const [acompteInclus, setAcompteInclus] = useState(true);
 
   // Formulaire d'ajout de client (onglet Clients).
   const [cNom, setCNom] = useState("");
@@ -266,6 +271,7 @@ export function MenuiserieAdmin({
     d.setDate(d.getDate() + 30);
     setDateValidite(d.toISOString().slice(0, 10));
     setLignes([{ designation: "", quantite: "1", prix: "" }]);
+    setAcompteInclus(true);
   }
 
   async function creerDocument() {
@@ -299,6 +305,7 @@ export function MenuiserieAdmin({
         date_edition: dateEdition,
         date_validite: typeForm === "devis" ? dateValidite : "",
         lignes: lignesValides,
+        acompte_inclus: acompteInclus,
       }),
     });
     setBusyId(null);
@@ -363,6 +370,7 @@ export function MenuiserieAdmin({
         client_email: doc.client_email ?? "",
         client_telephone: doc.client_telephone ?? "",
         lignes: doc.lignes,
+        acompte_inclus: doc.acompte_inclus !== false,
         devis_source: doc.id,
       }),
     });
@@ -595,6 +603,23 @@ export function MenuiserieAdmin({
               </label>
             ) : null}
           </div>
+
+          <label className="flex w-fit cursor-pointer items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={acompteInclus}
+              onChange={(e) => setAcompteInclus(e.target.checked)}
+              className="size-4 accent-accent"
+            />
+            <span>
+              Acompte de 40 % à la commande{" "}
+              <span className="text-xs text-muted-foreground">
+                {acompteInclus
+                  ? "(ligne acompte / solde affichée sur le PDF)"
+                  : "(aucun acompte : paiement intégral, rien n'est déduit)"}
+              </span>
+            </span>
+          </label>
 
           <div className="space-y-2">
             <span className="text-xs font-medium text-muted-foreground">Lignes du document</span>

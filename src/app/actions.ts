@@ -679,15 +679,43 @@ export async function submitCustomRequest(formData: FormData) {
     return { ok: false as const, error: "Impossible d’enregistrer la demande. Réessaie dans un instant." };
   }
 
-  // Notification push admin (pas d'e-mail pour les demandes sur-mesure).
-  const { notifyAdminPush } = await import("@/lib/push");
-  void notifyAdminPush({
-    title: "Nouvelle demande sur-mesure",
-    body: `${customer_name} — ${event_location}${event_date ? ` — ${event_date}` : ""}`,
-    url: "/admin/devis",
+  // E-mail + notification push admin (même mécanisme que les devis, pour ne
+  // jamais rater une demande sur-mesure si le push est inopérant).
+  await sendQuoteNotification("Nouvelle demande sur-mesure — à traiter", {
+    title: "Nouvelle demande sur-mesure !",
+    intro: `Une demande sur-mesure vient d'être soumise sur le site par <strong>${esc(customer_name)}</strong>.`,
+    sections: [
+      {
+        title: "Détails de la demande",
+        lines: [
+          `<strong>Client :</strong> ${esc(customer_name)}`,
+          `<strong>E-mail :</strong> ${esc(customer_email)}`,
+          customer_phone ? `<strong>Téléphone :</strong> ${esc(customer_phone)}` : "",
+          event_date ? `<strong>Date :</strong> ${esc(event_date)}` : "",
+          `<strong>Lieu :</strong> ${esc(event_location)}`,
+          notes ? `<strong>Message :</strong><br/><em>${esc(notes)}</em>` : "",
+        ].filter(Boolean),
+      },
+    ],
+    button: { label: "Ouvrir l'admin — Devis", href: `${SITE_URL}/admin/devis` },
+    footer: "La demande est enregistrée dans la table « custom_requests » de Supabase.",
   });
 
   redirect(`/merci?nom=${encodeURIComponent(customer_name)}`);
+}
+
+// Marque une demande sur-mesure comme traitée (affichage admin /admin/devis).
+export async function markCustomRequestTreated(formData: FormData) {
+  if (!(await isAdmin())) return;
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return;
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("custom_requests")
+    .update({ status: "traite" })
+    .eq("id", id);
+  if (error) console.error("[custom] Mise à jour statut impossible:", error);
+  revalidatePath("/admin/devis");
 }
 
 export async function loginAdmin(formData: FormData) {

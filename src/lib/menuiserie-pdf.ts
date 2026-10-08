@@ -25,6 +25,8 @@ export type MenuiserieDocData = {
   clientEmail?: string | null;
   clientTelephone?: string | null;
   lignes: MenuiserieLine[];
+  /** Acompte de 40 % inclus ? (défaut : true). false = paiement intégral. */
+  acompteInclus?: boolean;
 };
 
 // ===== Identité de l'entreprise (menuiserie) =====
@@ -238,16 +240,20 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
   page.drawText(totalTxt2, { x: bx + 260 - 12 - tw(totalTxt2, 11.5, b), y: y + 1, size: 11.5, font: b, color: C.blanc });
   y -= 44;
 
-  // Détail acompte / solde (base : acompte de 40 % à la commande).
-  const acompteCents = Math.round((total * 40) / 100);
-  const detailTxt =
-    doc.type === "devis"
-      ? `Acompte à la commande (40 %) : ${fmt(acompteCents / 100)} — Solde à la réception des travaux : ${fmt((total - acompteCents) / 100)}`
-      : `Acompte réglé à la commande (40 %) : ${fmt(acompteCents / 100)} — Solde à régler : ${fmt((total - acompteCents) / 100)}`;
-  page.drawText(detailTxt, {
-    x: M + CW - 10 - tw(detailTxt, 8.5, r),
-    y, size: 8.5, font: r, color: C.accent,
-  });
+  // Détail acompte / solde (base : acompte de 40 % à la commande). Si
+  // acompteInclus === false : aucun acompte, paiement intégral — rien à déduire.
+  const avecAcompte = doc.acompteInclus !== false;
+  if (avecAcompte) {
+    const acompteCents = Math.round((total * 40) / 100);
+    const detailTxt =
+      doc.type === "devis"
+        ? `Acompte à la commande (40 %) : ${fmt(acompteCents / 100)} — Solde à la réception des travaux : ${fmt((total - acompteCents) / 100)}`
+        : `Acompte réglé à la commande (40 %) : ${fmt(acompteCents / 100)} — Solde à régler : ${fmt((total - acompteCents) / 100)}`;
+    page.drawText(detailTxt, {
+      x: M + CW - 10 - tw(detailTxt, 8.5, r),
+      y, size: 8.5, font: r, color: C.accent,
+    });
+  }
   y -= 22;
 
   // ============ CONDITIONS ============
@@ -271,10 +277,15 @@ export async function buildMenuiseriePdf(doc: MenuiserieDocData): Promise<Uint8A
     if (curL) lines.push(curL);
     return lines;
   };
+  const avecAcompteCond = doc.acompteInclus !== false;
   const conditionsTxt =
     doc.type === "devis"
-      ? "Devis valable jusqu'à la date indiquée ci-dessus. Acompte de 40 % à la commande, solde à la réception des travaux. Prix ferme et définitif, TVA non applicable (art. 293 B du CGI)."
-      : "Facture payable par virement bancaire à réception. Acompte de 40 % réglé à la commande, solde dû à la réception des travaux. En cas de retard de paiement, pénalités au taux légal en vigueur et indemnité forfaitaire de recouvrement de 40 € (art. L441-10 du code de commerce). TVA non applicable (art. 293 B du CGI).";
+      ? avecAcompteCond
+        ? "Devis valable jusqu'à la date indiquée ci-dessus. Acompte de 40 % à la commande, solde à la réception des travaux. Prix ferme et définitif, TVA non applicable (art. 293 B du CGI)."
+        : "Devis valable jusqu'à la date indiquée ci-dessus. Paiement intégral à la réception des travaux. Prix ferme et définitif, TVA non applicable (art. 293 B du CGI)."
+      : avecAcompteCond
+        ? "Facture payable par virement bancaire à réception. Acompte de 40 % réglé à la commande, solde dû à la réception des travaux. En cas de retard de paiement, pénalités au taux légal en vigueur et indemnité forfaitaire de recouvrement de 40 € (art. L441-10 du code de commerce). TVA non applicable (art. 293 B du CGI)."
+        : "Facture payable par virement bancaire à réception, en totalité (aucun acompte déduit). En cas de retard de paiement, pénalités au taux légal en vigueur et indemnité forfaitaire de recouvrement de 40 € (art. L441-10 du code de commerce). TVA non applicable (art. 293 B du CGI).";
   for (const l of wrap(conditionsTxt, 9, r, CW - 20)) {
     page.drawText(l, { x: M + 10, y, size: 9, font: r, color: C.texte });
     y -= 12;

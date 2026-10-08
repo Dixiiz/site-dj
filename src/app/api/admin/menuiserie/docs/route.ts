@@ -93,6 +93,7 @@ export async function POST(request: Request) {
           : null,
       lignes: parsed.lignes,
       total_cents: parsed.totalCents,
+      acompte_inclus: body?.acompte_inclus === false ? false : true,
       devis_source: body?.devis_source ? String(body.devis_source) : null,
       statut: "brouillon",
     })

@@ -36,6 +36,7 @@ export async function POST(request: Request) {
     clientEmail: doc.client_email,
     clientTelephone: doc.client_telephone,
     lignes: Array.isArray(doc.lignes) ? doc.lignes : [],
+    acompteInclus: doc.acompte_inclus !== false,
   };
 
   try {

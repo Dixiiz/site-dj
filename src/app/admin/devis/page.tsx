@@ -1,4 +1,4 @@
-import { deleteQuote } from "@/app/actions";
+import { deleteQuote, markCustomRequestTreated } from "@/app/actions";
 import { markQuoteSeen, resolveQuoteOptions, resolveQuoteDetails, notifyDevisReady } from "@/app/client-actions";
 import { QuickStatusForm } from "@/components/quick-status-form";
 import { confirmAcompteReceived } from "@/app/client-actions";
@@ -69,7 +69,7 @@ export default async function DevisPage({
 
   // Les 3 requêtes partent en parallèle (au lieu d'être enchaînées) : le
   // temps de chargement de la page devient celui de la plus lente des trois.
-  const [quotesRes, schedulesRes, messagesRes, tracksRes, filesRes, rdvsRes] = await Promise.all([
+  const [quotesRes, schedulesRes, messagesRes, tracksRes, filesRes, rdvsRes, customReqRes] = await Promise.all([
     supabase
       .from("quotes")
       .select("*")
@@ -95,8 +95,36 @@ export default async function DevisPage({
       .from("rdv_requests")
       .select("id, quote_id, proposed_at, availability, status, origin")
       .order("created_at", { ascending: true }),
+    supabase
+      .from("custom_requests")
+      .select("id, customer_name, customer_email, customer_phone, event_date, event_location, notes, status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100),
   ]);
   const quotes = quotesRes.data;
+
+  // Demandes sur-mesure (formulaire /sur-mesure) : affichées en haut de la
+  // page avec pastille « Nouveau », filtrées par la même recherche.
+  type CustomRequestRow = {
+    id: string;
+    customer_name: string;
+    customer_email: string;
+    customer_phone: string | null;
+    event_date: string | null;
+    event_location: string;
+    notes: string | null;
+    status: string;
+    created_at: string;
+  };
+  const customRequests = (customReqRes.data ?? []) as CustomRequestRow[];
+  const customFiltered = customRequests.filter((r) => {
+    if (!query) return true;
+    return [r.customer_name, r.customer_email, r.customer_phone, r.event_location]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(query);
+  });
 
   // Échéanciers de paiement (barre de progression dans le détail de chaque devis).
   const schedulesByQuote = new Map<string, { numero: number; total: number; amount_cents: number; due_date: string; status: string }[]>();
@@ -206,6 +234,89 @@ export default async function DevisPage({
       </div>
 
       <DevisFilterBar q={q} tri={tri} />
+
+      {/* Demandes sur-mesure : visibles en haut de la page, pastille « Nouveau » */}
+      {customFiltered.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Demandes sur-mesure ({customFiltered.length})
+          </h2>
+          {customFiltered.map((req) => {
+            const isNouveau = req.status === "nouveau";
+            return (
+              <details
+                key={req.id}
+                className={`rounded-xl border bg-card transition-colors hover:border-accent/50 open:border-accent/70 ${
+                  isNouveau ? "border-accent/60" : "border-border"
+                }`}
+              >
+                <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-2 p-4 [&::-webkit-details-marker]:hidden">
+                  <div className="min-w-32 text-xs text-muted-foreground">
+                    {new Date(req.created_at).toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </div>
+                  <div className="min-w-44 flex-1">
+                    <div className="font-medium">{req.customer_name}</div>
+                    <div className="truncate text-xs text-muted-foreground">{req.event_location}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {[req.customer_email, req.customer_phone, req.event_date].filter(Boolean).join(" · ")}
+                    </div>
+                  </div>
+                  <div className="ml-auto">
+                    <Badge
+                      variant="outline"
+                      className={
+                        isNouveau
+                          ? "border-accent/60 text-accent"
+                          : "border-zinc-500/60 text-zinc-400"
+                      }
+                    >
+                      {isNouveau ? "Nouveau" : "Traité"}
+                    </Badge>
+                  </div>
+                </summary>
+                <div className="space-y-2 border-t border-border p-4 text-sm">
+                  {req.event_date ? (
+                    <p>
+                      <strong>Date de l&apos;événement :</strong>{" "}
+                      {new Date(req.event_date + "T12:00:00").toLocaleDateString("fr-FR")}
+                    </p>
+                  ) : null}
+                  {req.customer_phone ? (
+                    <p>
+                      <strong>Téléphone :</strong> {req.customer_phone}
+                    </p>
+                  ) : null}
+                  <p>
+                    <strong>E-mail :</strong> {req.customer_email}
+                  </p>
+                  {req.notes ? (
+                    <p>
+                      <strong>Message :</strong>
+                      <br />
+                      <em>{req.notes}</em>
+                    </p>
+                  ) : null}
+                  {isNouveau ? (
+                    <form action={markCustomRequestTreated} className="pt-2">
+                      <input type="hidden" name="id" value={req.id} />
+                      <SubmitButton
+                        pendingLabel="Enregistrement…"
+                        className="rounded-lg border border-green-500/50 px-3 py-1.5 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/10"
+                      >
+                        ✓ Marquer comme traité
+                      </SubmitButton>
+                    </form>
+                  ) : null}
+                </div>
+              </details>
+            );
+          })}
+        </section>
+      ) : null}
 
       {cree ? (
         <p className="rounded-lg border border-green-500/40 bg-green-500/10 px-3 py-2 text-sm text-green-400">
