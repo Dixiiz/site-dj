@@ -3,7 +3,11 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { CaDetailPanel, type DetailRow } from "./ca-detail-panel";
+
+// Lien animé (survol léger + pression) réutilisé dans le bloc 2.
+const MotionLink = motion.create(Link);
 
 type CardDef = {
   vue: string;
@@ -104,11 +108,16 @@ export function DashboardDetail({
     <>
       {/* BLOC 1 : les 2 chiffres qui comptent */}
       <div className="grid gap-4 md:grid-cols-2">
-        {cards1.map((card) => (
-          <button
+        {cards1.map((card, i) => (
+          <motion.button
             key={card.vue}
             type="button"
             onClick={() => toggle(card.vue)}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: i * 0.08, ease: "easeOut" }}
+            whileHover={{ y: -3 }}
+            whileTap={{ scale: 0.98 }}
             className={heroClass(card)}
           >
             <p
@@ -121,7 +130,7 @@ export function DashboardDetail({
             </p>
             <p className="mt-2 text-4xl font-semibold">{card.value}</p>
             <p className="mt-2 text-sm text-muted-foreground">{card.hint}</p>
-          </button>
+          </motion.button>
         ))}
       </div>
 
@@ -163,28 +172,38 @@ export function DashboardDetail({
 
       {/* BLOC 2 : détails (cliquables → détail) */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {cards2.map((card) =>
+        {cards2.map((card, i) =>
           card.href ? (
-            <Link
+            <MotionLink
               key={card.label}
               href={card.href}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.16 + i * 0.06, ease: "easeOut" }}
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.98 }}
               className={defaultClass(card)}
             >
               <p className="text-sm font-medium text-muted-foreground">{card.label}</p>
               <p className="mt-1.5 text-xl font-semibold">{card.value}</p>
               <p className="mt-1 text-xs text-muted-foreground">{card.hint}</p>
-            </Link>
+            </MotionLink>
           ) : (
-            <button
+            <motion.button
               key={card.label}
               type="button"
               onClick={() => toggle(card.vue)}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.16 + i * 0.06, ease: "easeOut" }}
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.98 }}
               className={defaultClass(card)}
             >
               <p className="text-sm font-medium text-muted-foreground">{card.label}</p>
               <p className="mt-1.5 text-xl font-semibold">{card.value}</p>
               <p className="mt-1 text-xs text-muted-foreground">{card.hint}</p>
-            </button>
+            </motion.button>
           ),
         )}
       </div>

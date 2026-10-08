@@ -62,8 +62,11 @@ export function AdminStats({
                   </span>
                 ) : null}
                 <div
-                  className="flex w-full flex-col-reverse overflow-hidden rounded-t"
-                  style={{ height: `${Math.max(total > 0 ? 8 : 2, (total / max) * 100)}%` }}
+                  className="flex w-full flex-col-reverse overflow-hidden rounded-t transition-opacity hover:opacity-80 animate-in fade-in slide-in-from-bottom-12 duration-700 fill-mode-both"
+                  style={{
+                    height: `${Math.max(total > 0 ? 8 : 2, (total / max) * 100)}%`,
+                    animationDelay: `${i * 50}ms`,
+                  }}
                 >
                   {total === 0 ? (
                     <div className="w-full bg-muted" style={{ height: "100%" }} />
@@ -94,11 +97,15 @@ export function AdminStats({
           Depuis la mise en ligne du site.
         </p>
         <div className="mt-4 space-y-3">
-          {funnel.map((row) => {
+          {funnel.map((row, i) => {
             const pct =
               totalDemandes > 0 ? Math.round((row.count / totalDemandes) * 100) : 0;
             return (
-              <div key={row.label}>
+              <div
+                key={row.label}
+                className="animate-in fade-in slide-in-from-left-4 duration-500 fill-mode-both"
+                style={{ animationDelay: `${i * 80}ms` }}
+              >
                 <div className="flex items-baseline justify-between gap-2 text-sm">
                   <span>{row.label}</span>
                   <span className="text-muted-foreground">
