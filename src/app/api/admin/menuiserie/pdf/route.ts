@@ -10,8 +10,9 @@ export async function POST(request: Request) {
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Accès refusé." }, { status: 403 });
   }
-  const body = await request.json().catch(() => null) as { id?: unknown } | null;
+  const body = await request.json().catch(() => null) as { id?: unknown; download?: unknown } | null;
   const id = String(body?.id ?? "");
+  const forcerTelechargement = Boolean(body?.download);
   if (!id) return NextResponse.json({ error: "Document introuvable." }, { status: 400 });
 
   const supabase = createAdminClient();
@@ -46,13 +47,16 @@ export async function POST(request: Request) {
     await supabase.storage
       .from("client-files")
       .upload(storagePath, bytes, { contentType: "application/pdf", upsert: true });
+    const fileName = `${doc.type === "facture" ? "Facture" : "Devis"} ${doc.numero}.pdf`;
     const { data: signed } = await supabase.storage
       .from("client-files")
-      .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+      // Option `download` : l'URL signée porte l'en-tête Content-Disposition
+      // attachment → le navigateur TÉLÉCHARGE le fichier au lieu de l'afficher.
+      .createSignedUrl(storagePath, 60 * 60 * 24 * 7, forcerTelechargement ? { download: fileName } : undefined);
     return NextResponse.json({
       url: signed?.signedUrl ?? null,
       numero: doc.numero,
-      fileName: `${doc.type === "facture" ? "Facture" : "Devis"} ${doc.numero}.pdf`,
+      fileName,
     });
   } catch (e) {
     console.error("Erreur génération PDF menuiserie", e);

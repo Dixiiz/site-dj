@@ -338,12 +338,15 @@ export function MenuiserieAdmin({
     toast.success(`${doc.numero} : ${STATUTS[statut]?.label ?? statut}`);
   }
 
-  async function genererPdf(doc: MenuiserieDoc) {
+  // mode "vue" : ouvre le PDF dans un nouvel onglet (visualiseur).
+  // mode "telecharger" : URL signée avec Content-Disposition attachment →
+  // le fichier est directement enregistré (nom : Facture FAC-2026-001.pdf…).
+  async function genererPdf(doc: MenuiserieDoc, mode: "vue" | "telecharger" = "vue") {
     setBusyId(doc.id);
     const { ok, json } = await api("/api/admin/menuiserie/pdf", {
       method: "POST",
       headers: JSON_HEADERS,
-      body: JSON.stringify({ id: doc.id }),
+      body: JSON.stringify({ id: doc.id, download: mode === "telecharger" }),
     });
     setBusyId(null);
     if (!ok) {
@@ -351,8 +354,22 @@ export function MenuiserieAdmin({
       return;
     }
     const url = json.url as string | null;
-    if (url) window.open(url, "_blank");
-    else toast.error("Lien de téléchargement indisponible.");
+    const fileName = (json.fileName as string | null) ?? "";
+    if (!url) {
+      toast.error("Lien de téléchargement indisponible.");
+      return;
+    }
+    if (mode === "telecharger") {
+      const a = document.createElement("a");
+      a.href = url;
+      if (fileName) a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast.success(`${fileName} téléchargé`);
+    } else {
+      window.open(url, "_blank");
+    }
   }
 
   async function convertirEnFacture(doc: MenuiserieDoc) {
@@ -875,6 +892,9 @@ export function MenuiserieAdmin({
                     <div className="flex flex-wrap items-center gap-2">
                       <button type="button" onClick={() => genererPdf(doc)} disabled={busyId === doc.id} className={btnCls}>
                         {busyId === doc.id ? "…" : "Générer le PDF"}
+                      </button>
+                      <button type="button" onClick={() => genererPdf(doc, "telecharger")} disabled={busyId === doc.id} className={btnCls}>
+                        {busyId === doc.id ? "…" : "⬇ Télécharger"}
                       </button>
                       {estDevis ? (
                         <>
