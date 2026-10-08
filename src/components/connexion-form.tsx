@@ -1,13 +1,21 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { loginClient, requestPasswordReset, signUpClient } from "@/app/client-actions";
+import { loginClient, sendFirstLoginLink, signUpClient } from "@/app/client-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function ConnexionForm({ next }: { next?: string }) {
-  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
+export function ConnexionForm({
+  next,
+  initialEmail,
+}: {
+  next?: string;
+  // E-mail prérempli (ex : lien reçu dans un e-mail de documents, avec
+  // ?email=…). Utilisé par le mode « première connexion » et la connexion.
+  initialEmail?: string;
+}) {
+  const [mode, setMode] = useState<"login" | "signup" | "first">("login");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -64,7 +72,7 @@ export function ConnexionForm({ next }: { next?: string }) {
           {safeNext ? <input type="hidden" name="next" value={safeNext} /> : null}
           <div className="space-y-1.5">
             <Label htmlFor="email">E-mail</Label>
-            <Input id="email" name="email" type="email" required autoComplete="email" />
+            <Input id="email" name="email" type="email" required autoComplete="email" defaultValue={initialEmail} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="password">Mot de passe</Label>
@@ -77,28 +85,34 @@ export function ConnexionForm({ next }: { next?: string }) {
           <button
             type="button"
             onClick={() => {
-              setMode("forgot");
+              setMode("first");
               setError(null);
               setInfo(null);
             }}
-            className="block w-full text-center text-xs text-accent underline-offset-2 hover:underline"
+            className="block w-full text-center text-xs font-medium text-accent underline-offset-2 hover:underline"
           >
-            Mot de passe oublié ?
+            Première connexion ?
           </button>
           <p className="text-center text-xs text-muted-foreground">
             Utilisez le même e-mail que celui de votre devis pour retrouver vos dossiers.
           </p>
         </form>
-      ) : mode === "forgot" ? (
-        <form action={onSubmit(requestPasswordReset)} className="space-y-4">
+      ) : mode === "first" ? (
+        // Première connexion (ou mot de passe oublié) : un seul champ, un lien
+        // e-mail, puis choix du mot de passe — sans autre formalité.
+        <form action={onSubmit(sendFirstLoginLink)} className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Recevez un lien par e-mail : vous n’avez plus qu’à choisir votre mot de passe.
+            Ça marche aussi si vous l’avez oublié.
+          </p>
           <div className="space-y-1.5">
-            <Label htmlFor="email-forgot">E-mail du compte</Label>
-            <Input id="email-forgot" name="email" type="email" required autoComplete="email" />
+            <Label htmlFor="email-first">E-mail de votre devis</Label>
+            <Input id="email-first" name="email" type="email" required autoComplete="email" defaultValue={initialEmail} />
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           {info ? <p className="text-sm text-accent">{info}</p> : null}
           <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? "Envoi…" : "Recevoir le lien de réinitialisation"}
+            {pending ? "Envoi…" : "Recevoir mon lien de première connexion"}
           </Button>
           <button
             type="button"
@@ -120,7 +134,7 @@ export function ConnexionForm({ next }: { next?: string }) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="email">E-mail</Label>
-            <Input id="email" name="email" type="email" required autoComplete="email" />
+            <Input id="email" name="email" type="email" required autoComplete="email" defaultValue={initialEmail} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="password">Mot de passe</Label>

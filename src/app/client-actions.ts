@@ -274,6 +274,151 @@ export async function requestPasswordReset(formData: FormData) {
       "E-mail envoyé ! Vérifiez votre boîte mail (et vos spams) — le lien est valable 1 heure, cliquez-le rapidement.",
   };
 }
+// « Première connexion » : le client n'indique que son e-mail et reçoit un
+// lien qui ouvre directement le formulaire de définition du mot de passe
+// (session établie par le RecoveryHashHandler, e-mail déjà connu).
+//  - Compte existant            → lien de récupération (sert aussi d'oubli de mdp) ;
+//  - Pas de compte mais un devis existe avec cet e-mail → le compte est créé
+//    automatiquement (lien d'invitation) : le client ne choisit que son mdp ;
+//  - Ni compte ni devis         → message le redirigeant vers « Créer un compte ».
+export async function sendFirstLoginLink(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!email) return { ok: false as const, error: "E-mail requis." };
+
+  const h = await headers();
+  const host = h.get("host") ?? "localhost:3000";
+  const proto = host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
+  const redirectTo = `${proto}://${host}/connexion/reinitialiser`;
+
+  const admin = createAdminClient();
+
+  // Le compte existe-t-il déjà ? (findOwnerUserId : cache 10 min sur l'e-mail)
+  const existingId = await findOwnerUserId(admin, email);
+  let name: string = "";
+
+  if (!existingId) {
+    // Pas de compte : on n'en crée un automatiquement que si un devis porte
+    // cet e-mail (c'est le cas typique du client qui vient de recevoir ses
+    // documents et n'a jamais créé d'accès).
+    const { data: quote } = await admin
+      .from("quotes")
+      .select("customer_name")
+      .eq("customer_email", email)
+      .limit(1)
+      .maybeSingle();
+    if (!quote) {
+      return {
+        ok: false as const,
+        error:
+          "Aucun compte ni devis avec cet e-mail. Utilisez « Créer un compte », ou vérifiez l'orthographe (celle de votre devis).",
+      };
+    }
+    name = String(quote.customer_name ?? "");
+
+    const { data, error } = await admin.auth.admin.generateLink({
+      type: "invite",
+      email,
+      options: { data: { name }, redirectTo },
+    });
+    if (error || !data?.properties?.action_link) {
+      const dejaPris = /already|exist|registered|duplicate/i.test(error?.message ?? "");
+      if (dejaPris) {
+        // Course entre deux clics : le compte vient d'être créé, on retombe
+        // sur le flux « compte existant » ci-dessous.
+      } else {
+        console.error("[sendFirstLoginLink] generateLink(invite):", error);
+        return { ok: false as const, error: "Envoi impossible pour le moment. Réessayez dans un instant." };
+      }
+    } else {
+      return await sendFirstLoginEmail(email, name, data.properties.action_link, true);
+    }
+  } else {
+    // Nom connu via les métadonnées du compte (pour personnaliser l'e-mail).
+    const { data: usersData } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    name = String(
+      (usersData?.users?.find((u) => u.id === existingId)?.user_metadata as { name?: string } | null)?.name ?? ""
+    );
+  }
+
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: "recovery",
+    email,
+    options: { redirectTo },
+  });
+  if (error || !data?.properties?.action_link) {
+    console.error("[sendFirstLoginLink] generateLink(recovery):", error);
+    return { ok: false as const, error: "Envoi impossible pour le moment. Réessayez dans un instant." };
+  }
+  return await sendFirstLoginEmail(email, name, data.properties.action_link, false);
+}
+
+// Variante « fire and forget » pour les formulaires admin (bouton « Renvoyer
+// un accès » de /admin/comptes) : la server action d'un <form> doit renvoyer
+// void, contrairement à sendFirstLoginLink dont le résultat est affiché au
+// client sur la page de connexion.
+export async function resendFirstLoginLink(formData: FormData) {
+  await sendFirstLoginLink(formData);
+}
+
+// Envoi Resend du lien « première connexion » (rédaction différente selon que
+// le compte vient d'être créé ou existait déjà).
+async function sendFirstLoginEmail(
+  email: string,
+  name: string,
+  actionLink: string,
+  nouveauCompte: boolean
+): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+  const { Resend } = await import("resend");
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error("[sendFirstLoginLink] RESEND_API_KEY manquante : e-mail non envoyé.");
+    return { ok: false as const, error: "Envoi d'e-mail momentanément indisponible. Réessayez ou contactez-nous." };
+  }
+  const bonjour = name ? `Bonjour ${name},` : "Bonjour,";
+  const resend = new Resend(apiKey);
+  const { error: sendError } = await resend.emails.send({
+    from: EMAIL_FROM,
+    to: email,
+    subject: nouveauCompte
+      ? "Créez votre accès à l'espace client — Propul'Sound DJ"
+      : "Votre accès à l'espace client — Propul'Sound DJ",
+    html: buildEmailHtml({
+      title: nouveauCompte ? "Votre espace client vous attend !" : "Définissez votre mot de passe",
+      intro: nouveauCompte
+        ? `${bonjour}<br/><br/>Votre dossier Propul'Sound DJ est prêt. Il ne manque qu'une chose : <strong>votre mot de passe</strong>. Cliquez sur le bouton ci-dessous — votre e-mail est déjà connu, vous n'avez rien d'autre à remplir. <strong>Ce lien est valable 1 heure.</strong>`
+        : `${bonjour}<br/><br/>Cliquez sur le bouton ci-dessous pour définir le mot de passe de votre espace client Propul'Sound DJ. Vous n'avez que votre mot de passe à choisir — tout le reste est déjà en place. <strong>Ce lien est valable 1 heure.</strong>`,
+      sections: [
+        {
+          title: "Ensuite",
+          lines: [
+            "Choisissez un mot de passe (6 caractères minimum).",
+            "Vous serez immédiatement connecté à votre espace client.",
+            nouveauCompte
+              ? "La prochaine fois, connectez-vous simplement avec votre e-mail et ce mot de passe."
+              : "Ce lien sert aussi si vous avez oublié votre mot de passe.",
+          ],
+        },
+      ],
+      button: { label: nouveauCompte ? "Créer mon mot de passe" : "Définir mon mot de passe", href: actionLink },
+      footer: "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail. — Maxime",
+    }),
+    text: buildEmailText({
+      intro: nouveauCompte
+        ? "Votre dossier est prêt : cliquez sur le bouton ci-dessous pour choisir votre mot de passe. Ce lien est valable 1 heure."
+        : "Cliquez sur le bouton ci-dessous pour définir le mot de passe de votre espace client. Ce lien est valable 1 heure.",
+      button: { label: nouveauCompte ? "Créer mon mot de passe" : "Définir mon mot de passe", href: actionLink },
+    }),
+  });
+  if (sendError) {
+    console.error("[sendFirstLoginLink] Echec envoi:", sendError);
+    return { ok: false as const, error: "L'envoi de l'e-mail a échoué. Réessayez dans un instant." };
+  }
+  return {
+    ok: true as const,
+    message:
+      "E-mail envoyé ! Ouvrez-le et cliquez sur le bouton pour définir votre mot de passe (vérifiez vos spams si besoin). Lien valable 1 heure.",
+  };
+}
 
 export async function updatePassword(formData: FormData) {
   const password = String(formData.get("password") ?? "");
@@ -1939,6 +2084,12 @@ async function notifyClientDocuments(
  "Signature en ligne, en 2 minutes, depuis votre espace.",
               ],
             },
+            {
+              title: "Première connexion ?",
+              lines: [
+                "Cliquez sur le bouton ci-dessous, puis choisissez « Première connexion » : vous recevez un lien et ne définissez que votre mot de passe.",
+              ],
+            },
           ]
         : accesDirect
           ? [
@@ -1967,7 +2118,9 @@ async function notifyClientDocuments(
           }
         : {
             label: opts.aSigner ? "Consulter les documents" : "Voir les documents",
-            href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}#documents`)}`,
+            // E-mail du client prérempli sur la page de connexion : pour une
+            // première connexion, il ne lui reste que le mot de passe à choisir.
+            href: `${SITE_URL}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quoteId}#documents`)}&email=${encodeURIComponent(quote.customer_email)}`,
           },
     };
     const resend = new Resend(apiKey);

@@ -10,15 +10,21 @@ export const metadata = {
 export default async function ConnexionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; email?: string }>;
 }) {
   const user = await getClientUser();
-  const { next } = await searchParams;
+  const { next, email } = await searchParams;
   if (user) redirect(next?.startsWith("/mon-espace") ? next : "/mon-espace");
+
+  // E-mail prérempli depuis un lien reçu par e-mail (seule une adresse
+  // plausible passe la vérification).
+  const initialEmail = /^[^\s@]{1,64}@[^\s@.]+(\.[^\s@.]+)+$/.test(email ?? "")
+    ? email
+    : undefined;
 
   return (
     <main className="mx-auto w-full max-w-md px-4 py-16">
-      <ConnexionForm next={next} />
+      <ConnexionForm next={next} initialEmail={initialEmail} />
     </main>
   );
 }

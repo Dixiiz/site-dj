@@ -3,8 +3,8 @@ import { getClientUser } from "@/app/client-actions";
 import { ResetPasswordForm } from "@/components/reset-password-form";
 
 export const metadata = {
-  title: "Nouveau mot de passe — Propul'Sound DJ",
-  description: "Définissez un nouveau mot de passe pour votre espace client.",
+  title: "Votre mot de passe — Propul'Sound DJ",
+  description: "Définissez le mot de passe de votre espace client Propul'Sound DJ.",
 };
 
 export default async function ReinitialiserPage({
@@ -14,9 +14,10 @@ export default async function ReinitialiserPage({
 }) {
   // Deux formats de lien possibles :
   //  - ?code=… : flux PKCE classique, échangé côté serveur ci-dessous ;
-  //  - #access_token=… : liens admin (envoyés via Resend), gérés côté
-  //    navigateur par le RecoveryHashHandler global (layout racine), qui
-  //    établit la session puis redirige ici (type=recovery).
+  //  - #access_token=… : liens admin (première connexion, invitation et
+  //    réinitialisation — envoyés via Resend), gérés côté navigateur par le
+  //    RecoveryHashHandler global (layout racine), qui établit la session puis
+  //    redirige ici (type=recovery).
   const { code } = await searchParams;
   if (code) {
     const supabase = await createAuthClient();
@@ -27,14 +28,17 @@ export default async function ReinitialiserPage({
 
   return (
     <main className="mx-auto w-full max-w-md px-4 py-16">
-      <h1 className="mb-6 text-center text-2xl font-semibold">Nouveau mot de passe</h1>
+      <h1 className="mb-2 text-center text-2xl font-semibold">Votre mot de passe</h1>
+      <p className="mb-6 text-center text-sm text-muted-foreground">
+        Choisissez le mot de passe de votre espace client — il vous servira à chaque connexion.
+      </p>
       {user ? (
-        <ResetPasswordForm />
+        <ResetPasswordForm email={user.email} />
       ) : (
         <div className="space-y-4 rounded-xl border border-border p-6 text-center">
           <p className="text-sm text-muted-foreground">
-            Ce lien est invalide ou a expiré. Faites une nouvelle demande depuis la page de
-            connexion (« Mot de passe oublié ? »).
+            Ce lien est invalide ou a expiré. Faites une nouvelle demande depuis la page de connexion
+            (« Première connexion »).
           </p>
           <a
             href="/connexion"

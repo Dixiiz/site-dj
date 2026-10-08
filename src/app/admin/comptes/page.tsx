@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resendFirstLoginLink } from "@/app/client-actions";
+import { SubmitButton } from "@/components/submit-button";
 
 export const metadata = { title: "Comptes clients — Admin Propul'Sound DJ" };
 export const dynamic = "force-dynamic";
@@ -69,6 +71,7 @@ export default async function AdminComptesPage() {
               <th className="px-4 py-3 text-center">Devis</th>
               <th className="px-4 py-3 text-center">En cours</th>
               <th className="px-4 py-3 text-center">Confirmés</th>
+              <th className="px-4 py-3 text-center">Accès</th>
             </tr>
           </thead>
           <tbody>
@@ -92,11 +95,25 @@ export default async function AdminComptesPage() {
                 <td className="px-4 py-3 text-center font-semibold">{c.devisTotal}</td>
                 <td className="px-4 py-3 text-center">{c.devisEnCours}</td>
                 <td className="px-4 py-3 text-center">{c.devisConfirmes}</td>
+                <td className="px-4 py-3 text-center">
+                  {/* Renvoie au client un e-mail « première connexion » : il
+                      ne lui reste que son mot de passe à choisir (utile pour
+                      les comptes jamais connectés). */}
+                  <form action={resendFirstLoginLink}>
+                    <input type="hidden" name="email" value={c.email} />
+                    <SubmitButton
+                      pendingLabel="…"
+                      className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:border-accent hover:text-accent disabled:opacity-50"
+                    >
+                      {c.lastSignIn ? "Renvoyer un accès" : "Envoyer un accès"}
+                    </SubmitButton>
+                  </form>
+                </td>
               </tr>
             ))}
             {comptes.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
                   Aucun compte client pour le moment.
                 </td>
               </tr>
