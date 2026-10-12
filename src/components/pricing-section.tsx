@@ -718,16 +718,25 @@ export function PricingSection({
                             </div>
                           );
                         }
-                        const isUpgrade = pi > 0 && qty > entryQty;
-                        const color = /ultime/i.test(packName)
+                        // Éclairé (discret) = matériel en PLUS par rapport au
+                        // pack du dessous ; doré = le plus gros de la ligne.
+                        const prevQty = pi > 0 ? quantities[pi - 1][i] : null;
+                        const isMoreThanBelow = prevQty !== null && qty > prevQty;
+                        const rowMax = Math.max(...quantities.map((x) => x[i]));
+                        const isTop = rowMax > entryQty && qty === rowMax;
+                        const color = isTop
                           ? "text-yellow-400"
-                          : isUpgrade
+                          : isMoreThanBelow
                             ? "text-green-400"
                             : "text-accent";
                         return (
                           <div
                             key={packName}
-                            className="flex items-center justify-center rounded-lg border border-border py-2"
+                            className={`flex items-center justify-center rounded-lg border py-2 ${
+                              isMoreThanBelow
+                                ? "border-green-500/25 bg-green-500/[0.07]"
+                                : "border-border"
+                            }`}
                           >
                             <span
                               className={`inline-flex min-w-10 justify-center text-xs font-semibold ${color}`}
