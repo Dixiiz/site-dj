@@ -31,6 +31,23 @@ function toMinutes(hhmm?: string | null): number | null {
   return m ? Number(m[1]) * 60 + Number(m[2]) : null;
 }
 
+// Minutes au-delà du forfait (peut être négatif = dans le forfait), ou null
+// si indéterminable / sans libellé personnalisé (ex : « Péage » → pas d'heures).
+// Distinction clé : 0 minute = durée DANS le forfait (≠ null = indéterminable).
+export function extraMinutes(input: ExtraHoursInput): number | null {
+  if (input.extra_fee_label?.trim()) return null;
+  const base = packBaseMinutes(input.formula_name);
+  if (base == null) return null;
+  let start = toMinutes(input.start_time ?? null);
+  let end = toMinutes(input.end_time ?? null);
+  // Anciennes données : horaires consignés dans les notes (« Début : 20:00 | Fin : 04:00 »).
+  if (start == null) start = toMinutes(input.notes?.match(/Début\s*:\s*(\d{1,2}:\d{2})/)?.[1] ?? null);
+  if (end == null) end = toMinutes(input.notes?.match(/Fin\s*:\s*(\d{1,2}:\d{2})/)?.[1] ?? null);
+  if (start == null || end == null) return null;
+  if (end < 12 * 60) end += 24 * 60; // fin après minuit → lendemain
+  return end - start - base;
+}
+
 // Nombre d'heures supplémentaires facturées (heures entamées), ou null si
 // indéterminable / sans libellé personnalisé (ex : « Péage » → pas d'heures).
 // Priorité : libellé personnalisé > colonne extra_hours > recalcul depuis les
@@ -42,15 +59,8 @@ export function computeExtraHours(input: ExtraHoursInput): number | null {
     // Pack non reconnu : seule la colonne enregistrée fait foi.
     return input.extra_hours && input.extra_hours > 0 ? input.extra_hours : null;
   }
-  let start = toMinutes(input.start_time ?? null);
-  let end = toMinutes(input.end_time ?? null);
-  // Anciennes données : horaires consignés dans les notes (« Début : 20:00 | Fin : 04:00 »).
-  if (start == null) start = toMinutes(input.notes?.match(/Début\s*:\s*(\d{1,2}:\d{2})/)?.[1] ?? null);
-  if (end == null) end = toMinutes(input.notes?.match(/Fin\s*:\s*(\d{1,2}:\d{2})/)?.[1] ?? null);
-  if (start == null || end == null) return null;
-  if (end < 12 * 60) end += 24 * 60; // fin après minuit → lendemain
-  const past = end - start - base;
-  return past > 0 ? Math.ceil(past / 60) : null;
+  const past = extraMinutes(input);
+  return past != null && past > 0 ? Math.ceil(past / 60) : null;
 }
 
 // Formatage français : 0.5 → « 30 min », 1 → « 1 h », 1.5 → « 1 h 30 ».

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { updateQuoteAdmin, estimateTravelAdmin } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
 import { ADMIN_PACK_LIST, ADMIN_FX_OPTIONS } from "@/components/pricing-section";
-import { computeExtraHours, formatExtraHours, packBaseMinutes } from "@/lib/booking-extra";
+import { extraMinutes, formatExtraHours, packBaseMinutes } from "@/lib/booking-extra";
 import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
 import type { SelectedOption } from "@/lib/types";
 
@@ -124,14 +124,19 @@ export function AdminQuoteEdit({
   // pack choisi (même règle que le site et la facturation serveur : heures
   // entamées dues). null = indéterminable (pack libre non reconnu, ou
   // libellé personnalisé déjà posé type « Péage ») → on ne touche à rien.
+  // ⚠️ extraMinutes distingue « 0 min supp » (durée dans le forfait) de
+  // « indéterminable » : c'est ce qui permet de REMETTRE le supplément à zéro
+  // quand on passe sous le forfait (ex : 19h-4h → 20h-4h).
   const selectedPack = ADMIN_PACK_LIST.find((p) => p.id === packId);
   const extraRateCents = selectedPack?.extraRateCents ?? EXTRA_HOUR_RATE_CENTS;
-  const autoExtraHours = computeExtraHours({
+  const extraMinutesCalc = extraMinutes({
     formula_name: selectedPack?.name ?? quote.formula_name,
     start_time: startTime,
     end_time: endTime,
     extra_fee_label: extraLabel,
   });
+  const autoExtraHours =
+    extraMinutesCalc != null ? Math.ceil(Math.max(0, extraMinutesCalc) / 60) : null;
   const autoExtraCents =
     autoExtraHours != null ? autoExtraHours * extraRateCents : null;
 
