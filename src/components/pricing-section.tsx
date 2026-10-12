@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { formatEuros } from "@/lib/money";
-import { NO_VIDEO } from "@/components/pack-media-assigner";
+import { NO_VIDEO_SENTINEL as NO_VIDEO } from "@/lib/upsell";
 import type { PackMediaOverrides } from "@/lib/site-media";
 
 type Pack = {

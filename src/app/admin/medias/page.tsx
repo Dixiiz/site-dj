@@ -19,7 +19,7 @@ import {
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { MediaManager } from "@/components/media-manager";
-import { PackMediaAssigner } from "@/components/pack-media-assigner";
+import { PackMediaManager } from "@/components/pack-media-manager";
 import { PACK_DEFAULTS } from "@/components/pricing-section";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { GalerieCredits } from "@/components/galerie-credits";
@@ -35,7 +35,7 @@ const FOLDERS: { key: MediaFolder; titre: string; hint: string; accept: string; 
   {
     key: "packs",
     titre: "Visuels des packs",
-    hint: "Aperçus des packs de la page Formules. Uploadez ici vos photos (et vidéos), puis rattachez chaque média à un pack dans « Rattachement aux packs » sous la grille. Sans rattachement, le visuel d'origine du site s'affiche.",
+    hint: "Un clic sur 📷 Photo ou 🎬 Vidéo ouvre une grille de miniatures : cliquez sur celle voulue, ou uploadez directement depuis le pack — le fichier est rattaché automatiquement.",
     accept:
       "image/jpeg,image/png,image/webp,image/avif,video/mp4,video/quicktime,video/webm",
     kind: "mixed",
@@ -195,6 +195,38 @@ function makeSetHomeVisibleAction(folder: MediaFolder) {
   };
 }
 
+// Upload direct depuis une carte pack : le fichier est envoyé dans le dossier
+// « packs » du bucket ET rattaché au pack en une seule action.
+function makeUploadPackAction() {
+  return async (formData: FormData) => {
+ "use server";
+    if (!(await requireAdmin())) return;
+    const pack = String(formData.get("pack") ?? "");
+    const field = String(formData.get("field") ?? "");
+    const file = formData.get("file");
+    if (
+      !pack ||
+      (field !== "image" && field !== "video") ||
+      !(file instanceof File) ||
+      file.size === 0
+    ) {
+      return;
+    }
+    const { uploadMedia, listMedia, savePackOverride } = await import("@/lib/site-media");
+    const res = await uploadMedia("packs", file);
+    if (!res.ok) return;
+    // Retrouver l'URL du fichier fraîchement envoyé (nom horodaté unique).
+    const safe = file.name.replace(/[^\w.\-]+/g, "-").toLowerCase();
+    const files = await listMedia("packs");
+    const uploaded = files.find((f) => f.name.endsWith(safe));
+    if (uploaded) {
+      await savePackOverride(pack, field as "image" | "video", uploaded.url);
+    }
+    revalidatePath("/admin/medias");
+    revalidatePath("/formules");
+  };
+}
+
 // Rattachement d'un média (image/vidéo) à un pack : persiste _packs.json.
 function makeAssignPackAction() {
   return async (formData: FormData) => {
@@ -249,41 +281,50 @@ export default async function AdminMediasPage() {
         Cliquez sur une section ci-dessous pour la déplier.
       </p>
 
-      {sections.map((section) => (
-        <CollapsibleSection
-          key={section.key}
-          title={section.titre}
-          hint={section.hint}
-          badge={`${section.items.length} fichier${section.items.length > 1 ? "s" : ""}`}
-        >
-          <MediaManager
-            folder={section.key}
-            items={section.items}
-            accept={section.accept}
-            kind={section.kind}
-            uploadAction={makeUploadAction(section.key)}
-            deleteStorageAction={makeDeleteStorageAction(section.key)}
-            deleteLocalAction={makeDeleteLocalAction(section.key)}
-            importLocalAction={makeImportLocalAction(section.key)}
-            orderAction={saveOrderAction}
-            homeToggle={
-              section.key === "videos/showcase"
-                ? {
-                    initial: showcaseHome,
-                    action: makeSetHomeVisibleAction(section.key),
-                  }
-                : undefined
-            }
-          />
-          {section.key === "packs" ? (
-            <PackMediaAssigner
+      {sections.map((section) =>
+        section.key === "packs" ? (
+          <CollapsibleSection
+            key={section.key}
+            title={section.titre}
+            hint={section.hint}
+            badge={`${PACK_DEFAULTS.length} packs`}
+          >
+            <PackMediaManager
               packs={PACK_DEFAULTS}
               items={section.items}
               initial={packOverrides}
               assignAction={makeAssignPackAction()}
+              uploadAssignAction={makeUploadPackAction()}
+              deleteAction={makeDeleteStorageAction("packs")}
             />
-          ) : null}
-          {section.key === "galerie" ? (
+          </CollapsibleSection>
+        ) : (
+          <CollapsibleSection
+            key={section.key}
+            title={section.titre}
+            hint={section.hint}
+            badge={`${section.items.length} fichier${section.items.length > 1 ? "s" : ""}`}
+          >
+            <MediaManager
+              folder={section.key}
+              items={section.items}
+              accept={section.accept}
+              kind={section.kind}
+              uploadAction={makeUploadAction(section.key)}
+              deleteStorageAction={makeDeleteStorageAction(section.key)}
+              deleteLocalAction={makeDeleteLocalAction(section.key)}
+              importLocalAction={makeImportLocalAction(section.key)}
+              orderAction={saveOrderAction}
+              homeToggle={
+                section.key === "videos/showcase"
+                  ? {
+                      initial: showcaseHome,
+                      action: makeSetHomeVisibleAction(section.key),
+                    }
+                  : undefined
+              }
+            />
+            {section.key === "galerie" ? (
             <>
               <GalerieCredits
                 items={section.items}
@@ -293,9 +334,10 @@ export default async function AdminMediasPage() {
                 setPhoto={makeSetPhotoCreditAction("galerie")}
               />
             </>
-          ) : null}
-        </CollapsibleSection>
-      ))}
+            ) : null}
+          </CollapsibleSection>
+        )
+      )}
     </main>
   );
 }

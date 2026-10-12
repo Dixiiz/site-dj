@@ -10,7 +10,7 @@ type Action = (formData: FormData) => void | Promise<void>;
 // Compresse une image dans le navigateur avant l'envoi : max ~2400px,
 // JPEG qualité 85 %. Indispensable car les server actions Vercel sont
 // limitées à ~4,5 Mo par requête et les photos d'origine font souvent 10 Mo+.
-async function compressImage(file: File, maxDim = 2400, quality = 0.85): Promise<File> {
+export async function compressImage(file: File, maxDim = 2400, quality = 0.85): Promise<File> {
   if (!file.type.startsWith("image/") || file.type === "image/gif") return file;
   try {
     const bitmap = await createImageBitmap(file);

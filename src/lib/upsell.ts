@@ -16,6 +16,10 @@ export type Upsell = {
   benefits: string[];
 };
 
+// Sentinelle stockée dans _packs.json quand la vidéo par défaut d'un pack a
+// été explicitement retirée (interprétée par pricing-section.tsx).
+export const NO_VIDEO_SENTINEL = "__aucune_video__";
+
 export const UPSELLS: Upsell[] = [
   {
     from: /essential/i,
