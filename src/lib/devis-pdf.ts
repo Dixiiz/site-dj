@@ -181,9 +181,12 @@ export async function buildDevisPdf(
   const fPrice = (quote.formula_price_cents ?? 0) / 100;
   rows.push([quote.formula_name ?? "Prestation", "1", fmt(fPrice), fmt(fPrice)]);
   for (const o of quote.selected_options ?? []) {
-    const unit = o.price_cents / 100;
     const qty = o.qty && o.qty > 0 ? o.qty : 1;
-    rows.push([`Option : ${o.name}`, String(qty), fmt(unit), fmt(unit * qty)]);
+    // price_cents = total de la ligne (convention de tous les créateurs de
+    // devis) ; le prix unitaire affiché en est déduit.
+    const total = o.price_cents / 100;
+    const unit = qty > 1 ? total / qty : total;
+    rows.push([`Option : ${o.name}`, String(qty), fmt(unit), fmt(total)]);
   }
   if ((quote.travel_fee_cents ?? 0) > 0) {
     const km = quote.travel_distance_km;

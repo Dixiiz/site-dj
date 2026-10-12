@@ -152,13 +152,13 @@ export async function buildFacturePdf(
     rows.push([quote.formula_name ?? "Prestation", "1", fmt(fPrice), fmt(fPrice)]);
   }
   for (const o of quote.selected_options ?? []) {
-    const unit = o.price_cents / 100;
     const qty = o.qty && o.qty > 0 ? o.qty : 1;
-    // Montant arrondi au centime (quantités décimales possibles, ex 3,25 h)
-    // — même calcul que le serveur pour garantir TAUX × QTÉ = MONTANT.
-    const montant = Math.round(unit * qty * 100) / 100;
+    // price_cents = total de la ligne (convention de tous les créateurs de
+    // devis) ; P.U. déduit, montants arrondis au centime.
+    const total = o.price_cents / 100;
+    const unit = qty > 1 ? Math.round((total / qty) * 100) / 100 : total;
     const prefix = opts.plainLines ? "" : "Option : ";
-    rows.push([`${prefix}${o.name}`, String(qty).replace(".", ","), fmt(unit), fmt(montant)]);
+    rows.push([`${prefix}${o.name}`, String(qty).replace(".", ","), fmt(unit), fmt(total)]);
   }
   if ((quote.travel_fee_cents ?? 0) > 0) {
     const km = quote.travel_distance_km;

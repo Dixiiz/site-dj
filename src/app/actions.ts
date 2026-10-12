@@ -751,6 +751,30 @@ export async function updateQuoteAdmin(formData: FormData) {
     };
   });
 
+  // Lignes supplémentaires manuelles du formulaire d'édition (JSON) :
+  // [{ label, amount }] — libellé et montant totalement libres.
+  const manualRaw = String(formData.get("manual_lines") ?? "").trim();
+  if (manualRaw) {
+    try {
+      const parsed = JSON.parse(manualRaw) as { label?: unknown; amount?: unknown }[];
+      parsed.forEach((line, index) => {
+        const label = String(line?.label ?? "").trim();
+        const amount = Number.parseFloat(String(line?.amount ?? "").replace(",", "."));
+        if (label && Number.isFinite(amount) && amount !== 0) {
+          selected.push({
+            id: `perso-${selected.length}-${index}`,
+            name: label,
+            price_cents: Math.round(amount * 100),
+            qty: 1,
+          });
+        }
+      });
+    } catch {
+      // JSON illisible : on garde au moins les options du catalogue.
+      console.error("[devis] lignes supplémentaires manuelles illisibles");
+    }
+  }
+
   const toCents = (value: FormDataEntryValue | null) => {
     const n = Number.parseFloat(String(value ?? "").replace(",", "."));
     return Number.isFinite(n) ? Math.round(n * 100) : 0;

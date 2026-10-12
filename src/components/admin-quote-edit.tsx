@@ -58,11 +58,32 @@ export function AdminQuoteEdit({
     ADMIN_PACK_LIST.find((p) => p.name === quote.formula_name)?.id ?? "custom"
   );
   const [packPrice, setPackPrice] = useState(euros(quote.formula_price_cents));
-  const [checked, setChecked] = useState<string[]>(
-    options.map((o) => o.name).filter((n) => ADMIN_FX_OPTIONS.some((f) => f.name === n))
-  );
+  const [checked, setChecked] = useState<string[]>(() => {
+    // Round-trip : « Pistolets CO2 × 2 » enregistré → re-coche « Pistolets CO2 »
+    // (la quantité, elle, est restaurée par co2Qty ci-dessous).
+    const names: string[] = [];
+    for (const o of options) {
+      const fx = ADMIN_FX_OPTIONS.find(
+        (f) => o.name === f.name || o.name.startsWith(`${f.name} ×`)
+      );
+      if (fx && !names.includes(fx.name)) names.push(fx.name);
+    }
+    return names;
+  });
   const [co2Qty, setCo2Qty] = useState(
     options.find((o) => o.name.startsWith("Pistolet"))?.name.includes("× 2") ? 2 : 1
+  );
+  // Lignes supplémentaires manuelles (location de matériel, aller-retour RDV…) :
+  // tout ce qui n'appartient pas au catalogue FX est repris ici — rien n'est
+  // perdu à la ré-édition. Montant = total de la ligne (€).
+  const [manualLines, setManualLines] = useState<{ label: string; amount: string }[]>(
+    () => {
+      const isFx = (name: string) =>
+        ADMIN_FX_OPTIONS.some((f) => name === f.name || name.startsWith(`${f.name} ×`));
+      return options
+        .filter((o) => !isFx(o.name))
+        .map((o) => ({ label: o.name, amount: euros(o.price_cents) }));
+    }
   );
   const [travelDist, setTravelDist] = useState(String(quote.travel_distance_km ?? ""));
   const [travelFee, setTravelFee] = useState(euros(quote.travel_fee_cents));
@@ -120,6 +141,13 @@ export function AdminQuoteEdit({
     })
     .filter((o): o is { name: string; price: number } => o !== null);
 
+  // Somme des lignes supplémentaires manuelles (€)
+  const manualLinesTotal = manualLines.reduce((sum, l) => {
+    if (!l.label.trim()) return sum;
+    const n = Number.parseFloat(l.amount.replace(",", "."));
+    return sum + (Number.isFinite(n) ? n : 0);
+  }, 0);
+
   // Heures supplémentaires recalculées en direct depuis les horaires et le
   // pack choisi (même règle que le site et la facturation serveur : heures
   // entamées dues). null = indéterminable (pack libre non reconnu, ou
@@ -151,7 +179,8 @@ export function AdminQuoteEdit({
     Math.round(Number.parseFloat(packPrice.replace(",", ".")) * 100 || 0) +
     Math.round(Number.parseFloat(travelFee.replace(",", ".")) * 100 || 0) +
     Math.round(Number.parseFloat(extraFee.replace(",", ".")) * 100 || 0) +
-    selectedOptions.reduce((sum, o) => sum + o.price, 0);
+    selectedOptions.reduce((sum, o) => sum + o.price, 0) +
+    manualLinesTotal;
 
   if (!open) {
     return (
@@ -183,6 +212,16 @@ export function AdminQuoteEdit({
         value={checked.join("||")}
       />
       <input type="hidden" name="co2_qty" value={co2Qty} />
+      {/* Lignes supplémentaires manuelles : libellé + montant libres (JSON) */}
+      <input
+        type="hidden"
+        name="manual_lines"
+        value={JSON.stringify(
+          manualLines
+            .map((l) => ({ label: l.label.trim(), amount: l.amount.trim() }))
+            .filter((l) => l.label !== "")
+        )}
+      />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className={label}>Nom du client</label>
@@ -357,6 +396,60 @@ export function AdminQuoteEdit({
             onChange={(e) => setPackPrice(e.target.value)}
             className={input}
           />
+        </div>
+      </div>
+
+      {/* Lignes supplémentaires manuelles : libellé + montant libres */}
+      <div>
+        <label className={label}>
+          Lignes supplémentaires (location matériel, aller-retour RDV, péage…)
+        </label>
+        <div className="space-y-1.5">
+          {manualLines.map((line, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <input
+                value={line.label}
+                onChange={(e) =>
+                  setManualLines((prev) =>
+                    prev.map((l, i) => (i === index ? { ...l, label: e.target.value } : l))
+                  )
+                }
+                placeholder="Ex : Location matériel"
+                className={`${input} flex-1`}
+              />
+              <div className="relative w-28 shrink-0">
+                <input
+                  value={line.amount}
+                  onChange={(e) =>
+                    setManualLines((prev) =>
+                      prev.map((l, i) => (i === index ? { ...l, amount: e.target.value } : l))
+                    )
+                  }
+                  placeholder="0,00"
+                  inputMode="decimal"
+                  className={`${input} pr-7`}
+                />
+                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  €
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setManualLines((prev) => prev.filter((_, i) => i !== index))}
+                aria-label="Retirer cette ligne"
+                className="rounded-lg border border-border px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:border-red-400 hover:text-red-400"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setManualLines((prev) => [...prev, { label: "", amount: "" }])}
+            className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-accent hover:text-foreground"
+          >
+            + Ajouter une ligne
+          </button>
         </div>
       </div>
 
