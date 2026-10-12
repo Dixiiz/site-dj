@@ -50,7 +50,8 @@ export function MediaManager({
   folder: string;
   items: MediaItem[];
   accept: string;
-  kind: "image" | "video";
+  /** « mixed » : images et vidéos dans la même grille (aperçu par extension). */
+  kind: "image" | "video" | "mixed";
   uploadAction: Action;
   deleteStorageAction: Action;
   deleteLocalAction: Action;
@@ -230,16 +231,16 @@ export function MediaManager({
                 →
               </button>
             </div>
-            {kind === "image" ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.url} alt={item.name} className="aspect-[4/3] w-full object-cover" />
-            ) : (
+            {kind === "video" || /\.(mp4|webm|mov)$/i.test(item.url) ? (
               <video
                 src={item.url}
                 className="aspect-[4/3] w-full bg-black object-contain"
                 muted
                 preload="metadata"
               />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={item.url} alt={item.name} className="aspect-[4/3] w-full object-cover" />
             )}
             <span
               className={`absolute left-1.5 top-1.5 rounded px-1.5 py-0.5 text-[9px] font-medium ${

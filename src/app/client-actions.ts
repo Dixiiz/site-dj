@@ -10,6 +10,8 @@ import type { SelectedOption } from "@/lib/types";
 import { SITE_URL } from "@/lib/site-url";
 import { EMAIL_FROM, buildEmailHtml, buildEmailText } from "@/lib/emails";
 import { ADMIN_PACK_LIST } from "@/components/pricing-section";
+import { formatEuros } from "@/lib/money";
+import { findUpsell } from "@/lib/upsell";
 
 // ---------- Recherche du compte client (cache) ----------
 
@@ -1275,6 +1277,101 @@ export async function notifyDevisReady(formData: FormData) {
   await notifyClientDocuments(quoteId, names, { aSigner: true });
   revalidatePath("/admin/devis");
   return { ok: true as const, message: `E-mail envoyé au client ✓ (${names.join(" + ")})` };
+}
+
+// ---------- E-mail « montée en gamme » (admin) ----------
+
+// L'admin propose au client de passer au pack du dessus (ex : Essential →
+// Deluxe). E-mail pré-rédigé : écart de prix explicite + bénéfices concrets.
+// Prix du pack cible lu depuis ADMIN_PACK_LIST ; prix actuel depuis le devis.
+export async function sendUpsellEmail(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select(
+      "customer_name, customer_email, formula_name, formula_price_cents, event_date, event_location"
+    )
+    .eq("id", quoteId)
+    .single();
+
+  const upsell = findUpsell(quote?.formula_name);
+  if (!upsell) {
+    return { ok: false as const, error: "Pas de montée en gamme prévue pour ce pack." };
+  }
+  if (!quote?.customer_email) {
+    return { ok: false as const, error: "Client sans e-mail sur ce devis." };
+  }
+
+  const target = ADMIN_PACK_LIST.find((p) => p.name === upsell.to);
+  if (!target) return { ok: false as const, error: "Pack cible introuvable." };
+
+  const diff = Math.max(
+    0,
+    Math.round((target.price - (quote.formula_price_cents ?? 0)) / 100)
+  );
+  const dateLong = quote.event_date
+    ? new Date(
+        quote.event_date.includes("T") ? quote.event_date : `${quote.event_date}T12:00:00`
+      ).toLocaleDateString("fr-FR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : null;
+
+  const emailData = {
+    title: "Envie de monter le show d'un cran ?",
+    intro: `Bonjour,<br/><br/>Merci pour votre confiance${dateLong ? ` pour le <strong>${dateLong}</strong>` : ""}${quote.event_location ? ` à <strong>${quote.event_location}</strong>` : ""}. En préparant votre devis (${quote.formula_name}), je me suis dit qu'une option méritait vraiment votre attention : le <strong>${upsell.to}</strong>.`,
+    sections: [
+      {
+        title: `Ce que vous gagnez avec le ${upsell.to}`,
+        lines: upsell.benefits,
+      },
+      {
+        title: "Côté budget",
+        lines: [
+          `Le ${upsell.to} est à <strong>${formatEuros(target.price)}</strong>, soit <strong>${formatEuros(diff * 100)} de plus</strong> que votre pack actuel.`,
+          "Sur l'ensemble de la prestation, cela représente quelques euros de plus par heure — pour un visuel sans commune mesure, vous et vos photos.",
+          "Le paiement en plusieurs fois (2 à 10×) reste bien sûr possible.",
+        ],
+      },
+    ],
+    button: {
+      label: `Voir le ${upsell.to} en détail`,
+      href: `${SITE_URL}/formules#formules-tarifs`,
+    },
+    footer:
+      "Si votre choix actuel vous convient parfaitement, il reste confirmé tel quel — cet e-mail n'est qu'une suggestion.",
+  };
+
+  try {
+    const { Resend } = await import("resend");
+    const apiKey = process.env.RESEND_API_KEY;
+    const from = process.env.NOTIF_EMAIL;
+    if (!apiKey || !from) {
+      return { ok: false as const, error: "Envoi e-mail non configuré (RESEND_API_KEY)." };
+    }
+    const resend = new Resend(apiKey);
+    await resend.emails.send({
+      from: EMAIL_FROM,
+      to: quote.customer_email,
+      subject: `Une suggestion pour votre soirée : le ${upsell.to} — Propul'Sound DJ`,
+      html: buildEmailHtml(emailData),
+      text: buildEmailText(emailData),
+    });
+  } catch (e) {
+    console.error("[sendUpsellEmail]", e);
+    return { ok: false as const, error: "L'envoi de l'e-mail a échoué." };
+  }
+
+  revalidatePath("/admin/devis");
+  return { ok: true as const, message: `E-mail « montée en gamme » envoyé à ${quote.customer_email} ✓` };
 }
 
 // L'admin a pris connaissance des nouveautés du devis.

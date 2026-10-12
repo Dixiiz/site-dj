@@ -1,7 +1,10 @@
 import { QuoteStatusSelect } from "@/components/quote-status-select";
 import { AdminQuoteEdit } from "@/components/admin-quote-edit";
+import { SubmitButton } from "@/components/submit-button";
+import { sendUpsellEmail } from "@/app/client-actions";
 import { formatEuros } from "@/lib/money";
 import { computeExtraHours, formatExtraHours } from "@/lib/booking-extra";
+import { findUpsell } from "@/lib/upsell";
 import type { SelectedOption } from "@/lib/types";
 
 type Quote = {
@@ -66,6 +69,9 @@ export function AdminQuoteDetails({
   const computedExtraHours = computeExtraHours(quote);
   const payees = (schedule ?? []).filter((s) => s.status === "payee").length;
   const totalSchedule = (schedule ?? []).length;
+  // Montée en gamme : e-mail pré-rédigé pour les packs d'entrée (Essential,
+  // Pack Standard, Clé en main Standard). Masqué si le devis est refusé/annulé.
+  const upsell = /refuse|annule/.test(quote.status) ? null : findUpsell(quote.formula_name);
 
   return (
     <div className="space-y-4 border-t border-border px-4 pb-4 pt-4 text-sm">
@@ -299,6 +305,26 @@ export function AdminQuoteDetails({
           })}
         </span>
         <div className="flex items-center gap-2">
+          {upsell ? (
+            <form
+              action={async (formData) => {
+                "use server";
+                // La server action renvoie un résultat (ok/error) : on le
+                // consomme ici, un <form action> doit retourner void.
+                await sendUpsellEmail(formData);
+              }}
+              className="shrink-0"
+            >
+              <input type="hidden" name="quote_id" value={quote.id} />
+              <SubmitButton
+                pendingLabel="Envoi…"
+                confirm={`Envoyer l'e-mail « montée en gamme » (${upsell.to}) à ${quote.customer_email} ?`}
+                className="rounded-lg border border-purple-500/50 bg-purple-500/10 px-4 py-1.5 text-xs font-medium text-purple-300 transition-colors hover:bg-purple-500/20"
+              >
+                ↑ Proposer le {upsell.to}
+              </SubmitButton>
+            </form>
+          ) : null}
           <a
             href={`/api/admin/fiche/${quote.id}`}
             className="rounded-lg border border-accent/50 bg-accent/10 px-4 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"

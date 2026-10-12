@@ -213,7 +213,16 @@ export default async function DevisPage({
       new Date(b.event_date ?? "0000-01-01").getTime() -
       new Date(a.event_date ?? "0000-01-01").getTime(),
   };
-  filtered.sort(sorters[tri ?? "date_proche"] ?? sorters.date_proche);
+  const baseSorter = sorters[tri ?? "date_proche"] ?? sorters.date_proche;
+  // Les devis « nouveau » restent épinglés en haut de la liste tant que leur
+  // statut n'a pas changé (contacté, signature, etc.) ; ensuite ils se
+  // repositionnent selon le tri sélectionné comme les autres.
+  filtered.sort((a, b) => {
+    const aNouveau = a.status === "nouveau";
+    const bNouveau = b.status === "nouveau";
+    if (aNouveau !== bNouveau) return aNouveau ? -1 : 1;
+    return baseSorter(a, b);
+  });
 
   return (
     <div className="space-y-6">
@@ -339,7 +348,11 @@ export default async function DevisPage({
                 key={quote.id}
                 open={quote.id === focus || undefined}
                 className={`rounded-xl border bg-card transition-colors hover:border-accent/50 open:border-accent/70 ${
-                  quote.id === focus ? "border-accent shadow-[0_0_24px_-8px_var(--accent)]" : "border-border"
+                  quote.id === focus
+                    ? "border-accent shadow-[0_0_24px_-8px_var(--accent)]"
+                    : quote.status === "nouveau"
+                      ? "border-accent/50 shadow-[0_0_20px_-10px_var(--accent)]"
+                      : "border-border"
                 }`}
               >
                 <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-2 p-4 [&::-webkit-details-marker]:hidden">
@@ -359,7 +372,15 @@ export default async function DevisPage({
                     </div>
                   </div>
                   <div className="min-w-44 flex-1">
-                    <div className="font-medium">{quote.customer_name}</div>
+                    <div className="flex items-center gap-2 font-medium">
+                      {quote.status === "nouveau" ? (
+                        <span
+                          className="size-2 shrink-0 animate-pulse rounded-full bg-accent"
+                          title="Nouveau devis"
+                        />
+                      ) : null}
+                      {quote.customer_name}
+                    </div>
                     <div className="truncate text-xs text-muted-foreground">
                       {quote.event_location ?? ""}
                     </div>

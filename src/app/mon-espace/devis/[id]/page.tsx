@@ -20,6 +20,7 @@ import { ClientDetailsEditor } from "@/components/client-details-editor";
 import { ClientPlaylistEditor } from "@/components/client-playlist-editor";
 import { ClientQuoteMessages } from "@/components/client-quote-messages";
 import { PACK_IMAGES } from "@/components/pricing-section";
+import { getPackOverrides } from "@/lib/site-media";
 import { computeExtraHours, formatExtraHours } from "@/lib/booking-extra";
 import { SignaturePad } from "@/components/signature-pad";
 import { SubmitButton } from "@/components/submit-button";
@@ -158,7 +159,12 @@ export default async function ClientQuotePage({
   // (Indispensable pour que les notifications e-mail de messagerie
   // fonctionnent à nouveau lors d'un prochain message.)
   void supabase.from("quotes").update({ has_unread_updates: false }).eq("id", id);
-  const packImage = PACK_IMAGES[quote.formula_name] ?? null;
+  const packImage =
+    (await getPackOverrides()
+      .then((o) => o[quote.formula_name]?.image)
+      .catch(() => undefined)) ??
+    PACK_IMAGES[quote.formula_name] ??
+    null;
   // Timeline de la soirée (JSON dans quotes.timeline).
   const timeline = (Array.isArray(quote.timeline) ? quote.timeline : []) as TimelineRow[];
   // Échéancier de paiement (table payment_schedule ; repli silencieux si

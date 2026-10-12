@@ -218,6 +218,49 @@ async function uploadCreditsBundle(
   return { ok: true };
 }
 
+// ---------- Visuels des packs (rattachement média → pack) ----------
+// Stocké dans le bucket, dossier « packs », fichier _packs.json :
+// { "Pack Deluxe": { image?: url, video?: url }, ... }
+// À défaut d'entrée pour un pack, le visuel par défaut du code s'applique.
+export type PackMediaEntry = { image?: string; video?: string };
+export type PackMediaOverrides = Record<string, PackMediaEntry>;
+
+export async function getPackOverrides(): Promise<PackMediaOverrides> {
+  const supabase = createAdminClient();
+  const { data } = await supabase.storage.from(MEDIA_BUCKET).download("packs/_packs.json");
+  if (!data) return {};
+  try {
+    const parsed = JSON.parse(await data.text());
+    return parsed && typeof parsed === "object" ? (parsed as PackMediaOverrides) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Affecte (url) ou retire (null) un média image/vidéo d'un pack. */
+export async function savePackOverride(
+  packName: string,
+  field: "image" | "video",
+  url: string | null
+): Promise<{ ok: boolean; error?: string }> {
+  await ensureMediaBucket();
+  const supabase = createAdminClient();
+  const current = await getPackOverrides();
+  const entry: PackMediaEntry = { ...(current[packName] ?? {}) };
+  if (url) entry[field] = url;
+  else delete entry[field];
+  if (entry.image || entry.video) current[packName] = entry;
+  else delete current[packName];
+  const { error } = await supabase.storage
+    .from(MEDIA_BUCKET)
+    .upload("packs/_packs.json", JSON.stringify(current), {
+      contentType: "application/json",
+      upsert: true,
+    });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 // ---------- Fichiers locaux (public/) : liste, import, suppression ----------
 
 const LOCAL_DIRS: Record<MediaFolder, string> = {

@@ -29,7 +29,12 @@ try {
 
   // Étape 1 : ouvrir la catégorie mariage
   await page.getByRole("button", { name: /Mariages & Grandes Réceptions/ }).click();
-  const card = page.locator('[role="button"]', { hasText: "Pack Deluxe" }).first();
+  // Cible la carte dont le TITRE est exactement « Pack Deluxe » (et non un
+  // encart « montée en gamme » qui mentionne le nom du pack ailleurs).
+  const card = page
+    .locator('[role="button"]')
+    .filter({ has: page.locator('[data-slot="card-title"]', { hasText: /^Pack Deluxe$/ }) })
+    .first();
   await card.waitFor({ state: "visible", timeout: 10000 });
   const video = card.locator("video[data-pack-video]");
 

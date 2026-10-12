@@ -4,6 +4,7 @@ import { QuoteBookingForm } from "@/components/quote-booking-form";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/admin";
+import { getPackOverrides } from "@/lib/site-media";
 import type { Formula, QuoteOption } from "@/lib/types";
 import { SITE_URL } from "@/lib/site-url";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-jsonld";
@@ -32,6 +33,7 @@ export default async function FormulesPage() {
   }
 
   const supabase = createAdminClient();
+  const packOverrides = await getPackOverrides().catch(() => ({}));
   const [{ data: formulas }, { data: options }] = await Promise.all([
     supabase.from("formulas").select("*").eq("is_active", true).order("sort_order"),
     supabase.from("options").select("*").eq("is_active", true).order("sort_order"),
@@ -87,7 +89,7 @@ export default async function FormulesPage() {
             { name: "Formules & tarifs", href: "/formules" },
           ]}
         />
-        <PricingSection />
+        <PricingSection packOverrides={packOverrides} />
         <FadeIn delay={0.15} className="mt-16">
           <div id="formulaire-devis" className="scroll-mt-24" />
           <QuoteBookingForm

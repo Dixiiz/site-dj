@@ -4,6 +4,7 @@ import {
   getHomeSelection,
   getCreditsBundle,
   getOrder,
+  getPackOverrides,
   importLocalToStorage,
   listLocalMedia,
   listMedia,
@@ -18,10 +19,12 @@ import {
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { MediaManager } from "@/components/media-manager";
+import { PackMediaAssigner } from "@/components/pack-media-assigner";
+import { PACK_DEFAULTS } from "@/components/pricing-section";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { GalerieCredits } from "@/components/galerie-credits";
 
-const FOLDERS: { key: MediaFolder; titre: string; hint: string; accept: string; kind: "image" | "video" }[] = [
+const FOLDERS: { key: MediaFolder; titre: string; hint: string; accept: string; kind: "image" | "video" | "mixed" }[] = [
   {
     key: "galerie",
     titre: "Galerie photos",
@@ -31,10 +34,11 @@ const FOLDERS: { key: MediaFolder; titre: string; hint: string; accept: string; 
   },
   {
     key: "packs",
-    titre: "Photos des packs",
-    hint: "Visuels des packs et formules sur la page d'accueil (aperçus scénographie).",
-    accept: "image/jpeg,image/png,image/webp,image/avif",
-    kind: "image",
+    titre: "Visuels des packs",
+    hint: "Aperçus des packs de la page Formules. Uploadez ici vos photos (et vidéos), puis rattachez chaque média à un pack dans « Rattachement aux packs » sous la grille. Sans rattachement, le visuel d'origine du site s'affiche.",
+    accept:
+      "image/jpeg,image/png,image/webp,image/avif,video/mp4,video/quicktime,video/webm",
+    kind: "mixed",
   },
   {
     key: "videos/showcase",
@@ -91,6 +95,7 @@ function makeUploadAction(folder: MediaFolder) {
     revalidatePath("/admin/medias");
     revalidatePath("/");
     revalidatePath("/galerie");
+    revalidatePath("/formules");
   };
 }
 
@@ -190,6 +195,22 @@ function makeSetHomeVisibleAction(folder: MediaFolder) {
   };
 }
 
+// Rattachement d'un média (image/vidéo) à un pack : persiste _packs.json.
+function makeAssignPackAction() {
+  return async (formData: FormData) => {
+ "use server";
+    if (!(await requireAdmin())) return;
+    const pack = String(formData.get("pack") ?? "");
+    const field = String(formData.get("field") ?? "");
+    const url = String(formData.get("url") ?? "").trim();
+    if (!pack || (field !== "image" && field !== "video")) return;
+    const { savePackOverride } = await import("@/lib/site-media");
+    await savePackOverride(pack, field as "image" | "video", url || null);
+    revalidatePath("/admin/medias");
+    revalidatePath("/formules");
+  };
+}
+
 async function saveOrderAction(folder: string, names: string[]) {
  "use server";
   if (!(await requireAdmin())) return { ok: false as const, error: "Non autorisé." };
@@ -202,7 +223,7 @@ async function saveOrderAction(folder: string, names: string[]) {
 }
 
 export default async function AdminMediasPage() {
-  const [sections, galerieCredits, showcaseHome] = await Promise.all([
+  const [sections, galerieCredits, showcaseHome, packOverrides] = await Promise.all([
     Promise.all(
       FOLDERS.map(async (f) => ({ ...f, items: await mergedItems(f.key) }))
     ),
@@ -211,6 +232,7 @@ export default async function AdminMediasPage() {
       lieux: {} as MediaCredits,
     })),
     getHomeSelection("videos/showcase").catch(() => null as string[] | null),
+    getPackOverrides().catch(() => ({})),
   ]);
 
   return (
@@ -253,6 +275,14 @@ export default async function AdminMediasPage() {
                 : undefined
             }
           />
+          {section.key === "packs" ? (
+            <PackMediaAssigner
+              packs={PACK_DEFAULTS}
+              items={section.items}
+              initial={packOverrides}
+              assignAction={makeAssignPackAction()}
+            />
+          ) : null}
           {section.key === "galerie" ? (
             <>
               <GalerieCredits

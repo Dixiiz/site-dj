@@ -8,11 +8,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { formatEuros } from "@/lib/money";
+import { NO_VIDEO } from "@/components/pack-media-assigner";
+import type { PackMediaOverrides } from "@/lib/site-media";
 
 type Pack = {
   name: string;
   price: number; // centimes
   highlight?: "populaire" | "show";
+  /** Argument commercial court : ce que le client vit concrètement avec ce pack. */
+  tagline?: string;
+  /** Preuve sociale chiffrée (ex : « Choisi par 7 mariages sur 10 en 2025 »). */
+  socialProof?: string;
   equipment: string[];
   image: string; // aperçu scénographie (remplaçable via public/images/packs/) — sert aussi de poster pour la vidéo
   video?: string; // aperçu animé « photo live » : figé, se joue au survol jusqu'à la dernière image puis se refige
@@ -50,6 +56,8 @@ const CATEGORIES: Category[] = [
       {
         name: "Pack Standard",
         price: 58000,
+        tagline:
+          "Le strict minimum : le dancefloor s'anime, mais la salle autour reste sombre.",
         image: "/images/packs/standard.jpg",
         baseMinutes: 360,
         extraRateCents: 8000,
@@ -65,6 +73,7 @@ const CATEGORIES: Category[] = [
         name: "Pack Premium",
         price: 68000,
         highlight: "populaire",
+        tagline: "Toute la salle prend vie : murs colorés et ambiance de club.",
         image: "/images/packs/Premium.jpg",
         baseMinutes: 360,
         extraRateCents: 8000,
@@ -95,6 +104,8 @@ const CATEGORIES: Category[] = [
       {
         name: "Pack Essential",
         price: 106000,
+        tagline:
+          "Le strict minimum : le dancefloor s'anime, mais la salle autour reste sombre.",
         image: "/images/packs/5.jpg",
         baseMinutes: 480,
         extraRateCents: 12000,
@@ -110,6 +121,10 @@ const CATEGORIES: Category[] = [
         name: "Pack Deluxe",
         price: 116000,
         highlight: "populaire",
+        // ⚠️ Chiffre à ajuster selon vos vraies statistiques de l'année.
+        socialProof: "Choisi par 7 mariages sur 10 en 2025",
+        tagline:
+          "Toute la salle prend vie : murs colorés, ambiance de club, photos de soirée réussies.",
         image: "/images/packs/4.jpg",
         video: "/videos/packs/deluxe.mp4",
         baseMinutes: 480,
@@ -127,6 +142,8 @@ const CATEGORIES: Category[] = [
         name: "Pack L'Ultime Show",
         price: 121000,
         highlight: "show",
+        tagline:
+          "Le show d'un vrai concert : impact maximum sur le dancefloor ET dans toute la salle.",
         image: "/images/packs/manolieraphael-0910.jpg",
         baseMinutes: 480,
         extraRateCents: 12000,
@@ -158,6 +175,7 @@ const CATEGORIES: Category[] = [
       {
         name: "Set DJ seul (votre sono)",
         price: 11000,
+        tagline: "Vous avez déjà le son ? On apporte juste le show du DJ.",
         image: "/images/packs/setdj.jpg",
         baseMinutes: 120,
         extraRateCents: 5500,
@@ -172,6 +190,7 @@ const CATEGORIES: Category[] = [
       {
         name: "Clé en main Standard",
         price: 25000,
+        tagline: "Une soirée complète son + lumière, en dispositif compact.",
         image: "/images/packs/cle.jpg",
         baseMinutes: 120,
         extraRateCents: 9000,
@@ -188,6 +207,7 @@ const CATEGORIES: Category[] = [
         name: "Clé en main Premium",
         price: 47000,
         highlight: "show",
+        tagline: "Le dispositif renforcé pour un vrai effet « waouh » en salle.",
         image: "/images/packs/jeannebastien-1328.jpg",
         baseMinutes: 180,
         extraRateCents: 9000,
@@ -291,11 +311,17 @@ function PackCard({
   selected,
   onSelect,
   previousEquipment,
+  nextPack,
+  onUpgrade,
 }: {
   pack: Pack;
   selected: boolean;
   onSelect: () => void;
   previousEquipment: string[] | null;
+  /** Pack directement au-dessus (encart « montée en gamme », idée 2). */
+  nextPack?: Pack | null;
+  /** Bascule la sélection sur nextPack (appelé par l'encart). */
+  onUpgrade?: () => void;
 }) {
   // Effet « photo live » (façon vidéos des options FX) : la vidéo affiche sa
   // première image en permanence (poster extrait de la vidéo), se joue au
@@ -394,6 +420,13 @@ function PackCard({
             : ""}
           .
         </p>
+        {/* Argument commercial (idée 3) + preuve sociale (idée 9). */}
+        {pack.tagline ? (
+          <p className="mt-2 text-sm leading-snug text-foreground/90">{pack.tagline}</p>
+        ) : null}
+        {pack.socialProof ? (
+          <p className="mt-1.5 text-xs font-medium text-accent">★ {pack.socialProof}</p>
+        ) : null}
       </CardHeader>
       <CardContent className="flex flex-1 flex-col">
         <ul className="flex-1 space-y-2.5">
@@ -413,6 +446,29 @@ function PackCard({
               ))}
           </p>
         ) : null}
+        {/* Encart « montée en gamme » (idée 2) : écart de prix explicite +
+            bascule sur le pack du dessus en un clic. */}
+        {nextPack ? (
+          <div className="mt-4 rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs">
+            <p className="font-medium text-accent">
+              {((nextPack.price - pack.price) / 100).toLocaleString("fr-FR")} € de plus
+              seulement : le {nextPack.name}
+            </p>
+            {nextPack.tagline ? (
+              <p className="mt-1 leading-snug text-muted-foreground">{nextPack.tagline}</p>
+            ) : null}
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onUpgrade?.();
+              }}
+              className="mt-2 w-full rounded-md border border-accent/50 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+            >
+              Basculer sur le {nextPack.name} →
+            </button>
+          </div>
+        ) : null}
         <p
           className={`mt-5 text-center text-sm font-medium ${
             selected ? "text-accent" : "text-muted-foreground"
@@ -422,6 +478,92 @@ function PackCard({
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+// ---------- Comparaison « d'un coup d'œil » (idée 4) ----------
+// Chaque ligne cible un type de matériel par expression régulière ; les
+// quantités sont extraites de la liste d'équipement (les lignes combinées
+// « 4 Lyres Beam + 2 Bars LED + 8 PAR LED » sont gérées via matchAll).
+// Les cases « — » (grisées) = non inclus : c'est ce qui fait ressortir la
+// valeur du pack du dessus.
+const COMPARE_ROWS: { pattern: RegExp; label: string; note: string }[] = [
+  { pattern: /lyres beam/i, label: "Lyres Beam", note: "jets style club" },
+  { pattern: /lyres spot/i, label: "Lyres Spot", note: "motifs projetés" },
+  { pattern: /bars led/i, label: "Bars LED", note: "dancefloor dynamique" },
+  { pattern: /par led/i, label: "PAR LED", note: "murs de la salle colorés" },
+  { pattern: /machines/i, label: "Machines à fumée", note: "climax marqués" },
+];
+
+const QTY_RE =
+  /(\d+)\s*(Lyres Beam|Lyres Spot|Lyres|Bars LED|Bars|PAR LED|PAR|Machines à fumée|Machines)/g;
+
+function packQuantities(pack: Pack): number[] {
+  const all = pack.equipment.join(" · ");
+  return COMPARE_ROWS.map(({ pattern }) => {
+    let total = 0;
+    for (const m of all.matchAll(QTY_RE)) {
+      if (pattern.test(m[2])) total += Number(m[1]);
+    }
+    return total;
+  });
+}
+
+function PackComparison({ packs }: { packs: Pack[] }) {
+  const quantities = packs.map(packQuantities);
+  const rows = COMPARE_ROWS.map((row, i) => ({ row, i })).filter(({ i }) =>
+    quantities.some((q) => q[i] > 0)
+  );
+  // Rien à comparer (ex : « Set DJ seul ») : pas de tableau.
+  if (rows.length === 0) return null;
+  return (
+    <div className="mt-6 overflow-x-auto rounded-xl border border-border bg-card/50 p-4">
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        Comparez l&apos;éclairage d&apos;un coup d&apos;œil
+      </h3>
+      <table className="mt-3 w-full min-w-[420px] text-sm">
+        <thead>
+          <tr>
+            <th />
+            {packs.map((p) => (
+              <th key={p.name} className="px-2 pb-2 text-center text-xs font-semibold">
+                {p.name}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(({ row, i }) => (
+            <tr key={row.label} className="border-t border-border">
+              <td className="py-2 pr-3">
+                <span className="font-medium">{row.label}</span>{" "}
+                <span className="text-xs text-muted-foreground">{row.note}</span>
+              </td>
+              {packs.map((p, pi) => {
+                const qty = quantities[pi][i];
+                return (
+                  <td key={p.name} className="px-2 py-2 text-center">
+                    {qty > 0 ? (
+                      <span className="inline-flex min-w-10 justify-center rounded-md bg-accent/15 px-1.5 py-0.5 text-xs font-semibold text-accent">
+                        {qty}×
+                      </span>
+                    ) : (
+                      <span
+                        className="text-muted-foreground/50"
+                        title="Non inclus dans ce pack"
+                      >
+                        —
+                      </span>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-2 text-xs text-muted-foreground">« — » : non inclus dans ce pack.</p>
+    </div>
   );
 }
 
@@ -440,12 +582,29 @@ export const PACK_IMAGES: Record<string, string> = Object.fromEntries(
   CATEGORIES.flatMap((category) => category.packs.map((pack) => [pack.name, pack.image]))
 );
 
+// Visuels/vidéos par défaut des packs (avant personnalisation via l'admin
+// médias → dossier « packs » → _packs.json). Utilisé par la section
+// « Visuels des packs » de l'admin pour proposer les rattachelements.
+export const PACK_DEFAULTS: { name: string; image: string; video?: string }[] =
+  CATEGORIES.flatMap((category) =>
+    category.packs.map((pack) => ({
+      name: pack.name,
+      image: pack.image,
+      ...(pack.video ? { video: pack.video } : {}),
+    }))
+  );
+
 export const ADMIN_FX_OPTIONS = FX_OPTIONS.map((option) => ({
   name: option.name,
   price: option.price,
 }));
 
-export function PricingSection() {
+export function PricingSection({
+  packOverrides = {},
+}: {
+  // Personnalisations image/vidéo par pack (admin → médias → _packs.json).
+  packOverrides?: PackMediaOverrides;
+}) {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [selectedPack, setSelectedPack] = useState<string | null>(null);
   const [selectedFx, setSelectedFx] = useState<string[]>([]);
@@ -496,6 +655,38 @@ export function PricingSection() {
       })
     );
   }
+
+  // Encart « FX → pack supérieur » (idée 6) : le client qui coche des effets
+  // ajoute déjà du budget ; lui rappeler combien coûte la montée au pack
+  // supérieur et ce qu'elle apporte en plus (lumières taillées pour le FX).
+  const fxTotal = selectedFx.reduce(
+    (sum, name) => sum + (FX_OPTIONS.find((o) => o.name === name)?.price ?? 0),
+    0
+  );
+  const ultimePack =
+    CATEGORIES.flatMap((c) => c.packs).find((p) => /ultime/i.test(p.name)) ?? null;
+  const currentPack = active?.packs.find((p) => p.name === selectedPack) ?? null;
+  const showUltimeNudge =
+    active?.id === "mariage" &&
+    selectedFx.length > 0 &&
+    Boolean(ultimePack && currentPack && currentPack.name !== ultimePack.name);
+  const ultimeDiff =
+    ultimePack && currentPack
+      ? Math.max(0, Math.round((ultimePack.price - currentPack.price) / 100))
+      : 0;
+
+  // Suggestion douce (pas de présélection) : tant qu'aucun pack n'est choisi,
+  // on met en avant le pack « populaire » avec l'écart de prix explicite.
+  const suggestion =
+    active && !selectedPack && active.packs.length >= 2
+      ? {
+          pack:
+            active.packs.find((p) => p.highlight === "populaire") ??
+            active.packs[1] ??
+            null,
+          entry: active.packs[0],
+        }
+      : null;
 
   return (
     <FadeIn as="section" className="mt-20" y={32}>
@@ -594,16 +785,46 @@ export function PricingSection() {
                 active.packs.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2"
               }`}
             >
-              {active.packs.map((pack, index) => (
-                <PackCard
-                  key={pack.name}
-                  pack={pack}
-                  selected={selectedPack === pack.name}
-                  onSelect={() => choosePack(pack)}
-                  previousEquipment={index > 0 ? active.packs[index - 1].equipment : null}
-                />
-              ))}
+              {active.packs.map((pack, index) => {
+                // Visuel/vidéo personnalisés (admin médias) sinon d'origine.
+                const ov = packOverrides[pack.name];
+                const resolved: Pack = {
+                  ...pack,
+                  image: ov?.image ?? pack.image,
+                  video: ov?.video === NO_VIDEO ? undefined : (ov?.video ?? pack.video),
+                };
+                const nextPack = active.packs[index + 1] ?? null;
+                return (
+                  <PackCard
+                    key={pack.name}
+                    pack={resolved}
+                    selected={selectedPack === pack.name}
+                    onSelect={() => choosePack(pack)}
+                    previousEquipment={index > 0 ? active.packs[index - 1].equipment : null}
+                    nextPack={nextPack}
+                    onUpgrade={nextPack ? () => choosePack(nextPack) : undefined}
+                  />
+                );
+              })}
             </div>
+
+            {/* Suggestion « douce » : rien n'est présélectionné — on attire
+                seulement l'attention sur le pack le plus choisi, et la ligne
+                disparaît dès qu'un pack est sélectionné. */}
+            {suggestion && suggestion.pack && suggestion.entry ? (
+              <p className="mt-4 text-xs text-muted-foreground">
+                💡 Indécis ? Le{" "}
+                <span className="font-medium text-foreground">{suggestion.pack.name}</span>, le
+                plus choisi, ne coûte que{" "}
+                <span className="font-medium text-accent">
+                  {((suggestion.pack.price - suggestion.entry.price) / 100).toLocaleString(
+                    "fr-FR"
+                  )}{" "}
+                  €
+                </span>{" "}
+                de plus — et il illumine toute la salle.
+              </p>
+            ) : null}
 
             <p className="mt-5 text-sm text-muted-foreground">
               Inclus dans toutes les formules :{" "}
@@ -620,6 +841,10 @@ export function PricingSection() {
                 direct dans le récapitulatif du devis ci-dessous.
               </span>
             </p>
+
+            {/* Comparaison de l'éclairage (idée 4) : les « — » font
+                ressortir ce que le pack du dessus apporte en plus. */}
+            <PackComparison packs={active.packs} />
           </div>
         </div>
       )}
@@ -762,6 +987,28 @@ export function PricingSection() {
           );
         })}
       </div>
+
+      {/* Nudge « FX → Ultime Show » (idée 6) : l'Ultime Show est le cadre
+          idéal pour les effets ; on chiffre l'écart restant en euros. */}
+      {showUltimeNudge && ultimePack && currentPack ? (
+        <div className="mt-6 flex flex-col gap-3 rounded-xl border border-accent/40 bg-accent/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm leading-snug">
+            <span className="font-medium text-accent">💡 Astuce :</span> vos options FX
+            ajoutent {formatEuros(fxTotal)} à votre devis. Le{" "}
+            <strong>Pack L&apos;Ultime Show</strong> n&apos;est qu&apos;à{" "}
+            {ultimeDiff.toLocaleString("fr-FR")} € du {currentPack.name} : ses{" "}
+            <strong>6 lyres Beam + 2 lyres Spot</strong> sont le cadre idéal pour vos
+            gerbes, nappages de fumée et jets CO₂.
+          </p>
+          <button
+            type="button"
+            onClick={() => choosePack(ultimePack)}
+            className="shrink-0 rounded-lg border border-accent/50 bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20"
+          >
+            Choisir l&apos;Ultime Show →
+          </button>
+        </div>
+      ) : null}
     </FadeIn>
   );
 }
