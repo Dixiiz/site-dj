@@ -649,16 +649,10 @@ export function PricingSection({
             </div>
 
             <div
-              className={`mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 ${
-                active.packs.length >= 3
-                  ? "lg:grid-cols-[150px_repeat(3,minmax(0,1fr))]"
-                  : "lg:grid-cols-[150px_repeat(2,minmax(0,1fr))]"
+              className={`mt-6 grid gap-5 ${
+                active.packs.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2"
               }`}
             >
-              {/* Sur lg, une colonne d'étiquettes devant les cartes : le
-                  tableau comparatif en dessous s'aligne colonne par colonne
-                  sous chaque pack. */}
-              <div aria-hidden className="hidden lg:block" />
               {active.packs.map((pack) => {
                 // Visuel/vidéo personnalisés (admin médias) sinon d'origine.
                 const ov = packOverrides[pack.name];
@@ -678,20 +672,22 @@ export function PricingSection({
               })}
             </div>
 
-            {/* Tableau comparatif intégré : une colonne par pack, alignée
-                sous sa carte. Vert = plus que le pack d'entrée, cyan = inclus,
-                gris — = non inclus. */}
-            <div className="mt-3 space-y-2">
+            {/* Tableau comparatif intégré : centré, plus étroit que les
+                cartes pour ne pas les décaler. Couleur du TEXTE uniquement :
+                doré = colonne Ultime Show, vert = supérieur au pack d'entrée,
+                cyan = inclus, gris — = non inclus. */}
+            <div className="mx-auto mt-3 w-full max-w-3xl space-y-2">
               {(function comparisonRows() {
                 const quantities = active.packs.map(packQuantities);
                 const rows = COMPARE_ROWS.map((row, i) => ({ row, i })).filter(({ i }) =>
                   quantities.some((q) => q[i] > 0)
                 );
                 if (rows.length === 0) return null;
-                const rowGrid =
+                const rowGrid = `grid items-stretch gap-2 ${
                   active.packs.length >= 3
-                    ? "grid grid-cols-[86px_repeat(3,minmax(0,1fr))] items-stretch gap-2 lg:grid-cols-[150px_repeat(3,minmax(0,1fr))] lg:gap-3"
-                    : "grid grid-cols-[86px_repeat(2,minmax(0,1fr))] items-stretch gap-2 lg:grid-cols-[150px_repeat(2,minmax(0,1fr))] lg:gap-3";
+                    ? "grid-cols-[86px_repeat(3,minmax(0,1fr))]"
+                    : "grid-cols-[86px_repeat(2,minmax(0,1fr))]"
+                }`;
                 return rows.map(({ row, i }) => {
                   const entryQty = quantities[0][i];
                   return (
@@ -706,11 +702,11 @@ export function PricingSection({
                       </div>
                       {quantities.map((q, pi) => {
                         const qty = q[i];
-                        const isEntry = pi === 0;
+                        const packName = active.packs[pi].name;
                         if (qty === 0) {
                           return (
                             <div
-                              key={active.packs[pi].name}
+                              key={packName}
                               className="flex items-center justify-center rounded-lg border border-dashed border-border/40 py-2"
                             >
                               <span
@@ -722,22 +718,19 @@ export function PricingSection({
                             </div>
                           );
                         }
-                        const isUpgrade = !isEntry && qty > entryQty;
+                        const isUpgrade = pi > 0 && qty > entryQty;
+                        const color = /ultime/i.test(packName)
+                          ? "text-yellow-400"
+                          : isUpgrade
+                            ? "text-green-400"
+                            : "text-accent";
                         return (
                           <div
-                            key={active.packs[pi].name}
-                            className={`flex items-center justify-center rounded-lg border py-2 ${
-                              isUpgrade
-                                ? "border-green-500/40 bg-green-500/10"
-                                : "border-border bg-accent/5"
-                            }`}
+                            key={packName}
+                            className="flex items-center justify-center rounded-lg border border-border py-2"
                           >
                             <span
-                              className={`inline-flex min-w-10 justify-center rounded-md px-1.5 py-0.5 text-xs font-semibold ${
-                                isUpgrade
-                                  ? "bg-green-500/20 text-green-400"
-                                  : "bg-accent/15 text-accent"
-                              }`}
+                              className={`inline-flex min-w-10 justify-center text-xs font-semibold ${color}`}
                             >
                               {qty}×
                             </span>
