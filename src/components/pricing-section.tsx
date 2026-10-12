@@ -737,9 +737,11 @@ export function PricingSection({
                           <div
                             key={packName}
                             className={`flex items-center justify-center rounded-lg border py-2 ${
-                              isMoreThanBelow
-                                ? "border-green-500/25 bg-green-500/[0.07]"
-                                : "border-border"
+                              isTop
+                                ? "border-yellow-500/30 bg-yellow-500/[0.07]"
+                                : isMoreThanBelow
+                                  ? "border-green-500/25 bg-green-500/[0.07]"
+                                  : "border-border"
                             }`}
                           >
                             <span
