@@ -719,11 +719,15 @@ export function PricingSection({
                           );
                         }
                         // Éclairé (discret) = matériel en PLUS par rapport au
-                        // pack du dessous ; doré = le plus gros de la ligne.
+                        // pack du dessous ; doré = strictement le plus gros de
+                        // la ligne (les égalités restent vert/cyan).
                         const prevQty = pi > 0 ? quantities[pi - 1][i] : null;
                         const isMoreThanBelow = prevQty !== null && qty > prevQty;
                         const rowMax = Math.max(...quantities.map((x) => x[i]));
-                        const isTop = rowMax > entryQty && qty === rowMax;
+                        const isUniqueMax =
+                          qty === rowMax &&
+                          quantities.filter((x) => x[i] === qty).length === 1;
+                        const isTop = rowMax > entryQty && isUniqueMax;
                         const color = isTop
                           ? "text-yellow-400"
                           : isMoreThanBelow
