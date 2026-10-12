@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { updateQuoteAdmin, estimateTravelAdmin } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
 import { ADMIN_PACK_LIST, ADMIN_FX_OPTIONS } from "@/components/pricing-section";
+import { computeExtraHours, formatExtraHours, packBaseMinutes } from "@/lib/booking-extra";
+import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
 import type { SelectedOption } from "@/lib/types";
 
 type Quote = {
@@ -66,6 +68,17 @@ export function AdminQuoteEdit({
   const [travelFee, setTravelFee] = useState(euros(quote.travel_fee_cents));
   const [extraFee, setExtraFee] = useState(euros(quote.extra_fee_cents));
   const [extraLabel, setExtraLabel] = useState(quote.extra_fee_label ?? "");
+  // Horaires contrôlés : le supplément « heures supplémentaires » est
+  // recalculé en direct quand ils changent (bug : le prix ne suivait pas).
+  const [startTime, setStartTime] = useState(
+    quote.start_time ?? parseTime(quote.notes, "Début") ?? ""
+  );
+  const [endTime, setEndTime] = useState(
+    quote.end_time ?? parseTime(quote.notes, "Fin") ?? ""
+  );
+  // Dès que l'admin écrit dans « Supplément » (péage…), l'auto-remplissage
+  // cède la main : la valeur saisie prime.
+  const [extraFeeTouched, setExtraFeeTouched] = useState(false);
   const [travelBusy, setTravelBusy] = useState(false);
   const [travelMsg, setTravelMsg] = useState<string | null>(null);
 
@@ -106,6 +119,28 @@ export function AdminQuoteEdit({
       return { name: label, price: fx.price * qty };
     })
     .filter((o): o is { name: string; price: number } => o !== null);
+
+  // Heures supplémentaires recalculées en direct depuis les horaires et le
+  // pack choisi (même règle que le site et la facturation serveur : heures
+  // entamées dues). null = indéterminable (pack libre non reconnu, ou
+  // libellé personnalisé déjà posé type « Péage ») → on ne touche à rien.
+  const selectedPack = ADMIN_PACK_LIST.find((p) => p.id === packId);
+  const extraRateCents = selectedPack?.extraRateCents ?? EXTRA_HOUR_RATE_CENTS;
+  const autoExtraHours = computeExtraHours({
+    formula_name: selectedPack?.name ?? quote.formula_name,
+    start_time: startTime,
+    end_time: endTime,
+    extra_fee_label: extraLabel,
+  });
+  const autoExtraCents =
+    autoExtraHours != null ? autoExtraHours * extraRateCents : null;
+
+  useEffect(() => {
+    if (autoExtraCents != null && !extraFeeTouched) {
+      setExtraFee(euros(autoExtraCents));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoExtraCents, extraFeeTouched]);
 
   const total =
     Math.round(Number.parseFloat(packPrice.replace(",", ".")) * 100 || 0) +
@@ -169,7 +204,8 @@ export function AdminQuoteEdit({
           <input
             name="start_time"
             type="time"
-            defaultValue={quote.start_time ?? parseTime(quote.notes, "Début") ?? ""}
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
             className={input}
           />
         </div>
@@ -178,7 +214,8 @@ export function AdminQuoteEdit({
           <input
             name="end_time"
             type="time"
-            defaultValue={quote.end_time ?? parseTime(quote.notes, "Fin") ?? ""}
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
             className={input}
           />
         </div>
@@ -214,9 +251,17 @@ export function AdminQuoteEdit({
           <input
             name="extra_fee"
             value={extraFee}
-            onChange={(e) => setExtraFee(e.target.value)}
+            onChange={(e) => {
+              setExtraFee(e.target.value);
+              setExtraFeeTouched(true);
+            }}
             className={input}
           />
+          {extraFeeTouched ? (
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Valeur saisie à la main — elle prime sur le calcul automatique.
+            </p>
+          ) : null}
         </div>
         <div>
           <label className={label}>Libellé du supplément (visible par le client)</label>
@@ -229,6 +274,14 @@ export function AdminQuoteEdit({
           />
         </div>
       </div>
+      {/* Rappel en direct : durée vs forfait du pack sélectionné */}
+      {autoExtraHours != null ? (
+        <p className="text-xs text-muted-foreground">
+          {autoExtraHours > 0
+            ? `⏱ ${formatExtraHours(autoExtraHours)} supplémentaires au-delà du forfait (${formatExtraHours((packBaseMinutes(selectedPack?.name ?? quote.formula_name) ?? 0) / 60)} incluses) — soit ${euros(autoExtraHours * extraRateCents)} € dans le champ « Supplément ».`
+            : `⏱ Durée dans le forfait (${formatExtraHours((packBaseMinutes(selectedPack?.name ?? quote.formula_name) ?? 0) / 60)} incluses) — aucun supplément d'heures.`}
+        </p>
+      ) : null}
       <div className="flex items-center gap-2">
         <button
           type="button"
