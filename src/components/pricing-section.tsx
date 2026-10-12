@@ -267,61 +267,15 @@ const FX_OPTIONS = [
   video?: string;
 }[];
 
-// Vulgarisation : bénéfice client associé à chaque matériel technique.
-const EXPLANATIONS: [RegExp, string][] = [
-  [/lyres beam/i, "Jets de lumière puissants et dynamiques style club/discothèque"],
-  [/lyres spot/i, "Projection de motifs lumineux et effets d'impact au sol/plafond"],
-  [/bars led/i, "Éclairage d'ambiance dynamique pour le dancefloor"],
-  [/par led/i, "Projecteurs autonomes pour illuminer et colorer les murs de votre salle"],
-  [/geyser|fumée/i, "Colonnes de fumée verticales éclairées pour marquer les climax"],
-  [/sono audiophony/i, "Système son haute définition puissant et cristallin (jusqu'à 250 personnes)"],
-  [/synchronisé/i, "Toutes les lumières pilotées en temps réel pour coller au rythme de la musique"],
-  [/platines|régie dj/i, "Le poste de mixage professionnel, au standard des clubs"],
-];
-
-function explain(item: string) {
-  return EXPLANATIONS.find(([pattern]) => pattern.test(item))?.[1];
-}
-
-function EquipmentLine({ item }: { item: string }) {
-  // Met en évidence les quantités d'éclairage pour comparer d'un coup d'œil.
-  const match = item.match(/(\d+)\s+(Lyres|Bars|PAR|Machines)/);
-  const benefit = explain(item);
-  return (
-    <li className="flex items-start gap-2">
-      {match ? (
-        <span className="mt-0.5 inline-flex min-w-12 shrink-0 justify-center rounded-md bg-accent/15 px-1.5 py-0.5 text-xs font-semibold text-accent">
-          {match[1]}×
-        </span>
-      ) : (
-        <span className="mt-0.5 shrink-0 text-accent">✓</span>
-      )}
-      <span>
-        <span className="text-sm text-foreground/90">{item}</span>
-        {benefit ? (
-          <span className="block text-xs leading-snug text-muted-foreground">{benefit}</span>
-        ) : null}
-      </span>
-    </li>
-  );
-}
 
 function PackCard({
   pack,
   selected,
   onSelect,
-  previousEquipment,
-  nextPack,
-  onUpgrade,
 }: {
   pack: Pack;
   selected: boolean;
   onSelect: () => void;
-  previousEquipment: string[] | null;
-  /** Pack directement au-dessus (encart « montée en gamme », idée 2). */
-  nextPack?: Pack | null;
-  /** Bascule la sélection sur nextPack (appelé par l'encart). */
-  onUpgrade?: () => void;
 }) {
   // Effet « photo live » (façon vidéos des options FX) : la vidéo affiche sa
   // première image en permanence (poster extrait de la vidéo), se joue au
@@ -420,57 +374,20 @@ function PackCard({
             : ""}
           .
         </p>
-        {/* Argument commercial (idée 3) + preuve sociale (idée 9). */}
+        {/* Argument commercial (idée 3) : ce que le client vit avec ce pack. */}
         {pack.tagline ? (
           <p className="mt-2 text-sm leading-snug text-foreground/90">{pack.tagline}</p>
         ) : null}
+        {/* Preuve sociale (idée 9) : pastille visible, chiffre confirmé par Maxime. */}
         {pack.socialProof ? (
-          <p className="mt-1.5 text-xs font-medium text-accent">★ {pack.socialProof}</p>
-        ) : null}
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col">
-        <ul className="flex-1 space-y-2.5">
-          {pack.equipment.map((item) => (
-            <EquipmentLine key={item} item={item} />
-          ))}
-        </ul>
-        {previousEquipment ? (
-          <p className="mt-4 rounded-lg bg-accent/10 px-3 py-2 text-xs text-accent">
-            En plus du pack précédent :
-            {pack.equipment
-              .filter((item) => !previousEquipment.includes(item))
-              .map((item) => (
-                <span key={item} className="ml-1 font-medium">
-                  {" "}+ {item}
-                </span>
-              ))}
+          <p className="mt-2 w-fit rounded-full bg-green-500/15 px-2.5 py-1 text-xs font-medium text-green-400">
+            {pack.socialProof}
           </p>
         ) : null}
-        {/* Encart « montée en gamme » (idée 2) : écart de prix explicite +
-            bascule sur le pack du dessus en un clic. */}
-        {nextPack ? (
-          <div className="mt-4 rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs">
-            <p className="font-medium text-accent">
-              {((nextPack.price - pack.price) / 100).toLocaleString("fr-FR")} € de plus
-              seulement : le {nextPack.name}
-            </p>
-            {nextPack.tagline ? (
-              <p className="mt-1 leading-snug text-muted-foreground">{nextPack.tagline}</p>
-            ) : null}
-            <button
-              type="button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onUpgrade?.();
-              }}
-              className="mt-2 w-full rounded-md border border-accent/50 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
-            >
-              Basculer sur le {nextPack.name} →
-            </button>
-          </div>
-        ) : null}
+      </CardHeader>
+      <CardContent className="mt-auto flex flex-col">
         <p
-          className={`mt-5 text-center text-sm font-medium ${
+          className={`text-center text-sm font-medium ${
             selected ? "text-accent" : "text-muted-foreground"
           }`}
         >
@@ -507,64 +424,6 @@ function packQuantities(pack: Pack): number[] {
     }
     return total;
   });
-}
-
-function PackComparison({ packs }: { packs: Pack[] }) {
-  const quantities = packs.map(packQuantities);
-  const rows = COMPARE_ROWS.map((row, i) => ({ row, i })).filter(({ i }) =>
-    quantities.some((q) => q[i] > 0)
-  );
-  // Rien à comparer (ex : « Set DJ seul ») : pas de tableau.
-  if (rows.length === 0) return null;
-  return (
-    <div className="mt-6 overflow-x-auto rounded-xl border border-border bg-card/50 p-4">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-        Comparez l&apos;éclairage d&apos;un coup d&apos;œil
-      </h3>
-      <table className="mt-3 w-full min-w-[420px] text-sm">
-        <thead>
-          <tr>
-            <th />
-            {packs.map((p) => (
-              <th key={p.name} className="px-2 pb-2 text-center text-xs font-semibold">
-                {p.name}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(({ row, i }) => (
-            <tr key={row.label} className="border-t border-border">
-              <td className="py-2 pr-3">
-                <span className="font-medium">{row.label}</span>{" "}
-                <span className="text-xs text-muted-foreground">{row.note}</span>
-              </td>
-              {packs.map((p, pi) => {
-                const qty = quantities[pi][i];
-                return (
-                  <td key={p.name} className="px-2 py-2 text-center">
-                    {qty > 0 ? (
-                      <span className="inline-flex min-w-10 justify-center rounded-md bg-accent/15 px-1.5 py-0.5 text-xs font-semibold text-accent">
-                        {qty}×
-                      </span>
-                    ) : (
-                      <span
-                        className="text-muted-foreground/50"
-                        title="Non inclus dans ce pack"
-                      >
-                        —
-                      </span>
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p className="mt-2 text-xs text-muted-foreground">« — » : non inclus dans ce pack.</p>
-    </div>
-  );
 }
 
 export const ADMIN_PACK_LIST = CATEGORIES.flatMap((category) =>
@@ -688,6 +547,15 @@ export function PricingSection({
         }
       : null;
 
+  // Suggestion de montée en gamme : affichée UNIQUEMENT après sélection d'un
+  // pack, en dessous du bloc packs (jamais dans la carte, pour ne pas porter
+  // à confusion avec la sélection en cours).
+  const selectedPackObj = active?.packs.find((p) => p.name === selectedPack) ?? null;
+  const upsellPack =
+    active && selectedPackObj
+      ? (active.packs[active.packs.indexOf(selectedPackObj) + 1] ?? null)
+      : null;
+
   return (
     <FadeIn as="section" className="mt-20" y={32}>
       <div id="formules-tarifs" className="scroll-mt-24" />
@@ -781,11 +649,17 @@ export function PricingSection({
             </div>
 
             <div
-              className={`mt-6 grid gap-5 ${
-                active.packs.length >= 3 ? "md:grid-cols-3" : "md:grid-cols-2"
+              className={`mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 ${
+                active.packs.length >= 3
+                  ? "lg:grid-cols-[150px_repeat(3,minmax(0,1fr))]"
+                  : "lg:grid-cols-[150px_repeat(2,minmax(0,1fr))]"
               }`}
             >
-              {active.packs.map((pack, index) => {
+              {/* Sur lg, une colonne d'étiquettes devant les cartes : le
+                  tableau comparatif en dessous s'aligne colonne par colonne
+                  sous chaque pack. */}
+              <div aria-hidden className="hidden lg:block" />
+              {active.packs.map((pack) => {
                 // Visuel/vidéo personnalisés (admin médias) sinon d'origine.
                 const ov = packOverrides[pack.name];
                 const resolved: Pack = {
@@ -793,24 +667,92 @@ export function PricingSection({
                   image: ov?.image ?? pack.image,
                   video: ov?.video === NO_VIDEO ? undefined : (ov?.video ?? pack.video),
                 };
-                const nextPack = active.packs[index + 1] ?? null;
                 return (
                   <PackCard
                     key={pack.name}
                     pack={resolved}
                     selected={selectedPack === pack.name}
                     onSelect={() => choosePack(pack)}
-                    previousEquipment={index > 0 ? active.packs[index - 1].equipment : null}
-                    nextPack={nextPack}
-                    onUpgrade={nextPack ? () => choosePack(nextPack) : undefined}
                   />
                 );
               })}
             </div>
 
-            {/* Suggestion « douce » : rien n'est présélectionné — on attire
-                seulement l'attention sur le pack le plus choisi, et la ligne
-                disparaît dès qu'un pack est sélectionné. */}
+            {/* Tableau comparatif intégré : une colonne par pack, alignée
+                sous sa carte. Vert = plus que le pack d'entrée, cyan = inclus,
+                gris — = non inclus. */}
+            <div className="mt-3 space-y-2">
+              {(function comparisonRows() {
+                const quantities = active.packs.map(packQuantities);
+                const rows = COMPARE_ROWS.map((row, i) => ({ row, i })).filter(({ i }) =>
+                  quantities.some((q) => q[i] > 0)
+                );
+                if (rows.length === 0) return null;
+                const rowGrid =
+                  active.packs.length >= 3
+                    ? "grid grid-cols-[86px_repeat(3,minmax(0,1fr))] items-stretch gap-2 lg:grid-cols-[150px_repeat(3,minmax(0,1fr))] lg:gap-3"
+                    : "grid grid-cols-[86px_repeat(2,minmax(0,1fr))] items-stretch gap-2 lg:grid-cols-[150px_repeat(2,minmax(0,1fr))] lg:gap-3";
+                return rows.map(({ row, i }) => {
+                  const entryQty = quantities[0][i];
+                  return (
+                    <div key={row.label} className={rowGrid}>
+                      <div className="flex flex-col justify-center">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {row.label}
+                        </span>
+                        <span className="text-[10px] leading-tight text-muted-foreground/70">
+                          {row.note}
+                        </span>
+                      </div>
+                      {quantities.map((q, pi) => {
+                        const qty = q[i];
+                        const isEntry = pi === 0;
+                        if (qty === 0) {
+                          return (
+                            <div
+                              key={active.packs[pi].name}
+                              className="flex items-center justify-center rounded-lg border border-dashed border-border/40 py-2"
+                            >
+                              <span
+                                className="text-sm text-muted-foreground/40"
+                                title="Non inclus dans ce pack"
+                              >
+                                —
+                              </span>
+                            </div>
+                          );
+                        }
+                        const isUpgrade = !isEntry && qty > entryQty;
+                        return (
+                          <div
+                            key={active.packs[pi].name}
+                            className={`flex items-center justify-center rounded-lg border py-2 ${
+                              isUpgrade
+                                ? "border-green-500/40 bg-green-500/10"
+                                : "border-border bg-accent/5"
+                            }`}
+                          >
+                            <span
+                              className={`inline-flex min-w-10 justify-center rounded-md px-1.5 py-0.5 text-xs font-semibold ${
+                                isUpgrade
+                                  ? "bg-green-500/20 text-green-400"
+                                  : "bg-accent/15 text-accent"
+                              }`}
+                            >
+                              {qty}×
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+
+            {/* Suggestions discrètes sous le bloc packs — jamais dans les
+                cartes : « Indécis » tant que rien n'est choisi, puis la
+                montée en gamme une fois un pack sélectionné. */}
             {suggestion && suggestion.pack && suggestion.entry ? (
               <p className="mt-4 text-xs text-muted-foreground">
                 💡 Indécis ? Le{" "}
@@ -823,6 +765,28 @@ export function PricingSection({
                   €
                 </span>{" "}
                 de plus — et il illumine toute la salle.
+              </p>
+            ) : null}
+            {upsellPack ? (
+              <p className="mt-4 text-xs text-muted-foreground">
+                Envie d&apos;un show plus généreux ? Le{" "}
+                <span className="font-medium text-foreground">{upsellPack.name}</span> ne
+                coûte que{" "}
+                <span className="font-medium text-accent">
+                  {((upsellPack.price - (selectedPackObj?.price ?? 0)) / 100).toLocaleString(
+                    "fr-FR"
+                  )}{" "}
+                  € de plus
+                </span>
+                {upsellPack.tagline ? <> — {upsellPack.tagline}</> : null}{" "}
+                <button
+                  type="button"
+                  onClick={() => choosePack(upsellPack)}
+                  className="underline decoration-dotted underline-offset-2 transition-colors hover:text-accent"
+                >
+                  Passer au {upsellPack.name}
+                </button>
+                .
               </p>
             ) : null}
 
@@ -841,10 +805,6 @@ export function PricingSection({
                 direct dans le récapitulatif du devis ci-dessous.
               </span>
             </p>
-
-            {/* Comparaison de l'éclairage (idée 4) : les « — » font
-                ressortir ce que le pack du dessus apporte en plus. */}
-            <PackComparison packs={active.packs} />
           </div>
         </div>
       )}
