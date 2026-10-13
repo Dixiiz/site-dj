@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { loginClient, sendFirstLoginLink, signUpClient } from "@/app/client-actions";
+import { loginClient, sendFirstLoginLink, signUpClient, requestPasswordReset } from "@/app/client-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +15,7 @@ export function ConnexionForm({
   // ?email=…). Utilisé par le mode « première connexion » et la connexion.
   initialEmail?: string;
 }) {
-  const [mode, setMode] = useState<"login" | "signup" | "first">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "first" | "forgot">("login");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -85,6 +85,17 @@ export function ConnexionForm({
           <button
             type="button"
             onClick={() => {
+              setMode("forgot");
+              setError(null);
+              setInfo(null);
+            }}
+            className="block w-full text-center text-sm font-medium text-accent underline-offset-2 hover:underline"
+          >
+            Mot de passe oublié ?
+          </button>
+          <button
+            type="button"
+            onClick={() => {
               setMode("first");
               setError(null);
               setInfo(null);
@@ -113,6 +124,36 @@ export function ConnexionForm({
           {info ? <p className="text-sm text-accent">{info}</p> : null}
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? "Envoi…" : "Recevoir mon lien de première connexion"}
+          </Button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("login");
+              setError(null);
+              setInfo(null);
+            }}
+            className="block w-full text-center text-xs text-muted-foreground underline-offset-2 hover:underline"
+          >
+            Retour à la connexion
+          </button>
+        </form>
+      ) : mode === "forgot" ? (
+        // Mot de passe oublié : un lien de réinitialisation est envoyé par
+        // e-mail (valable 1 h), le client choisit ensuite un nouveau mot de
+        // passe. (Mode « Mot de passe oublié ? » du formulaire de connexion.)
+        <form action={onSubmit(requestPasswordReset)} className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Recevez un lien par e-mail pour choisir un nouveau mot de passe.
+            Valable 1 heure.
+          </p>
+          <div className="space-y-1.5">
+            <Label htmlFor="email-forgot">Votre e-mail</Label>
+            <Input id="email-forgot" name="email" type="email" required autoComplete="email" defaultValue={initialEmail} />
+          </div>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {info ? <p className="text-sm text-accent">{info}</p> : null}
+          <Button type="submit" className="w-full" disabled={pending}>
+            {pending ? "Envoi…" : "Recevoir mon lien de réinitialisation"}
           </Button>
           <button
             type="button"

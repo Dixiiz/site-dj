@@ -38,7 +38,7 @@ export default async function ReinitialiserPage({
         <div className="space-y-4 rounded-xl border border-border p-6 text-center">
           <p className="text-sm text-muted-foreground">
             Ce lien est invalide ou a expiré. Faites une nouvelle demande depuis la page de connexion
-            (« Première connexion »).
+            (« Mot de passe oublié » ou « Première connexion »).
           </p>
           <a
             href="/connexion"
