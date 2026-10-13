@@ -3641,6 +3641,50 @@ export async function deleteAdminDocument(formData: FormData) {
 const FILES_BUCKET = "client-files";
 const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 Mo par fichier
 
+// ---------- Comptes clients (admin) ----------
+
+// Supprime un compte client (bouton « Supprimer » de /admin/comptes) :
+//  1) nettoyage des fichiers du client dans le bucket privé (les lignes
+//     quote_files seront supprimées en cascade avec le compte) ;
+//  2) suppression du compte Auth — déclenche en cascade la suppression de ses
+//     messages, playlists et fichiers (FK « on delete cascade » vers
+//     auth.users) ;
+//  3) les devis restent intacts : ils sont rattachés au client par e-mail,
+//     il peut donc recréer un compte avec le même e-mail et les retrouver.
+export async function deleteClientAccount(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return;
+  const userId = String(formData.get("user_id") ?? "");
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!userId || !email) return;
+
+  const supabase = createAdminClient();
+
+  // 1) Fichiers stockés (documents PDF, MP3 envoyés…) : les lignes disparaîtront
+  //    en cascade, mais les objets storage resteraient orphelins sinon.
+  const { data: files } = await supabase
+    .from("quote_files")
+    .select("storage_path")
+    .eq("user_id", userId);
+  const paths = (files ?? []).map((f) => f.storage_path).filter(Boolean);
+  for (let i = 0; i < paths.length; i += 50) {
+    await supabase.storage.from(FILES_BUCKET).remove(paths.slice(i, i + 50));
+  }
+
+  // 2) Suppression du compte Auth (cascades : quote_messages, playlist_tracks,
+  //    quote_files ; payment_schedule.user_id → null).
+  const { error } = await supabase.auth.admin.deleteUser(userId);
+  if (error) {
+    console.error("[deleteClientAccount] deleteUser:", error);
+    return;
+  }
+
+  // 3) Le cache e-mail → user_id ne doit plus servir l'ancien identifiant.
+  ownerUserCache.delete(email);
+
+  revalidatePath("/admin/comptes");
+}
+
 // Crée le bucket privé s'il n'existe pas encore (idempotent).
 async function ensureBucket(supabase: ReturnType<typeof createAdminClient>) {
   const { data: buckets } = await supabase.storage.listBuckets();

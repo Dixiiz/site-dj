@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { resendFirstLoginLink } from "@/app/client-actions";
+import { resendFirstLoginLink, deleteClientAccount } from "@/app/client-actions";
 import { SubmitButton } from "@/components/submit-button";
 
 export const metadata = { title: "Comptes clients — Admin Propul'Sound DJ" };
@@ -72,6 +72,7 @@ export default async function AdminComptesPage() {
               <th className="px-4 py-3 text-center">En cours</th>
               <th className="px-4 py-3 text-center">Confirmés</th>
               <th className="px-4 py-3 text-center">Accès</th>
+              <th className="px-4 py-3 text-center">Supprimer</th>
             </tr>
           </thead>
           <tbody>
@@ -109,11 +110,27 @@ export default async function AdminComptesPage() {
                     </SubmitButton>
                   </form>
                 </td>
+                <td className="px-4 py-3 text-center">
+                  {/* Supprime le compte Auth : messages, playlists et fichiers
+                      du client partent en cascade ; les devis restent (ils sont
+                      rattachés par e-mail) — le client peut recréer un compte. */}
+                  <form action={deleteClientAccount}>
+                    <input type="hidden" name="user_id" value={c.id} />
+                    <input type="hidden" name="email" value={c.email} />
+                    <SubmitButton
+                      pendingLabel="…"
+                      confirm={`Supprimer définitivement le compte de ${c.name} (${c.email}) ?\n\nSes messages, playlists et fichiers seront perdus ; ses devis seront conservés. Il pourra recréer un compte avec le même e-mail.`}
+                      className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:border-destructive hover:text-destructive disabled:opacity-50"
+                    >
+                      Supprimer
+                    </SubmitButton>
+                  </form>
+                </td>
               </tr>
             ))}
             {comptes.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
                   Aucun compte client pour le moment.
                 </td>
               </tr>
