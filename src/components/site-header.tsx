@@ -9,7 +9,7 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
       <div className="relative mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
-        <Link href="/" className="flex shrink-0 items-center gap-2.5">
+        <Link href="/" className="-my-2 flex shrink-0 items-center gap-2.5 rounded-lg py-2 pr-2 transition-opacity hover:opacity-85">
           <Image
             src="/logo-bleu-transparent.png"
             alt="Propul'Sound DJ"

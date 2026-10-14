@@ -158,7 +158,7 @@
   }
   /* Bouton phare : dégradé néon bleu → magenta (identité "show lumière") */
   .btn-gradient {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-8 py-3 font-medium text-white shadow-lg transition hover:brightness-110;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-8 py-3 font-medium text-white shadow-lg transition hover:brightness-110 active:scale-[0.98];
     background-image: linear-gradient(100deg, var(--color-accent), var(--color-accent-2));
     box-shadow: 0 8px 30px -8px var(--color-accent);
   }
@@ -194,6 +194,32 @@ body {
   overflow-x: clip;
   overscroll-behavior-x: none;
   scroll-behavior: smooth;
+}
+
+/* Mobile : pas de flash de surlignage au tap (rendu natif, plus propre) */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Tactile (mobiles + tablettes) : les champs de saisie restent à 16px minimum.
+   En dessous, iOS zoome automatiquement la page au focus — très pénible.
+   Sur desktop (souris) le style shadcn md:text-sm est conservé. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+  textarea,
+  select {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* Tactile : les flèches de navigation du calendrier (react-day-picker) passent
+   à 44px — la norme de zone de tap Apple/Google — sans toucher au style desktop. */
+@media (pointer: coarse) {
+  .rdp-button_previous,
+  .rdp-button_next {
+    width: 44px !important;
+    height: 44px !important;
+  }
 }
 
 /* Accessibilité : les utilisateurs sensibles au mouvement obtiennent une

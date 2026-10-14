@@ -60,9 +60,9 @@ export function MainNav() {
         )}
       </button>
 
-      {/* Mobile : panneau déroulant */}
+      {/* Mobile : panneau déroulant (animation d'apparition douce) */}
       {open ? (
-        <nav className="absolute inset-x-0 top-full z-40 border-b border-border bg-background/95 backdrop-blur-md md:hidden">
+        <nav className="absolute inset-x-0 top-full z-40 animate-in border-b border-border bg-background/95 backdrop-blur-md duration-200 fade-in slide-in-from-top-2 md:hidden">
           <ul className="mx-auto max-w-5xl px-4 py-3">
             {links.map((link) => {
               const active = pathname === link.href;

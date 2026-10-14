@@ -89,7 +89,7 @@ export function ConnexionForm({
               setError(null);
               setInfo(null);
             }}
-            className="block w-full text-center text-sm font-medium text-accent underline-offset-2 hover:underline"
+            className="block w-full rounded-md py-2.5 text-center text-sm font-medium text-accent transition-colors hover:text-foreground"
           >
             Mot de passe oublié ?
           </button>
@@ -100,7 +100,7 @@ export function ConnexionForm({
               setError(null);
               setInfo(null);
             }}
-            className="block w-full text-center text-xs font-medium text-accent underline-offset-2 hover:underline"
+            className="block w-full rounded-md py-2.5 text-center text-xs font-medium text-accent transition-colors hover:text-foreground"
           >
             Première connexion ?
           </button>
@@ -132,7 +132,7 @@ export function ConnexionForm({
               setError(null);
               setInfo(null);
             }}
-            className="block w-full text-center text-xs text-muted-foreground underline-offset-2 hover:underline"
+            className="block w-full rounded-md py-2.5 text-center text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             Retour à la connexion
           </button>
@@ -162,7 +162,7 @@ export function ConnexionForm({
               setError(null);
               setInfo(null);
             }}
-            className="block w-full text-center text-xs text-muted-foreground underline-offset-2 hover:underline"
+            className="block w-full rounded-md py-2.5 text-center text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             Retour à la connexion
           </button>

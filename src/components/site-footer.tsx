@@ -21,9 +21,15 @@ const links: { href: string; label: string }[] = [
 export function SiteFooter() {
   return (
     <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
-      <nav aria-label="Plan du site" className="mx-auto flex max-w-2xl flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4">
+      <nav aria-label="Plan du site" className="mx-auto flex max-w-2xl flex-wrap items-center justify-center gap-x-2 gap-y-1 px-4">
         {links.map((l) => (
-          <Link key={l.href} href={l.href} className="text-xs transition-colors hover:text-accent">
+          <Link
+            key={l.href}
+            href={l.href}
+            // Zone de tap confortable (≥ 36 px) sans changer le style visuel :
+            // padding transparent + marges négatives compensatoires.
+            className="inline-flex min-h-9 items-center rounded-md px-2 text-xs text-muted-foreground transition-all duration-200 hover:text-accent hover:underline hover:underline-offset-4"
+          >
             {l.label}
           </Link>
         ))}
@@ -33,17 +39,17 @@ export function SiteFooter() {
         soirées à Blois, Vendôme, Amboise et dans un rayon de 50 km ·
         Déplacement offert dans un rayon de 30 km
       </p>
-      <div className="mt-2 space-x-4">
-        <Link href="/mentions-legales" className="text-xs transition-colors hover:text-accent">
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-x-1">
+        <Link href="/mentions-legales" className="inline-flex min-h-9 items-center rounded-md px-2 text-xs text-muted-foreground transition-all duration-200 hover:text-accent hover:underline hover:underline-offset-4">
           Mentions légales
         </Link>
-        <Link href="/conditions-utilisation" className="text-xs transition-colors hover:text-accent">
+        <Link href="/conditions-utilisation" className="inline-flex min-h-9 items-center rounded-md px-2 text-xs text-muted-foreground transition-all duration-200 hover:text-accent hover:underline hover:underline-offset-4">
           CGV
         </Link>
-        <Link href="/politique-de-confidentialite" className="text-xs transition-colors hover:text-accent">
+        <Link href="/politique-de-confidentialite" className="inline-flex min-h-9 items-center rounded-md px-2 text-xs text-muted-foreground transition-all duration-200 hover:text-accent hover:underline hover:underline-offset-4">
           Confidentialité
         </Link>
-        <Link href="/politique-cookies" className="text-xs transition-colors hover:text-accent">
+        <Link href="/politique-cookies" className="inline-flex min-h-9 items-center rounded-md px-2 text-xs text-muted-foreground transition-all duration-200 hover:text-accent hover:underline hover:underline-offset-4">
           Cookies
         </Link>
       </div>

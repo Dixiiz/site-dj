@@ -128,7 +128,7 @@ export function GalleryCarousel({ photos }: { photos: string[] }) {
         <div className="mt-4 text-center">
           <Link
             href="/galerie"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-accent"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-4 text-sm text-muted-foreground transition-colors hover:text-accent"
           >
             Voir toute la galerie
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>

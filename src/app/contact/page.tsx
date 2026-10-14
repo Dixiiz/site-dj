@@ -129,7 +129,7 @@ export default function ContactPage() {
               </span>
             </a>
           </div>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-6 rounded-xl border border-border bg-muted/50 px-6 py-5">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2 rounded-xl border border-border bg-muted/50 px-6 py-4 sm:gap-6">
             {BRANDS.map((b) => (
               <a
                 key={b.name}
@@ -138,9 +138,11 @@ export default function ContactPage() {
                 rel="noopener noreferrer"
                 aria-label={b.name}
                 title={b.name}
-                className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-accent"
+                // Zone de tap 44×44 minimum sur mobile (icône seule), libellé
+                // à côté sur écran large.
+                className="flex h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3 text-sm text-muted-foreground transition-all duration-200 hover:bg-background/60 hover:text-accent active:scale-95 sm:min-w-0 sm:px-2"
               >
-                <svg viewBox="0 0 24 24" fill={b.color} className="h-6 w-6">
+                <svg viewBox="0 0 24 24" fill={b.color} className="h-6 w-6 transition-transform duration-200 hover:scale-110">
                   <path d={b.path} />
                 </svg>
                 <span className="hidden sm:inline">{b.name}</span>

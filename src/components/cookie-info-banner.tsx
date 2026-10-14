@@ -35,7 +35,7 @@ export function CookieInfoBanner() {
   return (
     <div
       role="status"
-      className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-3xl items-center justify-between gap-3 rounded-xl border border-border bg-background/95 p-3 text-xs text-muted-foreground shadow-lg backdrop-blur-md sm:p-4"
+      className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-3xl animate-in items-center justify-between gap-3 rounded-xl border border-border bg-background/95 p-3 text-xs text-muted-foreground shadow-lg backdrop-blur-md duration-300 fade-in slide-in-from-bottom-4 sm:p-4"
     >
       <p className="min-w-0 leading-relaxed">
         Ce site n&apos;utilise que des cookies strictement nécessaires
@@ -43,7 +43,7 @@ export function CookieInfoBanner() {
         cookie.{" "}
         <Link
           href="/politique-cookies"
-          className="shrink-0 text-accent underline underline-offset-4"
+          className="inline-flex min-h-9 shrink-0 items-center text-accent underline underline-offset-4"
         >
           En savoir plus
         </Link>
@@ -52,7 +52,7 @@ export function CookieInfoBanner() {
         type="button"
         onClick={dismiss}
         aria-label="Fermer l'information sur les cookies"
-        className="shrink-0 rounded-full border border-border px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-accent/10 hover:text-accent"
+        className="shrink-0 rounded-full border border-border px-5 py-2.5 font-medium text-foreground transition-all duration-200 hover:bg-accent/10 hover:text-accent active:scale-95"
       >
         OK
       </button>

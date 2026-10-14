@@ -167,9 +167,9 @@ export function VideoShowcase({ videos, orientation = "landscape" }: VideoShowca
             type="button"
             onClick={() => setIndex((i) => (i <= 0 ? max : i - 1))}
             aria-label="Vidéos précédentes"
-            className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full border border-border bg-background/80 p-2 text-foreground backdrop-blur transition hover:border-accent hover:text-accent"
+            className="absolute left-0 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background/80 text-foreground backdrop-blur transition hover:border-accent hover:text-accent active:scale-95"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="m15 18-6-6 6-6" />
             </svg>
           </button>
@@ -177,25 +177,32 @@ export function VideoShowcase({ videos, orientation = "landscape" }: VideoShowca
             type="button"
             onClick={advance}
             aria-label="Vidéos suivantes"
-            className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full border border-border bg-background/80 p-2 text-foreground backdrop-blur transition hover:border-accent hover:text-accent"
+            className="absolute right-0 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background/80 text-foreground backdrop-blur transition hover:border-accent hover:text-accent active:scale-95"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="m9 18 6-6-6-6" />
             </svg>
           </button>
-          <div className="mt-6 flex items-center justify-center gap-2">
+          <div className="mt-6 flex items-center justify-center gap-1">
             {Array.from({ length: max + 1 }).map((_, i) => (
               <button
                 key={i}
                 type="button"
                 aria-label={`Aller à la position ${i + 1}`}
                 onClick={() => setIndex(i)}
-                className={`h-1.5 rounded-full transition-all ${
-                  i === index
-                    ? "w-6 bg-accent"
-                    : "w-1.5 bg-muted-foreground/40 hover:bg-muted-foreground/70"
-                }`}
-              />
+                // Le point reste fin (6 px), mais la zone de tap est de 44 px
+                // de haut et ≥ 12 px de large : sélection fiable au doigt.
+                className={`flex h-11 items-center px-1.5 ${i === index ? "" : "opacity-70"}`}
+              >
+                <span
+                  aria-hidden
+                  className={`block h-1.5 rounded-full transition-all duration-500 ${
+                    i === index
+                      ? "w-6 bg-accent"
+                      : "w-1.5 bg-muted-foreground/40 hover:bg-muted-foreground/70"
+                  }`}
+                />
+              </button>
             ))}
           </div>
         </>
@@ -212,16 +219,16 @@ function SoundButton({ muted, onToggle }: { muted: boolean; onToggle: () => void
         onToggle();
       }}
       aria-label={muted ? "Activer le son" : "Couper le son"}
-      className="absolute bottom-3 right-3 z-10 rounded-full bg-background/80 p-2 text-foreground backdrop-blur transition-opacity focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+      className="absolute bottom-2.5 right-2.5 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur transition-all duration-300 hover:text-accent active:scale-90 focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
     >
       {muted ? (
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
           <line x1="22" y1="9" x2="16" y2="15" />
           <line x1="16" y1="9" x2="22" y2="15" />
         </svg>
       ) : (
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
           <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
         </svg>
