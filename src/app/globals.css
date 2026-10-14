@@ -210,6 +210,15 @@ html {
   select {
     font-size: max(16px, 1em);
   }
+
+  /* Les champs shadcn (data-slot) prennent une hauteur tactile confortable
+     (44px) sans toucher au style desktop. */
+  [data-slot="input"],
+  [data-slot="textarea"] {
+    min-height: 44px;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
 }
 
 /* Tactile : les flèches de navigation du calendrier (react-day-picker) passent

@@ -74,7 +74,7 @@ export default async function MonEspacePage() {
               <li key={quote.id}>
                 <Link
                   href={`/mon-espace/devis/${quote.id}`}
-                  className="block rounded-xl border border-border bg-muted/50 p-4 transition-colors hover:border-accent/40"
+                  className="block rounded-xl border border-border bg-muted/50 p-4 transition-all duration-200 hover:border-accent/40 hover:bg-muted/80 active:scale-[0.99]"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="flex items-center gap-1.5">
@@ -112,7 +112,7 @@ export default async function MonEspacePage() {
                     <SubmitButton
                       pendingLabel="Suppression…"
                       confirm="Supprimer ce devis ? Cette action est irréversible."
-                      className="text-xs text-muted-foreground transition-colors hover:text-red-400"
+                      className="inline-flex min-h-9 items-center rounded-md px-2 text-xs text-muted-foreground transition-colors hover:text-red-400"
                     >
                       Supprimer ce devis
                     </SubmitButton>

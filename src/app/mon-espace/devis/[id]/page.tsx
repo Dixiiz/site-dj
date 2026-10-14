@@ -237,11 +237,11 @@ export default async function ClientQuotePage({
         orientation="vertical"
         className="flex-col gap-4 md:flex-row md:gap-8 md:items-start"
       >
-        <TabsList className="flex w-full flex-row overflow-x-auto md:sticky md:top-20 md:w-48 md:flex-col md:self-start">
-          <TabsTrigger value="soiree" className="md:flex-none">Ma soirée</TabsTrigger>
-          <TabsTrigger value="paiement" className="md:flex-none">Paiement</TabsTrigger>
-          <TabsTrigger value="playlist" className="md:flex-none">Musiques</TabsTrigger>
-          <TabsTrigger value="messages" className="md:flex-none">Messagerie</TabsTrigger>
+        <TabsList className="min-h-11 w-full flex-row overflow-x-auto md:sticky md:top-20 md:min-h-9 md:w-48 md:flex-col md:self-start">
+          <TabsTrigger value="soiree" className="py-2.5 md:flex-none md:py-0.5">Ma soirée</TabsTrigger>
+          <TabsTrigger value="paiement" className="py-2.5 md:flex-none md:py-0.5">Paiement</TabsTrigger>
+          <TabsTrigger value="playlist" className="py-2.5 md:flex-none md:py-0.5">Musiques</TabsTrigger>
+          <TabsTrigger value="messages" className="py-2.5 md:flex-none md:py-0.5">Messagerie</TabsTrigger>
         </TabsList>
         <TabsContent value="paiement" className="tab-anim min-w-0 flex-1 space-y-6">
           <PaymentPanel

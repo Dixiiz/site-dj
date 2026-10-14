@@ -532,6 +532,7 @@ export function QuoteBookingForm({
                   <Button
                     type="button"
                     variant="outline"
+                    className="h-11 shrink-0 border-border px-4"
                     onClick={onEstimateTravel}
                     disabled={travelPending}
                   >
@@ -837,12 +838,17 @@ export function QuoteBookingForm({
             ) : null}
             <div className="flex justify-between border-t border-border pt-3 text-lg font-medium">
               <span>Total estimé</span>
-              <span>{formatEuros(total)}</span>
+              {/* key={total} : à chaque changement de montant, l'ancien nombre
+                  disparaît et le nouveau apparaît en fondu/zoom — feedback
+                  immédiat quand on ajoute une option ou change les horaires. */}
+              <span key={total} className="animate-in text-accent duration-300 fade-in zoom-in-95">
+                {formatEuros(total)}
+              </span>
             </div>
             {total > 0 ? <RecapInstallments total={total} /> : null}
             <Button
               type="submit"
-              className="w-full"
+              className="h-12 w-full text-base font-medium active:scale-[0.98]"
               size="lg"
               disabled={pending || !formulaId || !selectedDate || !endTime || invalidOrder || !allowedEndTimes.includes(endTime)}
             >
@@ -902,7 +908,7 @@ export function QuoteBookingForm({
                         .getElementById("recap-devis")
                         ?.scrollIntoView({ behavior: "smooth", block: "start" })
                     }
-                    className="rounded-full border border-accent/40 px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/15"
+                    className="inline-flex min-h-11 items-center rounded-full border border-accent/40 px-4 text-xs text-accent transition-all duration-200 hover:bg-accent/15 active:scale-95"
                   >
                     Voir le récap
                   </button>
@@ -940,7 +946,7 @@ function RecapInstallments({ total }: { total: number }) {
               onClick={() => setNiveau(niveau === n ? null : n)}
               aria-pressed={niveau === n}
               title={ok ? `Voir en ${n} fois` : "Minimum 150 € par échéance (x4+ dès 1 000 €)"}
-              className={`rounded-full px-2 py-0.5 font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-25 ${
+              className={`inline-flex min-h-9 items-center rounded-full px-3 font-medium transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-25 ${
                 niveau === n
                   ? "bg-accent text-white"
                   : ok
