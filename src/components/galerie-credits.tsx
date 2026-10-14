@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { MediaCreditsManager } from "./media-credits-manager";
 import { PhotoCreditAssigner } from "./photo-credit-assigner";
@@ -12,8 +12,10 @@ type Item = { name: string; url: string };
 
 /**
  * État partagé des crédits galerie : une seule source de vérité côté client.
- * Toute modification (rapide ou en lot) met à jour cet état puis persiste —
- * les trois sections restent toujours synchronisées, sans rechargement.
+ * Toute modification (rapide ou en lot) est d'abord persistée côté serveur ;
+ * l'état n'est mis à jour qu'en cas de succès — sinon l'interface continue
+ * d'afficher l'état réel et l'erreur est visible (toast). Les sauvegardes
+ * sont sérialisées pour qu'aucune ne puisse en écraser une autre.
  */
 export function GalerieCredits({
   items,
@@ -29,17 +31,37 @@ export function GalerieCredits({
   setPhoto: (formData: FormData) => Promise<{ ok: boolean; error?: string }>;
 }) {
   const [bundle, setBundle] = useState<CreditsBundle>(initial);
+  // Référence miroir : garantit que chaque sauvegarde part bien de l'état le
+  // plus récent, même si plusieurs actions s'enchaînent rapidement.
+  const bundleRef = useRef<CreditsBundle>(initial);
+  // File d'attente : les sauvegardes s'exécutent l'une après l'autre.
+  const queueRef = useRef<Promise<unknown>>(Promise.resolve());
+
+  function commit(next: CreditsBundle) {
+    bundleRef.current = next;
+    setBundle(next);
+  }
+
+  function enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const run = queueRef.current.then(task, task);
+    queueRef.current = run.catch(() => {});
+    return run;
+  }
 
   async function applySection(
     section: "photographers" | "lieux",
     credits: CreditsMap
   ): Promise<{ ok: boolean; error?: string }> {
-    setBundle((b) => ({ ...b, [section]: credits }));
-    const formData = new FormData();
-    formData.set("credits", JSON.stringify(credits));
-    return section === "photographers"
-      ? await savePhotographers(formData)
-      : await saveLieux(formData);
+    return enqueue(async () => {
+      const formData = new FormData();
+      formData.set("credits", JSON.stringify(credits));
+      const res =
+        section === "photographers"
+          ? await savePhotographers(formData)
+          : await saveLieux(formData);
+      if (res.ok) commit({ ...bundleRef.current, [section]: credits });
+      return res;
+    });
   }
 
   async function applyPhoto(
@@ -47,34 +69,37 @@ export function GalerieCredits({
     photographer: string,
     lieu: string
   ): Promise<{ ok: boolean; error?: string }> {
-    // Mise à jour optimiste : retire la photo de toutes les entrées, puis réassigne.
-    const strip = (map: CreditsMap) => {
-      const copy: CreditsMap = {};
-      for (const [key, photos] of Object.entries(map)) {
-        const rest = photos.filter((n) => n !== name);
-        if (rest.length > 0) copy[key] = rest;
+    return enqueue(async () => {
+      // Retire la photo de toutes les entrées, puis la réassigne.
+      const strip = (map: CreditsMap) => {
+        const copy: CreditsMap = {};
+        for (const [key, photos] of Object.entries(map)) {
+          const rest = photos.filter((n) => n !== name);
+          if (rest.length > 0) copy[key] = rest;
+        }
+        return copy;
+      };
+      const next = {
+        photographers: strip(bundleRef.current.photographers),
+        lieux: strip(bundleRef.current.lieux),
+      };
+      if (photographer.trim()) {
+        next.photographers[photographer.trim()] = [
+          ...(next.photographers[photographer.trim()] ?? []),
+          name,
+        ];
       }
-      return copy;
-    };
-    const next = {
-      photographers: strip(bundle.photographers),
-      lieux: strip(bundle.lieux),
-    };
-    if (photographer.trim()) {
-      next.photographers[photographer.trim()] = [
-        ...(next.photographers[photographer.trim()] ?? []),
-        name,
-      ];
-    }
-    if (lieu.trim()) {
-      next.lieux[lieu.trim()] = [...(next.lieux[lieu.trim()] ?? []), name];
-    }
-    setBundle(next);
-    const formData = new FormData();
-    formData.set("name", name);
-    formData.set("photographer", photographer);
-    formData.set("lieu", lieu);
-    return await setPhoto(formData);
+      if (lieu.trim()) {
+        next.lieux[lieu.trim()] = [...(next.lieux[lieu.trim()] ?? []), name];
+      }
+      const formData = new FormData();
+      formData.set("name", name);
+      formData.set("photographer", photographer);
+      formData.set("lieu", lieu);
+      const res = await setPhoto(formData);
+      if (res.ok) commit(next);
+      return res;
+    });
   }
 
   return (

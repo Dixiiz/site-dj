@@ -61,19 +61,46 @@ export async function deleteMedia(folder: MediaFolder, name: string): Promise<{ 
   return { ok: true };
 }
 
+// ---------- Fichiers d'état JSON : lecture hors cache CDN ----------
+// Le CDN de Supabase met les objets en cache ~1 h (cacheControl par défaut
+// 3600). Les fichiers d'état (_ordre, _credits, _accueil, _packs) sont
+// réécrits par l'admin : une lecture passant par le CDN peut renvoyer
+// jusqu'à une heure l'ancienne version — ce qui masquait les enregistrements
+// et faisait écraser les modifications récentes par les sauvegardes
+// suivantes (lire-vieux → réécrire-tout). On lit donc en direct avec un
+// paramètre d'URL unique (nouvelle clé de cache CDN) et cache: "no-store".
+async function downloadStateJson<T>(path: string): Promise<T | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  const bust = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  try {
+    const res = await fetch(
+      `${url.replace(/\/$/, "")}/storage/v1/object/site-media/${path}?cb=${bust}`,
+      { headers: { Authorization: `Bearer ${key}` }, cache: "no-store" }
+    );
+    if (!res.ok) return null;
+    return (JSON.parse(await res.text())) as T;
+  } catch {
+    return null;
+  }
+}
+
+// Les écritures d'état font lire-modifier-écrire le même fichier : deux
+// requêtes simultanées pourraient s'écraser mutuellement. On les sérialise.
+let stateWriteQueue: Promise<unknown> = Promise.resolve();
+function enqueueStateWrite<T>(task: () => Promise<T>): Promise<T> {
+  const run = stateWriteQueue.then(task, task);
+  stateWriteQueue = run.catch(() => {});
+  return run;
+}
+
 // ---------- Ordre d'affichage (stocké dans le bucket, _ordre.json) ----------
 
 export async function getOrder(folder: MediaFolder): Promise<string[]> {
-  const supabase = createAdminClient();
-  const { data } = await supabase.storage.from(MEDIA_BUCKET).download(`${folder}/_ordre.json`);
-  if (!data) return [];
-  try {
-    const text = await data.text();
-    const parsed = JSON.parse(text);
-    return Array.isArray(parsed) ? parsed.map(String) : [];
-  } catch {
-    return [];
-  }
+  const parsed = await downloadStateJson<unknown>(`${folder}/_ordre.json`);
+  if (parsed === null) return [];
+  return Array.isArray(parsed) ? parsed.map(String) : [];
 }
 
 export async function saveOrder(folder: MediaFolder, names: string[]): Promise<{ ok: boolean; error?: string }> {
@@ -84,6 +111,7 @@ export async function saveOrder(folder: MediaFolder, names: string[]): Promise<{
     .from(MEDIA_BUCKET)
     .upload(`${folder}/_ordre.json`, body, {
       contentType: "application/json",
+      cacheControl: "0",
       upsert: true,
     });
   if (error) return { ok: false, error: error.message };
@@ -95,15 +123,9 @@ export async function saveOrder(folder: MediaFolder, names: string[]): Promise<{
 // « En action » de la page d'accueil. Fichier absent → tout est affiché
 // (comportement historique, rétrocompatible).
 export async function getHomeSelection(folder: MediaFolder): Promise<string[] | null> {
-  const supabase = createAdminClient();
-  const { data } = await supabase.storage.from(MEDIA_BUCKET).download(`${folder}/_accueil.json`);
-  if (!data) return null;
-  try {
-    const parsed = JSON.parse(await data.text());
-    return Array.isArray(parsed) ? parsed.map(String) : null;
-  } catch {
-    return null;
-  }
+  const parsed = await downloadStateJson<unknown>(`${folder}/_accueil.json`);
+  if (parsed === null) return null;
+  return Array.isArray(parsed) ? parsed.map(String) : null;
 }
 
 export async function saveHomeSelection(
@@ -117,6 +139,7 @@ export async function saveHomeSelection(
     .from(MEDIA_BUCKET)
     .upload(`${folder}/_accueil.json`, body, {
       contentType: "application/json",
+      cacheControl: "0",
       upsert: true,
     });
   if (error) return { ok: false, error: error.message };
@@ -136,30 +159,18 @@ export type MediaCreditsBundle = {
 };
 
 export async function getCreditsBundle(folder: MediaFolder): Promise<MediaCreditsBundle> {
-  const supabase = createAdminClient();
-  const { data } = await supabase.storage.from(MEDIA_BUCKET).download(`${folder}/_credits.json`);
-  if (!data) return { photographers: {}, lieux: {} };
-  try {
-    const parsed = JSON.parse(await data.text());
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      !Array.isArray(parsed) &&
-      (parsed.photographers || parsed.lieux)
-    ) {
-      return {
-        photographers: parsed.photographers ?? {},
-        lieux: parsed.lieux ?? {},
-      };
-    }
-    // Ancien format : mapping plat photographe → photos.
-    return {
-      photographers: parsed && typeof parsed === "object" ? parsed : {},
-      lieux: {},
-    };
-  } catch {
+  const parsed = await downloadStateJson<Record<string, unknown>>(`${folder}/_credits.json`);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     return { photographers: {}, lieux: {} };
   }
+  if (parsed.photographers || parsed.lieux) {
+    return {
+      photographers: (parsed.photographers as MediaCredits) ?? {},
+      lieux: (parsed.lieux as MediaCredits) ?? {},
+    };
+  }
+  // Ancien format : mapping plat photographe → photos.
+  return { photographers: parsed as MediaCredits, lieux: {} };
 }
 
 // Enregistre une seule section (photographers ou lieux) en fusionnant avec
@@ -169,10 +180,12 @@ export async function saveCreditsSection(
   section: "photographers" | "lieux",
   credits: MediaCredits
 ): Promise<{ ok: boolean; error?: string }> {
-  await ensureMediaBucket();
-  const bundle = await getCreditsBundle(folder);
-  bundle[section] = credits;
-  return uploadCreditsBundle(folder, bundle);
+  return enqueueStateWrite(async () => {
+    await ensureMediaBucket();
+    const bundle = await getCreditsBundle(folder);
+    bundle[section] = credits;
+    return uploadCreditsBundle(folder, bundle);
+  });
 }
 
 // Attribue photographe et/ou lieu à UNE photo : retire la photo de toutes
@@ -183,24 +196,26 @@ export async function setPhotoCredit(
   photographer: string,
   lieu: string
 ): Promise<{ ok: boolean; error?: string }> {
-  await ensureMediaBucket();
-  const bundle = await getCreditsBundle(folder);
+  return enqueueStateWrite(async () => {
+    await ensureMediaBucket();
+    const bundle = await getCreditsBundle(folder);
 
-  const removeFrom = (map: MediaCredits) => {
-    for (const key of Object.keys(map)) {
-      map[key] = (map[key] ?? []).filter((n) => n !== name);
-      if (map[key].length === 0) delete map[key];
-    }
-  };
-  removeFrom(bundle.photographers);
-  removeFrom(bundle.lieux);
+    const removeFrom = (map: MediaCredits) => {
+      for (const key of Object.keys(map)) {
+        map[key] = (map[key] ?? []).filter((n) => n !== name);
+        if (map[key].length === 0) delete map[key];
+      }
+    };
+    removeFrom(bundle.photographers);
+    removeFrom(bundle.lieux);
 
-  const p = photographer.trim();
-  if (p) (bundle.photographers[p] ||= []).push(name);
-  const l = lieu.trim();
-  if (l) (bundle.lieux[l] ||= []).push(name);
+    const p = photographer.trim();
+    if (p) (bundle.photographers[p] ||= []).push(name);
+    const l = lieu.trim();
+    if (l) (bundle.lieux[l] ||= []).push(name);
 
-  return uploadCreditsBundle(folder, bundle);
+    return uploadCreditsBundle(folder, bundle);
+  });
 }
 
 async function uploadCreditsBundle(
@@ -212,6 +227,7 @@ async function uploadCreditsBundle(
     .from(MEDIA_BUCKET)
     .upload(`${folder}/_credits.json`, JSON.stringify(bundle), {
       contentType: "application/json",
+      cacheControl: "0",
       upsert: true,
     });
   if (error) return { ok: false, error: error.message };
@@ -226,15 +242,8 @@ export type PackMediaEntry = { image?: string; video?: string };
 export type PackMediaOverrides = Record<string, PackMediaEntry>;
 
 export async function getPackOverrides(): Promise<PackMediaOverrides> {
-  const supabase = createAdminClient();
-  const { data } = await supabase.storage.from(MEDIA_BUCKET).download("packs/_packs.json");
-  if (!data) return {};
-  try {
-    const parsed = JSON.parse(await data.text());
-    return parsed && typeof parsed === "object" ? (parsed as PackMediaOverrides) : {};
-  } catch {
-    return {};
-  }
+  const parsed = await downloadStateJson<PackMediaOverrides>("packs/_packs.json");
+  return parsed && typeof parsed === "object" ? parsed : {};
 }
 
 /** Affecte (url) ou retire (null) un média image/vidéo d'un pack. */
@@ -243,22 +252,25 @@ export async function savePackOverride(
   field: "image" | "video",
   url: string | null
 ): Promise<{ ok: boolean; error?: string }> {
-  await ensureMediaBucket();
-  const supabase = createAdminClient();
-  const current = await getPackOverrides();
-  const entry: PackMediaEntry = { ...(current[packName] ?? {}) };
-  if (url) entry[field] = url;
-  else delete entry[field];
-  if (entry.image || entry.video) current[packName] = entry;
-  else delete current[packName];
-  const { error } = await supabase.storage
-    .from(MEDIA_BUCKET)
-    .upload("packs/_packs.json", JSON.stringify(current), {
-      contentType: "application/json",
-      upsert: true,
-    });
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
+  return enqueueStateWrite(async () => {
+    await ensureMediaBucket();
+    const supabase = createAdminClient();
+    const current = await getPackOverrides();
+    const entry: PackMediaEntry = { ...(current[packName] ?? {}) };
+    if (url) entry[field] = url;
+    else delete entry[field];
+    if (entry.image || entry.video) current[packName] = entry;
+    else delete current[packName];
+    const { error } = await supabase.storage
+      .from(MEDIA_BUCKET)
+      .upload("packs/_packs.json", JSON.stringify(current), {
+        contentType: "application/json",
+        cacheControl: "0",
+        upsert: true,
+      });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  });
 }
 
 // ---------- Fichiers locaux (public/) : liste, import, suppression ----------
