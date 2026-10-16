@@ -1,7 +1,8 @@
 import { QuoteStatusSelect } from "@/components/quote-status-select";
 import { AdminQuoteEdit } from "@/components/admin-quote-edit";
 import { SubmitButton } from "@/components/submit-button";
-import { sendUpsellEmail, sendAvisRelanceEmail } from "@/app/client-actions";
+import { sendUpsellEmail } from "@/app/client-actions";
+import { AvisRelanceButton } from "./avis-relance-button";
 import { formatEuros } from "@/lib/money";
 import { computeExtraHours, formatExtraHours } from "@/lib/booking-extra";
 import { findUpsell } from "@/lib/upsell";
@@ -325,24 +326,9 @@ export function AdminQuoteDetails({
               </SubmitButton>
             </form>
           ) : null}
-          {/* Relance manuelle de la demande d'avis (rédaction différente
-              des e-mails automatiques) : bloque aussi la relance du cron. */}
-          <form
-            action={async (formData) => {
-              "use server";
-              await sendAvisRelanceEmail(formData);
-            }}
-            className="shrink-0"
-          >
-            <input type="hidden" name="quote_id" value={quote.id} />
-            <SubmitButton
-              pendingLabel="Envoi…"
-              confirm={`Envoyer l'e-mail de relance d'avis à ${quote.customer_email} ?`}
-              className="rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-1.5 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/20"
-            >
-              ★ Relancer l&apos;avis
-            </SubmitButton>
-          </form>
+          {/* Relance manuelle de la demande d'avis : composant client pour
+              afficher l'erreur exacte en toast (l'envoi peut échouer). */}
+          <AvisRelanceButton id={quote.id} />
           <a
             href={`/api/admin/fiche/${quote.id}`}
             className="rounded-lg border border-accent/50 bg-accent/10 px-4 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
