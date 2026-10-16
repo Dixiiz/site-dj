@@ -8,6 +8,7 @@ import { AdminQuoteDetails } from "@/components/admin-quote-details";
 import { updateQuoteStatus } from "@/app/actions";
 import { DevisFilterBar } from "@/components/devis-filter-bar";
 import { AdminQuoteLazyFolder } from "@/components/admin-quote-lazy-folder";
+import { AvisLibreForm } from "@/components/avis-libre-form";
 
 import { Badge } from "@/components/ui/badge";
 import { formatEuros } from "@/lib/money";
@@ -243,6 +244,9 @@ export default async function DevisPage({
       </div>
 
       <DevisFilterBar q={q} tri={tri} />
+
+      {/* Demande d'avis « libre » : clients sans devis sur le site */}
+      <AvisLibreForm />
 
       {/* Demandes sur-mesure : visibles en haut de la page, pastille « Nouveau » */}
       {customFiltered.length > 0 ? (

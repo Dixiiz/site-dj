@@ -1373,6 +1373,150 @@ export async function sendUpsellEmail(formData: FormData) {
   revalidatePath("/admin/devis");
   return { ok: true as const, message: `E-mail « montée en gamme » envoyé à ${quote.customer_email} ✓` };
 }
+// Gabarit partagé de l'e-mail de relance d'avis (dossier client OU client
+// libre sans devis) : rédaction différente des e-mails automatiques
+// (demande post-soirée et relance J+10 du cron) — ton plus personnel.
+function avisRelanceEmailData(name: string, eventDate: string | null) {
+  const dateLong = eventDate
+    ? new Date(
+        eventDate.includes("T") ? eventDate : `${eventDate}T12:00:00`
+      ).toLocaleDateString("fr-FR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : null;
+  // L'intro n'est pas échappée par le gabarit : on neutralise le & du nom
+  // (« Caroline & Rémy ») pour un HTML valide.
+  const nameHtml = name.replace(/&/g, "&amp;");
+
+  return {
+    title: "Un petit avis ? Un vrai coup de pouce",
+    intro: `Bonjour ${nameHtml},<br/><br/>Je me permets de revenir vers vous pour savoir si vous aviez eu l'occasion de laisser un petit avis suite à la prestation DJ${dateLong ? ` du <strong>${dateLong}</strong>` : ""}.`,
+    sections: [
+      {
+        title: "Pourquoi c'est important",
+        lines: [
+          "Les avis sont <strong>vraiment importants</strong> pour moi : ils m'aident à faire connaître Propul'Sound DJ et permettent aux futurs clients de se faire une idée de mon travail avant de me faire confiance pour leurs événements.",
+          "Si vous avez quelques minutes, ce serait donc un <strong>vrai coup de pouce</strong> pour mon activité !",
+        ],
+      },
+      {
+        title: "2 minutes, au moment qui vous arrange",
+        lines: [
+          `<a href="${SITE_URL}/avis/google" style="color:#21619A;"><strong>Laisser un avis Google</strong></a> — le plus utile pour me faire connaître`,
+          `<a href="${SITE_URL}/avis/mariages" style="color:#21619A;"><strong>Laisser un avis Mariages.net</strong></a> — pour les couples en préparation`,
+          "Et si vous avez des photos ou vidéos de la piste de danse, je suis toujours preneur !",
+        ],
+      },
+    ],
+    button: { label: "Laisser un avis Google (2 min)", href: `${SITE_URL}/avis/google` },
+    footer: "Merci encore pour votre confiance, et au plaisir de se recroiser à l'occasion ! — Maxime, Propul'Sound DJ",
+  };
+}
+
+// Envoi Resend de l'e-mail de relance d'avis. Renvoie l'erreur éventuelle.
+async function sendAvisEmail(to: string, name: string, eventDate: string | null): Promise<string | null> {
+  const { Resend } = await import("resend");
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    return "Envoi e-mail non configuré (RESEND_API_KEY).";
+  }
+  const emailData = avisRelanceEmailData(name, eventDate);
+  try {
+    const resend = new Resend(apiKey);
+    const { error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to,
+      subject: "Toujours un petit moment pour un avis ? — Propul'Sound DJ",
+      html: buildEmailHtml(emailData),
+      text: buildEmailText(emailData),
+    });
+    if (error) {
+      console.error("[sendAvisEmail] Echec envoi:", error);
+      return "L'envoi de l'e-mail a échoué. Réessayez dans un instant.";
+    }
+    return null;
+  } catch (e) {
+    console.error("[sendAvisEmail]", e);
+    return "L'envoi de l'e-mail a échoué.";
+  }
+}
+
+// ---------- Relance manuelle de la demande d'avis ----------
+
+// Renvoie une demande d'avis au client d'une soirée passée, avec une
+// rédaction différente des e-mails automatiques (demande post-soirée et
+// relance J+10 du cron) : ton plus personnel, plus « coup de pouce ».
+// Pose les marqueurs [[demande-avis:]] et [[avis-relance:]] pour que le
+// cron n'en renvoie pas lui-même derrière (demande ou relance).
+export async function sendAvisRelanceEmail(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!quoteId) return { ok: false as const, error: "Devis introuvable." };
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("customer_name, customer_email, event_date, notes")
+    .eq("id", quoteId)
+    .single();
+
+  if (!quote?.customer_email) {
+    return { ok: false as const, error: "Client sans e-mail sur ce devis." };
+  }
+  if ((quote.notes ?? "").includes("[[avis-ok]]")) {
+    return {
+      ok: false as const,
+      error: `L'avis de ${quote.customer_name} est déjà marqué comme reçu — relance inutile.`,
+    };
+  }
+
+  const err = await sendAvisEmail(quote.customer_email, quote.customer_name ?? "", quote.event_date);
+  if (err) return { ok: false as const, error: err };
+
+  // Marqueurs : une demande d'avis vient de partir + une relance a déjà eu
+  // lieu → le cron n'enverra ni sa demande ni sa relance automatique.
+  const stamp = `[[avis-relance:${new Date().toISOString().slice(0, 10)}]]`;
+  const demandeAvis = `[[demande-avis:${new Date().toISOString().slice(0, 10)}]]`;
+  const notes = quote.notes ?? "";
+  const nextNotes = [
+    ...(notes.includes("[[demande-avis:") ? [] : [demandeAvis]),
+    stamp,
+    ...(notes ? [notes] : []),
+  ].join("\n");
+  await supabase.from("quotes").update({ notes: nextNotes }).eq("id", quoteId);
+
+  revalidatePath("/admin/devis");
+  return { ok: true as const, message: `E-mail de relance d'avis envoyé à ${quote.customer_email} ✓` };
+}
+
+// Demande d'avis à un client SANS devis sur le site (soirée d'avant le site,
+// prestation prise en direct…) : juste un nom, un e-mail et une date
+// optionnelle. Aucun marqueur ni mise à jour en base : envoi pur et simple,
+// renvoyable autant de fois que nécessaire.
+export async function sendAvisLibreEmail(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const eventDate = String(formData.get("event_date") ?? "").trim() || null;
+
+  if (!email || !email.includes("@")) {
+    return { ok: false as const, error: "Adresse e-mail invalide." };
+  }
+  if (!name) {
+    return { ok: false as const, error: "Le prénom ou le nom du client est requis." };
+  }
+
+  const err = await sendAvisEmail(email, name, eventDate);
+  if (err) return { ok: false as const, error: err };
+
+  return { ok: true as const, message: `Demande d'avis envoyée à ${email} ✓` };
+}
 
 // L'admin a pris connaissance des nouveautés du devis.
 export async function markQuoteSeen(formData: FormData) {
