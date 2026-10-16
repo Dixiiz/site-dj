@@ -21,7 +21,7 @@ export default function ArticleDjMariageBlois() {
         description="Budget, répertoire, matériel, espace client : le guide complet pour choisir le DJ de votre mariage à Blois, Vendôme, Amboise et dans tout le Loir-et-Cher."
         slug="/blog/choisir-dj-mariage-blois"
         datePublished="2025-11-12"
-        dateModified="2026-01-10"
+        dateModified="2026-10-16"
       />
       <SiteHeader />
       <main className="mx-auto w-full max-w-3xl px-4 pb-16">
@@ -38,7 +38,7 @@ export default function ArticleDjMariageBlois() {
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             Publié le <time dateTime="2025-11-12">12 novembre 2025</time> · Mis à
-            jour le <time dateTime="2026-01-10">10 janvier 2026</time>
+            jour le <time dateTime="2026-10-16">16 octobre 2026</time>
           </p>
         </FadeIn>
 
@@ -156,7 +156,15 @@ export default function ArticleDjMariageBlois() {
               Montrichard, Onzain, Chaumont-sur-Loire, Chambord</strong> et
               dans un rayon de 50 km : les 30 premiers kilomètres
               d&apos;aller-retour sont offerts, et les frais se calculent
-              automatiquement dans votre devis.
+              automatiquement dans votre devis. Vous vous mariez plutôt vers
+              Tours ou Amboise ? Voyez notre{" "}
+              <Link
+                href="/blog/dj-mariage-tours"
+                className="text-accent underline underline-offset-4"
+              >
+                guide dédié au DJ de mariage à Tours
+              </Link>
+              .
             </p>
 
             <h2 className="text-2xl font-medium tracking-tight">
@@ -170,6 +178,52 @@ export default function ArticleDjMariageBlois() {
               <li>Des avis clients récents et vérifiables</li>
               <li>Un échange téléphonique avant la soirée (le feeling !)</li>
             </ul>
+
+            <h2 className="text-2xl font-medium tracking-tight">
+              7. Questions fréquentes (FAQ)
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <p className="font-medium">Quel est le prix d&apos;un DJ à Blois ?</p>
+                <p>
+                  Entre 900 € et 1 800 € pour un mariage complet, selon la durée
+                  et les options. Pour un anniversaire, la fourchette descend
+                  généralement entre 400 € et 800 €. Le plus fiable reste de
+                  construire votre devis en ligne pour obtenir le prix final
+                  tout compris.
+                </p>
+              </div>
+              <div>
+                <p className="font-medium">Jusqu&apos;à quelle heure peut-on danser ?</p>
+                <p>
+                  Dans la plupart des salles du Loir-et-Cher, la limite est
+                  fixée par le règlement intérieur (souvent 2 h ou 4 h). Sur
+                  certains domaines et châteaux, le volume sonore est encadré
+                  après minuit : un DJ expérimenté adapte le format (ambiance
+                  lounge, acoustic) pour continuer la soirée sans enfreindre
+                  les règles.
+                </p>
+              </div>
+              <div>
+                <p className="font-medium">Le DJ vient-il aussi à Vendôme ou Amboise ?</p>
+                <p>
+                  Oui : Propul&apos;Sound DJ intervient dans un rayon de 50 km
+                  autour de Blois — Vendôme, Amboise, Romorantin, Chambord,
+                  Montrichard, Morée et tout le val de Loire jusqu&apos;à Tours.
+                  Les 30 premiers kilomètres de déplacement sont offerts.
+                </p>
+              </div>
+              <div>
+                <p className="font-medium">Faut-il réserver longtemps à l&apos;avance ?</p>
+                <p>
+                  Pour un mariage en haute saison (mai à septembre), les
+                  samedis partent vite : 9 à 12 mois d&apos;avance est une bonne
+                  moyenne. Hors saison ou pour un vendredi/dimanche, 3 à 6 mois
+                  suffisent généralement. Les disponibilités en temps réel sont
+                  visibles sur le site.
+                </p>
+              </div>
+            </div>
 
             <div className="rounded-xl border border-accent/40 bg-accent/5 p-5 text-center">
               <p className="font-medium">Prêt à comparer concrètement ?</p>

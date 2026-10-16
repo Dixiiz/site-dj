@@ -31,6 +31,14 @@ const TAG_ICONS: Record<string, LucideIcon> = {
 
 const articles = [
   {
+    href: "/blog/dj-mariage-tours",
+    tag: "Mariage",
+    title: "DJ mariage à Tours : tarifs, salles et conseils (2026)",
+    excerpt:
+      "Tarifs réels autour de Tours, domaines du val de Loire et leurs contraintes, zone d'intervention : le guide pour les futurs mariés de Tours, Amboise et Montlouis-sur-Loire.",
+    readingTime: "5 min",
+  },
+  {
     href: "/blog/choisir-dj-mariage-blois",
     tag: "Mariage",
     title: "Comment choisir son DJ de mariage à Blois ? (guide 2026)",

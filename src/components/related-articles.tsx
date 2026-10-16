@@ -10,6 +10,7 @@ import {
 
 // Icône sobre (Lucide) par article, cohérente avec les catégories du blog.
 const ARTICLE_ICONS: Record<string, LucideIcon> = {
+  "/blog/dj-mariage-tours": Heart,
   "/blog/choisir-dj-mariage-blois": Heart,
   "/blog/playlist-mariage-2026": Music,
   "/blog/dj-ou-playlist-spotify": Music,
@@ -19,8 +20,13 @@ const ARTICLE_ICONS: Record<string, LucideIcon> = {
 
 const RELATED: Record<string, { href: string; title: string }[]> = {
   "/blog/choisir-dj-mariage-blois": [
+    { href: "/blog/dj-mariage-tours", title: "DJ mariage à Tours : tarifs, salles et conseils (2026)" },
     { href: "/blog/playlist-mariage-2026", title: "Playlist de mariage 2026 — les 15 titres qui font lever la foule" },
     { href: "/blog/combien-coute-dj-anniversaire", title: "Combien coûte un DJ pour un anniversaire à Blois ? (2026)" },
+  ],
+  "/blog/dj-mariage-tours": [
+    { href: "/blog/choisir-dj-mariage-blois", title: "Comment choisir son DJ de mariage à Blois ? (guide 2026)" },
+    { href: "/blog/playlist-mariage-2026", title: "Playlist de mariage 2026 — les 15 titres qui font lever la foule" },
   ],
   "/blog/playlist-mariage-2026": [
     { href: "/blog/choisir-dj-mariage-blois", title: "Comment choisir son DJ de mariage à Blois ? (guide 2026)" },

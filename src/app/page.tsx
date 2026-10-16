@@ -217,7 +217,7 @@ export default async function Home() {
           {heroSrc && <HeroVideo src={heroSrc} />}
           <FadeIn>
             <p className="text-sm tracking-[0.3em] text-accent uppercase">
-              DJ &amp; animations — Loir-et-Cher
+              DJ mariage · anniversaire · soirées — Blois, Loir-et-Cher
             </p>
             <h1
               className="font-display mx-auto mt-4 max-w-4xl text-5xl font-normal tracking-tight text-glow sm:text-7xl"
