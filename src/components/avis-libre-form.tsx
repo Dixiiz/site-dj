@@ -33,9 +33,9 @@ export function AvisLibreForm() {
       </summary>
       <form action={onSubmit} className="space-y-3 px-4 py-3">
         <p className="text-xs text-muted-foreground">
-          Pour les soirées qui n&apos;ont pas transité par le site : le même
-          e-mail de demande d&apos;avis que pour les dossiers clients, envoyé
-          directement à l&apos;adresse indiquée.
+          Pour les soirées qui n&apos;ont pas transité par le site : une
+          demande d&apos;avis « première fois » (ils n&apos;ont jamais reçu de
+          mail d&apos;avis), envoyée directement à l&apos;adresse indiquée.
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
           <input

@@ -1373,9 +1373,9 @@ export async function sendUpsellEmail(formData: FormData) {
   revalidatePath("/admin/devis");
   return { ok: true as const, message: `E-mail « montée en gamme » envoyé à ${quote.customer_email} ✓` };
 }
-// Gabarit partagé de l'e-mail de relance d'avis (dossier client OU client
-// libre sans devis) : rédaction différente des e-mails automatiques
-// (demande post-soirée et relance J+10 du cron) — ton plus personnel.
+// Gabarit de l'e-mail de relance d'avis (dossier client) : rédaction
+// différente des e-mails automatiques (demande post-soirée et relance J+10
+// du cron) — ton plus personnel.
 function avisRelanceEmailData(name: string, eventDate: string | null) {
   const dateLong = eventDate
     ? new Date(
@@ -1416,20 +1416,30 @@ function avisRelanceEmailData(name: string, eventDate: string | null) {
   };
 }
 
-// Envoi Resend de l'e-mail de relance d'avis. Renvoie l'erreur éventuelle.
-async function sendAvisEmail(to: string, name: string, eventDate: string | null): Promise<string | null> {
+// Envoi Resend de l'e-mail de demande d'avis (première demande OU relance).
+// Renvoie l'erreur éventuelle.
+async function sendAvisEmail(
+  to: string,
+  name: string,
+  eventDate: string | null,
+  premiere = false
+): Promise<string | null> {
   const { Resend } = await import("resend");
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     return "Envoi e-mail non configuré (RESEND_API_KEY).";
   }
-  const emailData = avisRelanceEmailData(name, eventDate);
+  const emailData = premiere
+    ? avisPremierEmailData(name, eventDate)
+    : avisRelanceEmailData(name, eventDate);
   try {
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({
       from: EMAIL_FROM,
       to,
-      subject: "Toujours un petit moment pour un avis ? — Propul'Sound DJ",
+      subject: premiere
+        ? "Merci pour cette soirée ! Votre avis compte énormément"
+        : "Toujours un petit moment pour un avis ? — Propul'Sound DJ",
       html: buildEmailHtml(emailData),
       text: buildEmailText(emailData),
     });
@@ -1442,6 +1452,45 @@ async function sendAvisEmail(to: string, name: string, eventDate: string | null)
     console.error("[sendAvisEmail]", e);
     return "L'envoi de l'e-mail a échoué.";
   }
+}
+
+// Gabarit « première demande » pour les clients SANS devis sur le site :
+// ils n'ont jamais reçu de demande d'avis, on ne parle donc pas de relance.
+function avisPremierEmailData(name: string, eventDate: string | null) {
+  const dateLong = eventDate
+    ? new Date(
+        eventDate.includes("T") ? eventDate : `${eventDate}T12:00:00`
+      ).toLocaleDateString("fr-FR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : null;
+  const nameHtml = name.replace(/&/g, "&amp;");
+
+  return {
+    title: "Merci pour cette soirée !",
+    intro: `Bonjour ${nameHtml},<br/><br/>J'espère que la soirée${dateLong ? ` du <strong>${dateLong}</strong>` : ""} restera un beau souvenir ! Ce fut un plaisir d'animer votre événement.<br/><br/><strong>Votre avis compte énormément</strong> pour un DJ indépendant comme moi : c'est ce qui permet aux futurs clients de se faire une idée de mon travail avant de me faire confiance pour leurs événements.`,
+    sections: [
+      {
+        title: "Un vrai coup de pouce pour mon activité",
+        lines: [
+          "Les avis m'aident à faire connaître Propul'Sound DJ — si vous avez quelques minutes, ce serait un vrai coup de pouce !",
+        ],
+      },
+      {
+        title: "2 minutes, au moment qui vous arrange",
+        lines: [
+          `<a href="${SITE_URL}/avis/google" style="color:#21619A;"><strong>Laisser un avis Google</strong></a> — le plus utile pour me faire connaître`,
+          `<a href="${SITE_URL}/avis/mariages" style="color:#21619A;"><strong>Laisser un avis Mariages.net</strong></a> — pour les couples en préparation`,
+          "Et si vous avez des photos ou vidéos de la piste de danse, je suis toujours preneur !",
+        ],
+      },
+    ],
+    button: { label: "Laisser un avis Google (2 min)", href: `${SITE_URL}/avis/google` },
+    footer: "Merci encore pour votre confiance, et au plaisir de se recroiser à l'occasion ! — Maxime, Propul'Sound DJ",
+  };
 }
 
 // ---------- Relance manuelle de la demande d'avis ----------
@@ -1512,7 +1561,7 @@ export async function sendAvisLibreEmail(formData: FormData) {
     return { ok: false as const, error: "Le prénom ou le nom du client est requis." };
   }
 
-  const err = await sendAvisEmail(email, name, eventDate);
+  const err = await sendAvisEmail(email, name, eventDate, true);
   if (err) return { ok: false as const, error: err };
 
   return { ok: true as const, message: `Demande d'avis envoyée à ${email} ✓` };

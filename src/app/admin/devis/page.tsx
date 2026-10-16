@@ -245,9 +245,6 @@ export default async function DevisPage({
 
       <DevisFilterBar q={q} tri={tri} />
 
-      {/* Demande d'avis « libre » : clients sans devis sur le site */}
-      <AvisLibreForm />
-
       {/* Demandes sur-mesure : visibles en haut de la page, pastille « Nouveau » */}
       {customFiltered.length > 0 ? (
         <section className="space-y-3">
@@ -659,6 +656,10 @@ export default async function DevisPage({
           })}
         </div>
       )}
+
+      {/* Demande d'avis « libre » : clients sans devis sur le site (rare,
+          une fois par an) — tout en bas de la page pour ne pas gêner. */}
+      <AvisLibreForm />
     </div>
   );
 }
