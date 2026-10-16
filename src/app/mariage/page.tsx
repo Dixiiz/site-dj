@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { FadeIn } from "@/components/fade-in";
 import { EventLanding, type EventLandingData } from "@/components/event-landing";
 
 export const metadata: Metadata = {
@@ -56,5 +58,50 @@ const data: EventLandingData = {
 };
 
 export default function MariagePage() {
-  return <EventLanding data={data} />;
+  return (
+    <>
+      <EventLanding data={data} />
+      {/* Maillage interne : la page la plus forte du site pousse les guides
+          du blog (répartition du « link equity », découverte des articles). */}
+      <FadeIn as="section" className="mx-auto w-full max-w-5xl px-4 pb-20">
+        <div className="rounded-3xl border border-border bg-card p-6 text-sm sm:p-8">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Pour aller plus loin
+          </p>
+          <p className="mt-2 text-muted-foreground">
+            Vous êtes en pleine préparation ? Deux guides écrits pour les
+            futurs mariés du secteur :
+          </p>
+          <ul className="mt-4 space-y-2">
+            <li>
+              <Link
+                href="/blog/choisir-dj-mariage-blois"
+                className="text-accent underline underline-offset-4"
+              >
+                Comment choisir son DJ de mariage à Blois ? — le guide complet
+              </Link>{" "}
+              <span className="text-muted-foreground">(budget, répertoire, matériel, checklist)</span>
+            </li>
+            <li>
+              <Link
+                href="/blog/dj-mariage-tours"
+                className="text-accent underline underline-offset-4"
+              >
+                DJ mariage à Tours : tarifs, salles et conseils
+              </Link>{" "}
+              <span className="text-muted-foreground">(val de Loire, Amboise, Chenonceaux)</span>
+            </li>
+            <li>
+              <Link
+                href="/blog/playlist-mariage-2026"
+                className="text-accent underline underline-offset-4"
+              >
+                Playlist de mariage 2026 — les 15 titres qui font lever la foule
+              </Link>
+            </li>
+          </ul>
+        </div>
+      </FadeIn>
+    </>
+  );
 }

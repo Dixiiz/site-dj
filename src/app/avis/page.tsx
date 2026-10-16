@@ -290,6 +290,26 @@ export default async function AvisPage() {
             — et merci d&apos;avance pour votre avis, il compte énormément.
           </div>
         </FadeIn>
+
+        <FadeIn delay={0.2} className="mt-6">
+          <p className="text-center text-sm text-muted-foreground">
+            En pleine préparation d&apos;un mariage ? Nos{" "}
+            <Link
+              href="/blog/choisir-dj-mariage-blois"
+              className="text-accent underline underline-offset-2 hover:underline"
+            >
+              guides pour choisir son DJ à Blois
+            </Link>{" "}
+            et{" "}
+            <Link
+              href="/blog/dj-mariage-tours"
+              className="text-accent underline underline-offset-2 hover:underline"
+            >
+              autour de Tours
+            </Link>
+            .
+          </p>
+        </FadeIn>
       </main>
       <SiteFooter />
     </>
