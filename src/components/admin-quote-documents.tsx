@@ -6,7 +6,7 @@ import {
   generateDevisDocument,
   generateDevisEtContratDocument,
   generateFactureDocument,
-  sendInvoiceDocument,
+  sendDocumentToClient,
   uploadAdminDocument,
 } from "@/app/client-actions";
 import { buttonVariants } from "@/components/ui/button";
@@ -76,20 +76,19 @@ export function AdminQuoteDocuments({
       >
         ↓
       </a>
-      {/* Pour les factures : envoi manuel de l'e-mail au client (sur clic). */}
-      {file.name.startsWith("Facture ") && file.name.endsWith(".pdf") ? (
-        <form action={async (fd: FormData) => { await sendInvoiceDocument(fd); }}>
-          <input type="hidden" name="quote_id" value={quoteId} />
-          <input type="hidden" name="file_id" value={file.id} />
-          <SubmitButton
-            pendingLabel="Envoi…"
-            confirm={`Envoyer « ${file.name} » au client par e-mail ?`}
-            className="rounded-lg border border-blue-500/40 px-2.5 py-1 text-xs text-blue-400 transition-colors hover:bg-blue-500/10"
-          >
-            ✉ Envoyer au client
-          </SubmitButton>
-        </form>
-      ) : null}
+      {/* Pour tous les documents : envoi manuel de l'e-mail au client
+          (sur clic — la génération n'envoie jamais d'e-mail automatique). */}
+      <form action={async (fd: FormData) => { await sendDocumentToClient(fd); }}>
+        <input type="hidden" name="quote_id" value={quoteId} />
+        <input type="hidden" name="file_id" value={file.id} />
+        <SubmitButton
+          pendingLabel="Envoi…"
+          confirm={`Envoyer « ${file.name} » au client par e-mail ?`}
+          className="rounded-lg border border-blue-500/40 px-2.5 py-1 text-xs text-blue-400 transition-colors hover:bg-blue-500/10"
+        >
+          ✉ Envoyer au client
+        </SubmitButton>
+      </form>
       <form action={deleteAdminDocument}>
         <input type="hidden" name="quote_id" value={quoteId} />
         <input type="hidden" name="file_id" value={file.id} />
@@ -113,6 +112,9 @@ export function AdminQuoteDocuments({
           <div className="flex flex-wrap items-start gap-2">
           <form action={async (fd: FormData) => { await generateDevisDocument(fd); }}>
             <input type="hidden" name="quote_id" value={quoteId} />
+            {/* Génération silencieuse : aucun e-mail automatique, l'admin
+                vérifie le PDF puis l'envoie via le bouton « ✉ Envoyer » */}
+            <input type="hidden" name="silent" value="1" />
             {/* Personnalisation du devis (facultatif) */}
             <details className="mb-2 text-left">
               <summary className="cursor-pointer text-xs text-muted-foreground hover:text-accent">
@@ -175,7 +177,8 @@ export function AdminQuoteDocuments({
             >
               Générer le devis PDF
             </SubmitButton>
-            {/* Génère les DEUX documents d'un coup : un seul e-mail au client */}
+            {/* Génère les DEUX documents d'un coup (sans e-mail : envoi
+                manuel via « ✉ Envoyer au client » après vérification) */}
             <SubmitButton
               pendingLabel="Génération du devis + contrat…"
               formAction={async (fd: FormData) => { await generateDevisEtContratDocument(fd); }}
@@ -186,6 +189,7 @@ export function AdminQuoteDocuments({
           </form>
           <form action={async (fd: FormData) => { await generateContratDocument(fd); }}>
             <input type="hidden" name="quote_id" value={quoteId} />
+            <input type="hidden" name="silent" value="1" />
             <SubmitButton
               pendingLabel="Génération du contrat…"
               className="rounded-lg border border-cyan-500/50 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition-colors hover:border-cyan-400 hover:bg-cyan-400/25 hover:text-cyan-100"
@@ -196,8 +200,9 @@ export function AdminQuoteDocuments({
           </div>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Généré automatiquement depuis la prestation choisie — le client le
-          signe dans son espace, ce qui confirme le devis.
+          Généré depuis la prestation choisie. Aucun e-mail n&apos;est envoyé
+          automatiquement : vérifiez le PDF, puis cliquez « ✉ Envoyer au
+          client » quand vous êtes prêt — le client le signe dans son espace.
         </p>
         {toSign.length > 0 ? (
           <ul className="mt-3 space-y-2">{toSign.map((f) => row(f, true))}</ul>

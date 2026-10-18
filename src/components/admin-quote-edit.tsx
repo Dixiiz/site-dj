@@ -180,7 +180,10 @@ export function AdminQuoteEdit({
     Math.round(Number.parseFloat(travelFee.replace(",", ".")) * 100 || 0) +
     Math.round(Number.parseFloat(extraFee.replace(",", ".")) * 100 || 0) +
     selectedOptions.reduce((sum, o) => sum + o.price, 0) +
-    manualLinesTotal;
+    // ⚠️ manualLinesTotal est en euros (saisie du formulaire) : on convertit
+    // en centimes comme le reste du calcul, sinon une ligne de 250 € ne
+    // faisait gagner que 2,50 € au total.
+    Math.round(manualLinesTotal * 100);
 
   if (!open) {
     return (

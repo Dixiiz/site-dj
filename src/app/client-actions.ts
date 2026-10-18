@@ -1929,7 +1929,13 @@ export async function generateDevisDocument(formData: FormData) {
 
   revalidatePath("/admin/devis");
   revalidatePath(`/mon-espace/devis/${quoteId}`);
-  return { ok: true as const, message: "Devis PDF généré et envoyé à la signature ✓" };
+  return {
+    ok: true as const,
+    message:
+      formData.get("silent") === "1"
+        ? "Devis PDF généré ✓ — vérifiez-le, puis envoyez-le au client avec le bouton ✉."
+        : "Devis PDF généré et envoyé à la signature ✓",
+  };
 }
 
 // Génère automatiquement le contrat PDF (même charte que le devis) et le
@@ -2017,7 +2023,13 @@ export async function generateContratDocument(formData: FormData) {
 
   revalidatePath("/admin/devis");
   revalidatePath(`/mon-espace/devis/${quoteId}`);
-  return { ok: true as const, message: "Contrat PDF généré et envoyé à la signature ✓" };
+  return {
+    ok: true as const,
+    message:
+      formData.get("silent") === "1"
+        ? "Contrat PDF généré ✓ — vérifiez-le, puis envoyez-le au client avec le bouton ✉."
+        : "Contrat PDF généré et envoyé à la signature ✓",
+  };
 }
 
 // Génère le devis ET le contrat en un clic, puis n'envoie qu'UN SEUL e-mail
@@ -2040,7 +2052,9 @@ export async function generateDevisEtContratDocument(formData: FormData) {
   const contratResult = await generateContratDocument(silentFd);
   if (contratResult && contratResult.ok === false) return contratResult;
 
-  // Un seul e-mail récapitulatif avec les documents à signer présents.
+  // Un seul e-mail récapitulatif avec les documents à signer présents —
+  // sauf génération silencieuse : l'admin vérifie les PDF puis envoie
+  // lui-même via le bouton « ✉ Envoyer au client ».
   const supabase = createAdminClient();
   const { data: files } = await supabase
     .from("quote_files")
@@ -2051,13 +2065,18 @@ export async function generateDevisEtContratDocument(formData: FormData) {
     .filter((f) => /^Devis |^Contrat /.test(f.name))
     .map((f) => f.name.replace(/\.pdf$/, ""));
 
-  await notifyClientDocuments(quoteId, names, { aSigner: true });
+  const silent = formData.get("silent") === "1";
+  if (!silent) {
+    await notifyClientDocuments(quoteId, names, { aSigner: true });
+  }
 
   revalidatePath("/admin/devis");
   revalidatePath(`/mon-espace/devis/${quoteId}`);
   return {
     ok: true as const,
-    message: `Devis + contrat générés et envoyés à la signature ✓ (${names.length} document${names.length > 1 ? "s" : ""})`,
+    message: silent
+      ? `Devis + contrat générés ✓ (${names.length} document${names.length > 1 ? "s" : ""}) — vérifiez-les, puis envoyez-les au client avec le bouton ✉.`
+      : `Devis + contrat générés et envoyés à la signature ✓ (${names.length} document${names.length > 1 ? "s" : ""})`,
   };
 }
 
@@ -2153,24 +2172,27 @@ export async function generateFactureDocument(formData: FormData) {
   }
 }
 
-// Envoie au client l'e-mail « document disponible » pour une facture déjà
-// générée (sur clic de l'admin — rien n'est envoyé automatiquement).
-export async function sendInvoiceDocument(formData: FormData) {
+// Envoie au client l'e-mail pour un document déjà généré (sur clic de
+// l'admin — rien n'est envoyé automatiquement à la génération).
+// • Devis / contrat (à signer) : e-mail « signature en ligne » avec lien
+//   vers l'espace client — le client signe dans son espace.
+// • Autres documents (facture…) : PDF joint à l'e-mail + lien signé en secours.
+export async function sendDocumentToClient(formData: FormData) {
   const { isAdmin } = await import("@/lib/admin-auth");
   if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
 
   const quoteId = String(formData.get("quote_id") ?? "");
   const fileId = String(formData.get("file_id") ?? "");
-  if (!quoteId || !fileId) return { ok: false as const, error: "Facture introuvable." };
+  if (!quoteId || !fileId) return { ok: false as const, error: "Document introuvable." };
 
   const supabase = createAdminClient();
   const { data: file } = await supabase
     .from("quote_files")
-    .select("id, name, from_admin, storage_path")
+    .select("id, name, from_admin, storage_path, doc_kind")
     .eq("id", fileId)
     .eq("quote_id", quoteId)
     .single();
-  if (!file?.from_admin) return { ok: false as const, error: "Facture introuvable." };
+  if (!file?.from_admin) return { ok: false as const, error: "Document introuvable." };
 
   const { data: quote } = await supabase
     .from("quotes")
@@ -2179,8 +2201,20 @@ export async function sendInvoiceDocument(formData: FormData) {
     .single();
   if (!quote?.customer_email) return { ok: false as const, error: "Client sans e-mail." };
 
-  // Le client reçoit la facture SANS compte : PDF joint à l'e-mail + lien de
-  // téléchargement signé (30 jours) en secours.
+  // Document à signer (devis, contrat) : le client signe dans son espace,
+  // l'e-mail le guide vers la signature en ligne (pas de pièce jointe).
+  if (file.doc_kind === "a_signer") {
+    after(() =>
+      notifyClientDocuments(quoteId, [file.name.replace(/\.pdf$/, "")], { aSigner: true })
+    );
+    return {
+      ok: true as const,
+      message: `« ${file.name} » : e-mail de signature en cours vers ${quote.customer_email} ✓`,
+    };
+  }
+
+  // Les autres documents (facture…) partent avec le PDF joint : le client
+  // les récupère sans compte + lien de téléchargement signé (30 jours) en secours.
   let downloadUrl: string | undefined;
   let attachment: { filename: string; content: string } | undefined;
   if (file.storage_path) {
