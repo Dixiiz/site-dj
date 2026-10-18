@@ -11,7 +11,7 @@ import { AdminQuoteLazyFolder } from "@/components/admin-quote-lazy-folder";
 import { AvisLibreForm } from "@/components/avis-libre-form";
 
 import { Badge } from "@/components/ui/badge";
-import { ADMIN_FX_OPTIONS } from "@/components/pricing-section";
+import { isFxOption } from "@/lib/fx-catalog";
 import { formatEuros } from "@/lib/money";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendScheduledEmails } from "@/lib/email-jobs";
@@ -45,15 +45,6 @@ function optionShort(name: string, qty?: number): string {
   if (n.includes("cérémonie")) return "Cérémonie";
   if (n.includes("light+")) return "Light+";
   return name.length > 14 ? `${name.slice(0, 12)}…` : name;
-}
-
-// Options du catalogue FX (cases à cocher) ≠ lignes supplémentaires manuelles
-// (libellé + montant libres ajoutés par l'admin, ex : location matériel,
-// déplacement RDV) : affichage séparé dans la liste et le détail du devis.
-function isFxOption(name: string): boolean {
-  return ADMIN_FX_OPTIONS.some(
-    (f) => name === f.name || name.startsWith(`${f.name} ×`)
-  );
 }
 
 function eventKind(formulaName: string): string {
