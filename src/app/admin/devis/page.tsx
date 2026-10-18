@@ -11,6 +11,7 @@ import { AdminQuoteLazyFolder } from "@/components/admin-quote-lazy-folder";
 import { AvisLibreForm } from "@/components/avis-libre-form";
 
 import { Badge } from "@/components/ui/badge";
+import { ADMIN_FX_OPTIONS } from "@/components/pricing-section";
 import { formatEuros } from "@/lib/money";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendScheduledEmails } from "@/lib/email-jobs";
@@ -44,6 +45,15 @@ function optionShort(name: string, qty?: number): string {
   if (n.includes("cérémonie")) return "Cérémonie";
   if (n.includes("light+")) return "Light+";
   return name.length > 14 ? `${name.slice(0, 12)}…` : name;
+}
+
+// Options du catalogue FX (cases à cocher) ≠ lignes supplémentaires manuelles
+// (libellé + montant libres ajoutés par l'admin, ex : location matériel,
+// déplacement RDV) : affichage séparé dans la liste et le détail du devis.
+function isFxOption(name: string): boolean {
+  return ADMIN_FX_OPTIONS.some(
+    (f) => name === f.name || name.startsWith(`${f.name} ×`)
+  );
 }
 
 function eventKind(formulaName: string): string {
@@ -339,7 +349,9 @@ export default async function DevisPage({
       ) : (
         <div className="space-y-3">
           {filtered.map((quote) => {
-            const options = (quote.selected_options ?? []) as SelectedOption[];
+            const allLines = (quote.selected_options ?? []) as SelectedOption[];
+            const options = allLines.filter((o) => isFxOption(o.name));
+            const supplements = allLines.filter((o) => !isFxOption(o.name));
             const status = STATUS_STYLES[quote.status] ?? {
               label: quote.status,
               className: "border-border",
@@ -385,7 +397,7 @@ export default async function DevisPage({
                     <div className="truncate text-xs text-muted-foreground">
                       {quote.event_location ?? ""}
                     </div>
-                    {/* Type d'événement + aperçu des options */}
+                    {/* Type d'événement + aperçu options / suppléments */}
                     <div className="mt-0.5 truncate text-xs">
                       <span className="text-accent">{eventKind(quote.formula_name ?? "")}</span>
                       {options.length > 0 ? (
@@ -394,9 +406,15 @@ export default async function DevisPage({
                           {options.map((o) => optionShort(o.name, o.qty)).join(" · ")}
                         </span>
                       ) : null}
+                      {supplements.length > 0 ? (
+                        <span className="text-muted-foreground">
+                          {options.length > 0 ? " + " : " · "}
+                          {supplements.map((o) => o.name).join(" + ")}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
-                  <div>
+                  <div className="flex flex-col items-end gap-1">
                     {options.length > 0 ? (
                       <Badge className="border-green-500/60 text-green-400" variant="outline">
                         {options.length} option{options.length > 1 ? "s" : ""}
@@ -406,6 +424,11 @@ export default async function DevisPage({
                         Sans option
                       </Badge>
                     )}
+                    {supplements.length > 0 ? (
+                      <Badge className="border-purple-500/60 text-purple-400" variant="outline">
+                        {supplements.length} supplément{supplements.length > 1 ? "s" : ""}
+                      </Badge>
+                    ) : null}
                   </div>
                   <div className="ml-auto flex items-center gap-3 text-right">
                     <div>
@@ -626,6 +649,7 @@ export default async function DevisPage({
                 <AdminQuoteDetails
                   quote={quote}
                   options={options}
+                  supplements={supplements}
                   schedule={schedulesByQuote.get(quote.id)}
                 />
                 {/* Dossier complet (conversation, musiques, fichiers,

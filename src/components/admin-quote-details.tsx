@@ -57,10 +57,12 @@ function parseNotes(notes: string | null) {
 export function AdminQuoteDetails({
   quote,
   options,
+  supplements = [],
   schedule,
 }: {
   quote: Quote;
   options: SelectedOption[];
+  supplements?: SelectedOption[];
   schedule?: { numero: number; total: number; amount_cents: number; due_date: string; status: string }[];
 }) {
   const extras = (quote.extra_fee_cents ?? 0) + (quote.travel_fee_cents ?? 0);
@@ -265,6 +267,21 @@ export function AdminQuoteDetails({
         )}
       </div>
 
+      {/* Lignes supplémentaires manuelles (≠ options du catalogue FX) */}
+      {supplements.length > 0 ? (
+        <div className="space-y-1.5">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Suppléments
+          </h3>
+          {supplements.map((s) => (
+            <div key={s.id ?? s.name} className="flex justify-between gap-2">
+              <span className="text-purple-400">+ {s.name}</span>
+              <span>{formatEuros(s.price_cents ?? 0)}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div className="space-y-1.5 border-t border-border pt-3">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Prix détaillé
@@ -280,6 +297,15 @@ export function AdminQuoteDetails({
           >
             <span>{option.name}</span>
             <span>{formatEuros(option.price_cents ?? 0)}</span>
+          </div>
+        ))}
+        {supplements.map((s) => (
+          <div
+            key={`ps-${s.id ?? s.name}`}
+            className="flex justify-between text-muted-foreground"
+          >
+            <span>{s.name}</span>
+            <span>{formatEuros(s.price_cents ?? 0)}</span>
           </div>
         ))}
         {extras > 0 ? (
