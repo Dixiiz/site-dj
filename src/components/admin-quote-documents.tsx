@@ -7,6 +7,7 @@ import {
   generateDevisEtContratDocument,
   generateFactureDocument,
   sendDocumentToClient,
+  notifyDevisReady,
   uploadAdminDocument,
 } from "@/app/client-actions";
 import { buttonVariants } from "@/components/ui/button";
@@ -76,19 +77,22 @@ export function AdminQuoteDocuments({
       >
         ↓
       </a>
-      {/* Pour tous les documents : envoi manuel de l'e-mail au client
-          (sur clic — la génération n'envoie jamais d'e-mail automatique). */}
-      <form action={async (fd: FormData) => { await sendDocumentToClient(fd); }}>
-        <input type="hidden" name="quote_id" value={quoteId} />
-        <input type="hidden" name="file_id" value={file.id} />
-        <SubmitButton
-          pendingLabel="Envoi…"
-          confirm={`Envoyer « ${file.name} » au client par e-mail ?`}
-          className="rounded-lg border border-blue-500/40 px-2.5 py-1 text-xs text-blue-400 transition-colors hover:bg-blue-500/10"
-        >
-          ✉ Envoyer au client
-        </SubmitButton>
-      </form>
+      {/* Documents à signer (devis, contrat) : envoi GROUPÉ via le bouton
+          unique de la section — un seul e-mail listant tous les documents.
+          Documents simples (facture…) : envoi individuel par document. */}
+      {file.doc_kind !== "a_signer" ? (
+        <form action={async (fd: FormData) => { await sendDocumentToClient(fd); }}>
+          <input type="hidden" name="quote_id" value={quoteId} />
+          <input type="hidden" name="file_id" value={file.id} />
+          <SubmitButton
+            pendingLabel="Envoi…"
+            confirm={`Envoyer « ${file.name} » au client par e-mail ?`}
+            className="rounded-lg border border-blue-500/40 px-2.5 py-1 text-xs text-blue-400 transition-colors hover:bg-blue-500/10"
+          >
+            ✉ Envoyer au client
+          </SubmitButton>
+        </form>
+      ) : null}
       <form action={deleteAdminDocument}>
         <input type="hidden" name="quote_id" value={quoteId} />
         <input type="hidden" name="file_id" value={file.id} />
@@ -205,7 +209,30 @@ export function AdminQuoteDocuments({
           client » quand vous êtes prêt — le client le signe dans son espace.
         </p>
         {toSign.length > 0 ? (
-          <ul className="mt-3 space-y-2">{toSign.map((f) => row(f, true))}</ul>
+          <>
+            <ul className="mt-3 space-y-2">{toSign.map((f) => row(f, true))}</ul>
+            {/* Un SEUL bouton pour tous les documents à signer : devis et
+                contrat partent ensemble dans un seul e-mail au client. */}
+            <form
+              action={async (fd: FormData) => { await notifyDevisReady(fd); }}
+              className="mt-3"
+            >
+              <input type="hidden" name="quote_id" value={quoteId} />
+              <SubmitButton
+                pendingLabel="Envoi…"
+                confirm={`Envoyer un seul e-mail au client avec ${toSign
+                  .map((f) => f.name.replace(/\.pdf$/, ""))
+                  .join(" + ")} ?`}
+                className="rounded-lg border border-blue-500/50 bg-blue-500/10 px-3 py-1.5 text-xs font-medium text-blue-300 transition-colors hover:border-blue-400 hover:bg-blue-400/25 hover:text-blue-100"
+              >
+                ✉{" "}
+                {toSign.some((f) => /^Devis /i.test(f.name)) &&
+                toSign.some((f) => /^Contrat /i.test(f.name))
+                  ? "Envoyer devis + contrat au client"
+                  : "Envoyer les documents au client"}
+              </SubmitButton>
+            </form>
+          </>
         ) : (
           <p className="mt-3 text-xs text-muted-foreground">
             Aucun document à signer pour le moment.

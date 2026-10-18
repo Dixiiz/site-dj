@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { updateQuoteAdmin, estimateTravelAdmin } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
 import { ADMIN_PACK_LIST, ADMIN_FX_OPTIONS } from "@/components/pricing-section";
+import { findFxOption, isFxOption } from "@/lib/fx-catalog";
 import { extraMinutes, formatExtraHours, packBaseMinutes } from "@/lib/booking-extra";
 import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
 import type { SelectedOption } from "@/lib/types";
@@ -60,12 +61,11 @@ export function AdminQuoteEdit({
   const [packPrice, setPackPrice] = useState(euros(quote.formula_price_cents));
   const [checked, setChecked] = useState<string[]>(() => {
     // Round-trip : « Pistolets CO2 × 2 » enregistré → re-coche « Pistolets CO2 »
-    // (la quantité, elle, est restaurée par co2Qty ci-dessous).
+    // (la quantité, elle, est restaurée par co2Qty ci-dessous). findFxOption
+    // reconnaît aussi les libellés historiques (« Machine à fumée lourde »).
     const names: string[] = [];
     for (const o of options) {
-      const fx = ADMIN_FX_OPTIONS.find(
-        (f) => o.name === f.name || o.name.startsWith(`${f.name} ×`)
-      );
+      const fx = findFxOption(o.name);
       if (fx && !names.includes(fx.name)) names.push(fx.name);
     }
     return names;
@@ -78,10 +78,10 @@ export function AdminQuoteEdit({
   // perdu à la ré-édition. Montant = total de la ligne (€).
   const [manualLines, setManualLines] = useState<{ label: string; amount: string }[]>(
     () => {
-      const isFx = (name: string) =>
-        ADMIN_FX_OPTIONS.some((f) => name === f.name || name.startsWith(`${f.name} ×`));
+      // Tout ce qui n'appartient pas au catalogue FX (findFxOption reconnaît
+      // aussi les libellés historiques) est repris ici — rien n'est perdu.
       return options
-        .filter((o) => !isFx(o.name))
+        .filter((o) => !isFxOption(o.name))
         .map((o) => ({ label: o.name, amount: euros(o.price_cents) }));
     }
   );
