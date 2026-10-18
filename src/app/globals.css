@@ -312,3 +312,21 @@ html {
 .conseil-row {
   animation: conseil-row 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* Défilement fluide partout (admin + client) */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Ouverture animée des accordéons <details> dans l'admin uniquement
+   (progressive enhancement Chrome 131+ : ignorée ailleurs, aucun risque) */
+.admin-shell details::details-content {
+  block-size: 0;
+  overflow-y: clip;
+  transition:
+    content-visibility 260ms allow-discrete,
+    block-size 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.admin-shell details[open]::details-content {
+  block-size: auto;
+}

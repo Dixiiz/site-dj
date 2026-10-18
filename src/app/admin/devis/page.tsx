@@ -9,6 +9,7 @@ import { updateQuoteStatus } from "@/app/actions";
 import { DevisFilterBar } from "@/components/devis-filter-bar";
 import { AdminQuoteLazyFolder } from "@/components/admin-quote-lazy-folder";
 import { AvisLibreForm } from "@/components/avis-libre-form";
+import { ScrollToFocus } from "@/components/scroll-to-focus";
 
 import { Badge } from "@/components/ui/badge";
 import { isFxOption } from "@/lib/fx-catalog";
@@ -59,13 +60,13 @@ function eventKind(formulaName: string): string {
 export default async function DevisPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; tri?: string; focus?: string; cree?: string; revise?: string; erreur_revise?: string }>;
+  searchParams: Promise<{ q?: string; tri?: string; focus?: string; cree?: string; genere?: string; revise?: string; erreur_revise?: string }>;
 }) {
   // Filet de sécurité : si le Cron Vercel n'a pas tourné, on traite les
   // e-mails planifiés (relance J+10, avis post-soirée) à l'ouverture de l'admin.
   sendScheduledEmails().catch((e) => console.error("[email-jobs]", e));
 
-  const { q, tri, focus, cree, revise, erreur_revise } = await searchParams as { q?: string; tri?: string; focus?: string; cree?: string; revise?: string; erreur_revise?: string };
+  const { q, tri, focus, cree, genere, revise, erreur_revise } = await searchParams as { q?: string; tri?: string; focus?: string; cree?: string; genere?: string; revise?: string; erreur_revise?: string };
   const query = (q ?? "").trim().toLowerCase();
   const supabase = createAdminClient();
 
@@ -335,6 +336,16 @@ export default async function DevisPage({
         </p>
       ) : null}
 
+      {genere ? (
+        <p className="rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-300">
+          Document généré ✓ — vérifiez-le, puis envoyez-le au client avec le bouton « ✉ Envoyer devis + contrat au client ».
+        </p>
+      ) : null}
+
+      {/* Après une action (édition, génération, envoi…) : le devis concerné
+          est ouvert via ?focus=… et on scrolle en douceur vers lui. */}
+      <ScrollToFocus focus={focus} />
+
       {filtered.length === 0 ? (
         <p className="text-muted-foreground">Aucun devis correspondant.</p>
       ) : (
@@ -350,6 +361,7 @@ export default async function DevisPage({
             return (
               <details
                 key={quote.id}
+                id={`devis-${quote.id}`}
                 open={quote.id === focus || undefined}
                 className={`rounded-xl border bg-card transition-colors hover:border-accent/50 open:border-accent/70 ${
                   quote.id === focus
@@ -359,8 +371,8 @@ export default async function DevisPage({
                       : "border-border"
                 }`}
               >
-                <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-2 p-4 [&::-webkit-details-marker]:hidden">
-                  <div className="min-w-32">
+                <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-2 p-4 sm:gap-x-4 [&::-webkit-details-marker]:hidden">
+                  <div className="min-w-24 sm:min-w-32">
                     <div className="font-medium">
                       {quote.event_date
                         ? new Date(quote.event_date).toLocaleDateString("fr-FR", {
@@ -375,7 +387,7 @@ export default async function DevisPage({
                       {eventKind(quote.formula_name ?? "")}
                     </div>
                   </div>
-                  <div className="min-w-44 flex-1">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 font-medium">
                       {quote.status === "nouveau" ? (
                         <span

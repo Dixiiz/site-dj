@@ -817,7 +817,8 @@ export async function updateQuoteAdmin(formData: FormData) {
 
   revalidatePath("/admin/devis");
   revalidatePath("/disponibilites");
-  redirect(`/admin/devis?modifie=1`);
+  // On reste sur le devis : ?focus ouvre l'accordéon + scroll en douceur.
+  redirect(`/admin/devis?focus=${id}&modifie=1`);
 }
 
 // Création d'un devis sur mesure côté admin : client, date, pack, options,

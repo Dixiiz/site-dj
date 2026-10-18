@@ -29,7 +29,7 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-full">
+    <div className="admin-shell min-h-full">
       {/* En-tête sticky : la navigation reste accessible même en défilant */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4">

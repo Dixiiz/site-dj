@@ -72,7 +72,7 @@ export function AdminQuoteLazyFolder({
   return (
     <div ref={setRootEl} className="contents">
       {open ? (
-        <div className="space-y-6 border-t border-border px-4 pb-5 pt-4">
+        <div className="space-y-6 border-t border-border px-4 pb-5 pt-4 animate-in fade-in slide-in-from-top-1 duration-300">
           <AdminQuoteConversation quoteId={quoteId} initialMessages={initialMessages} />
           <AdminQuotePlaylist
             quoteId={quoteId}

@@ -1228,7 +1228,7 @@ export async function resolveQuoteDetails(formData: FormData) {
     const fd = new FormData();
     fd.set("quote_id", quoteId);
     fd.set("silent", "1");
-    const gen = await generateDevisEtContratDocument(fd);
+    const gen = await genererDevisEtContratCore(fd);
     if (gen.ok === false) {
       return {
         ok: false as const,
@@ -1254,7 +1254,7 @@ export async function resolveQuoteDetails(formData: FormData) {
 
 // L'admin envoie (de son propre chef) l'e-mail « documents à signer » pour un
 // devis modifié : liste les PDF à signer non signés du devis.
-export async function notifyDevisReady(formData: FormData) {
+async function notifyDevisReadyCore(formData: FormData) {
   const { isAdmin } = await import("@/lib/admin-auth");
   if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
   const quoteId = String(formData.get("quote_id") ?? "");
@@ -1277,6 +1277,12 @@ export async function notifyDevisReady(formData: FormData) {
   await notifyClientDocuments(quoteId, names, { aSigner: true });
   revalidatePath("/admin/devis");
   return { ok: true as const, message: `E-mail envoyé au client ✓ (${names.join(" + ")})` };
+}
+
+export async function notifyDevisReady(formData: FormData) {
+  const result = await notifyDevisReadyCore(formData);
+  if (result && result.ok === false) return result;
+  redirect(`/admin/devis?focus=${String(formData.get("quote_id") ?? "")}`);
 }
 
 // ---------- E-mail « montée en gamme » (admin) ----------
@@ -1852,7 +1858,7 @@ export async function signClientDocument(formData: FormData) {
 
 // Génère automatiquement le devis PDF à partir de la prestation choisie
 // et le place dans la section « à signer » du client.
-export async function generateDevisDocument(formData: FormData) {
+async function genererDevisCore(formData: FormData) {
   const { isAdmin } = await import("@/lib/admin-auth");
   if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
 
@@ -1938,10 +1944,18 @@ export async function generateDevisDocument(formData: FormData) {
   };
 }
 
+// Wrapper public : après génération, on REVIENS sur le devis (accordéon
+// ouvert via ?focus + scroll en douceur) au lieu de retomber en haut.
+export async function generateDevisDocument(formData: FormData) {
+  const result = await genererDevisCore(formData);
+  if (result && result.ok === false) return result;
+  redirect(`/admin/devis?focus=${String(formData.get("quote_id") ?? "")}&genere=1`);
+}
+
 // Génère automatiquement le contrat PDF (même charte que le devis) et le
 // place dans la section « à signer » du client. Réutilise le numéro de
 // contrat du devis si celui-ci a déjà été généré.
-export async function generateContratDocument(formData: FormData) {
+async function genererContratCore(formData: FormData) {
   const { isAdmin } = await import("@/lib/admin-auth");
   if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
 
@@ -2032,9 +2046,15 @@ export async function generateContratDocument(formData: FormData) {
   };
 }
 
+export async function generateContratDocument(formData: FormData) {
+  const result = await genererContratCore(formData);
+  if (result && result.ok === false) return result;
+  redirect(`/admin/devis?focus=${String(formData.get("quote_id") ?? "")}&genere=1`);
+}
+
 // Génère le devis ET le contrat en un clic, puis n'envoie qu'UN SEUL e-mail
 // au client listant les deux documents (au lieu de deux mails séparés).
-export async function generateDevisEtContratDocument(formData: FormData) {
+async function genererDevisEtContratCore(formData: FormData) {
   const { isAdmin } = await import("@/lib/admin-auth");
   if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
 
@@ -2047,9 +2067,9 @@ export async function generateDevisEtContratDocument(formData: FormData) {
   for (const [key, value] of formData.entries()) silentFd.set(key, value);
   silentFd.set("silent", "1");
 
-  const devisResult = await generateDevisDocument(silentFd);
+  const devisResult = await genererDevisCore(silentFd);
   if (devisResult && devisResult.ok === false) return devisResult;
-  const contratResult = await generateContratDocument(silentFd);
+  const contratResult = await genererContratCore(silentFd);
   if (contratResult && contratResult.ok === false) return contratResult;
 
   // Un seul e-mail récapitulatif avec les documents à signer présents —
@@ -2080,9 +2100,15 @@ export async function generateDevisEtContratDocument(formData: FormData) {
   };
 }
 
+export async function generateDevisEtContratDocument(formData: FormData) {
+  const result = await genererDevisEtContratCore(formData);
+  if (result && result.ok === false) return result;
+  redirect(`/admin/devis?focus=${String(formData.get("quote_id") ?? "")}&genere=1`);
+}
+
 // Génère la facture PDF (même charte que le devis, sans signature) et la
 // place dans les documents simples du devis. Numérotation F-AAAA-NNN.
-export async function generateFactureDocument(formData: FormData) {
+async function genererFactureCore(formData: FormData) {
   const { isAdmin } = await import("@/lib/admin-auth");
   if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
 
@@ -2172,12 +2198,18 @@ export async function generateFactureDocument(formData: FormData) {
   }
 }
 
+export async function generateFactureDocument(formData: FormData) {
+  const result = await genererFactureCore(formData);
+  if (result && result.ok === false) return result;
+  redirect(`/admin/devis?focus=${String(formData.get("quote_id") ?? "")}&genere=1`);
+}
+
 // Envoie au client l'e-mail pour un document déjà généré (sur clic de
 // l'admin — rien n'est envoyé automatiquement à la génération).
 // • Devis / contrat (à signer) : e-mail « signature en ligne » avec lien
 //   vers l'espace client — le client signe dans son espace.
 // • Autres documents (facture…) : PDF joint à l'e-mail + lien signé en secours.
-export async function sendDocumentToClient(formData: FormData) {
+async function envoyerDocumentCore(formData: FormData) {
   const { isAdmin } = await import("@/lib/admin-auth");
   if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
 
@@ -2243,6 +2275,12 @@ export async function sendDocumentToClient(formData: FormData) {
     ok: true as const,
     message: `« ${file.name} » : envoi en cours vers ${quote.customer_email} ✓`,
   };
+}
+
+export async function sendDocumentToClient(formData: FormData) {
+  const result = await envoyerDocumentCore(formData);
+  if (result && result.ok === false) return result;
+  redirect(`/admin/devis?focus=${String(formData.get("quote_id") ?? "")}`);
 }
 
 // Le client supprime un devis encore au stade « nouveau » (erreur de saisie).

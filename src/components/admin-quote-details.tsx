@@ -77,7 +77,7 @@ export function AdminQuoteDetails({
   const upsell = /refuse|annule/.test(quote.status) ? null : findUpsell(quote.formula_name);
 
   return (
-    <div className="space-y-4 border-t border-border px-4 pb-4 pt-4 text-sm">
+    <div className="space-y-4 border-t border-border px-4 pb-4 pt-4 text-sm animate-in fade-in slide-in-from-top-1 duration-300">
       {/* Devis sans acompte : la signature suffit à confirmer la soirée */}
       {quote.acompte_required === false ? (
         <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">

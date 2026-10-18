@@ -206,7 +206,7 @@ export function AdminQuoteEdit({
       action={async (formData: FormData) => {
         await updateQuoteAdmin(formData);
       }}
-      className="w-full space-y-3 rounded-xl border border-accent/40 bg-primary/5 p-4"
+      className="w-full space-y-3 rounded-xl border border-accent/40 bg-primary/5 p-4 animate-in fade-in slide-in-from-top-1 duration-200"
     >
       <input type="hidden" name="id" value={quote.id} />
       <input
@@ -329,7 +329,7 @@ export function AdminQuoteEdit({
             : `⏱ Durée dans le forfait (${formatExtraHours((packBaseMinutes(selectedPack?.name ?? quote.formula_name) ?? 0) / 60)} incluses) — aucun supplément d'heures.`}
         </p>
       ) : null}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={calcTravel}
@@ -463,7 +463,7 @@ export function AdminQuoteEdit({
           {ADMIN_FX_OPTIONS.map((fx) => {
             const active = checked.includes(fx.name);
             return (
-              <div key={fx.name} className="flex items-center gap-3">
+              <div key={fx.name} className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={() =>
