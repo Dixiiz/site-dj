@@ -141,6 +141,7 @@ export function buildEmailText(opts: {
   intro: string;
   sections?: Section[];
   button?: Button;
+  footer?: string;
 }): string {
   const strip = (s: string) => s.replace(/<[^>]*>/g, "");
   const parts: string[] = [strip(opts.intro), ""];
@@ -150,6 +151,7 @@ export function buildEmailText(opts: {
     parts.push("");
   }
   if (opts.button) parts.push(`${opts.button.label} : ${opts.button.href}`, "");
+  if (opts.footer) parts.push(strip(opts.footer), "");
   parts.push("Une question ? Répondez simplement à cet e-mail.");
   return parts.join("\n");
 }

@@ -9,6 +9,7 @@ import { createAuthClient } from "@/lib/supabase/server";
 import type { SelectedOption } from "@/lib/types";
 import { SITE_URL } from "@/lib/site-url";
 import { EMAIL_FROM, buildEmailHtml, buildEmailText } from "@/lib/emails";
+import { signerLienPremiereConnexion } from "@/lib/lien-premiere-connexion";
 import { ADMIN_PACK_LIST } from "@/components/pricing-section";
 import { formatEuros } from "@/lib/money";
 import { findUpsell } from "@/lib/upsell";
@@ -290,7 +291,12 @@ export async function sendFirstLoginLink(formData: FormData) {
   const h = await headers();
   const host = h.get("host") ?? "localhost:3000";
   const proto = host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
-  const redirectTo = `${proto}://${host}/connexion/reinitialiser`;
+
+  // Le mail contient un lien enveloppe signé (valable 7 jours) : ce n'est
+  // qu'au clic que /connexion/demarrer génère le vrai lien Supabase (valable
+  // 1 h) — le décompte démarre donc au clic, pas à l'envoi.
+  const token = signerLienPremiereConnexion(email);
+  const envelopeLink = `${proto}://${host}/connexion/demarrer?q=${encodeURIComponent(token)}`;
 
   const admin = createAdminClient();
 
@@ -316,24 +322,9 @@ export async function sendFirstLoginLink(formData: FormData) {
       };
     }
     name = String(quote.customer_name ?? "");
-
-    const { data, error } = await admin.auth.admin.generateLink({
-      type: "invite",
-      email,
-      options: { data: { name }, redirectTo },
-    });
-    if (error || !data?.properties?.action_link) {
-      const dejaPris = /already|exist|registered|duplicate/i.test(error?.message ?? "");
-      if (dejaPris) {
-        // Course entre deux clics : le compte vient d'être créé, on retombe
-        // sur le flux « compte existant » ci-dessous.
-      } else {
-        console.error("[sendFirstLoginLink] generateLink(invite):", error);
-        return { ok: false as const, error: "Envoi impossible pour le moment. Réessayez dans un instant." };
-      }
-    } else {
-      return await sendFirstLoginEmail(email, name, data.properties.action_link, true);
-    }
+    // La création du compte (invite Supabase) sera faite par
+    // /connexion/demarrer au clic sur le lien enveloppe.
+    return await sendFirstLoginEmail(email, name, envelopeLink, true);
   } else {
     // Nom connu via les métadonnées du compte (pour personnaliser l'e-mail).
     const { data: usersData } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
@@ -342,16 +333,7 @@ export async function sendFirstLoginLink(formData: FormData) {
     );
   }
 
-  const { data, error } = await admin.auth.admin.generateLink({
-    type: "recovery",
-    email,
-    options: { redirectTo },
-  });
-  if (error || !data?.properties?.action_link) {
-    console.error("[sendFirstLoginLink] generateLink(recovery):", error);
-    return { ok: false as const, error: "Envoi impossible pour le moment. Réessayez dans un instant." };
-  }
-  return await sendFirstLoginEmail(email, name, data.properties.action_link, false);
+  return await sendFirstLoginEmail(email, name, envelopeLink, false);
 }
 
 // Variante « fire and forget » pour les formulaires admin (bouton « Renvoyer
@@ -387,8 +369,8 @@ async function sendFirstLoginEmail(
     html: buildEmailHtml({
       title: nouveauCompte ? "Votre espace client vous attend !" : "Définissez votre mot de passe",
       intro: nouveauCompte
-        ? `${bonjour}<br/><br/>Votre dossier Propul'Sound DJ est prêt. Il ne manque qu'une chose : <strong>votre mot de passe</strong>. Cliquez sur le bouton ci-dessous — votre e-mail est déjà connu, vous n'avez rien d'autre à remplir. <strong>Ce lien est valable 1 heure.</strong>`
-        : `${bonjour}<br/><br/>Cliquez sur le bouton ci-dessous pour définir le mot de passe de votre espace client Propul'Sound DJ. Vous n'avez que votre mot de passe à choisir — tout le reste est déjà en place. <strong>Ce lien est valable 1 heure.</strong>`,
+        ? `${bonjour}<br/><br/>Votre dossier Propul'Sound DJ est prêt. Il ne manque qu'une chose : <strong>votre mot de passe</strong>. Cliquez sur le bouton ci-dessous — votre e-mail est déjà connu, vous n'avez rien d'autre à remplir. <strong>Ce lien est valable 7 jours</strong> ; l'ouverture de votre accès (1 h) ne démarre qu'au moment où vous cliquez.`
+        : `${bonjour}<br/><br/>Cliquez sur le bouton ci-dessous pour définir le mot de passe de votre espace client Propul'Sound DJ. Vous n'avez que votre mot de passe à choisir — tout le reste est déjà en place. <strong>Ce lien est valable 7 jours</strong> ; la procédure (1 h) ne démarre qu'au moment où vous cliquez.`,
       sections: [
         {
           title: "Ensuite",
@@ -402,13 +384,15 @@ async function sendFirstLoginEmail(
         },
       ],
       button: { label: nouveauCompte ? "Créer mon mot de passe" : "Définir mon mot de passe", href: actionLink },
-      footer: "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail. — Maxime",
+      footer:
+        "Ce lien reste valable 7 jours : cliquez-le quand vous voulez, votre accès s'ouvre pour 1 heure à ce moment-là. — Maxime",
     }),
     text: buildEmailText({
       intro: nouveauCompte
-        ? "Votre dossier est prêt : cliquez sur le bouton ci-dessous pour choisir votre mot de passe. Ce lien est valable 1 heure."
-        : "Cliquez sur le bouton ci-dessous pour définir le mot de passe de votre espace client. Ce lien est valable 1 heure.",
+        ? "Votre dossier est prêt : cliquez sur le bouton ci-dessous pour choisir votre mot de passe. Ce lien est valable 7 jours — le décompte de 1 h ne démarre qu'au clic."
+        : "Cliquez sur le bouton ci-dessous pour définir le mot de passe de votre espace client. Ce lien est valable 7 jours — le décompte de 1 h ne démarre qu'au clic.",
       button: { label: nouveauCompte ? "Créer mon mot de passe" : "Définir mon mot de passe", href: actionLink },
+      footer: "Ce lien reste valable 7 jours : cliquez-le quand vous voulez, votre accès s'ouvre pour 1 heure à ce moment-là. — Maxime",
     }),
   });
   if (sendError) {
@@ -418,7 +402,7 @@ async function sendFirstLoginEmail(
   return {
     ok: true as const,
     message:
-      "E-mail envoyé ! Ouvrez-le et cliquez sur le bouton pour définir votre mot de passe (vérifiez vos spams si besoin). Lien valable 1 heure.",
+      "E-mail envoyé ! Ouvrez-le et cliquez sur le bouton pour définir votre mot de passe (vérifiez vos spams si besoin). Lien valable 7 jours — votre accès s'ouvre pour 1 heure au clic.",
   };
 }
 

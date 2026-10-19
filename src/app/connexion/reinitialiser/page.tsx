@@ -1,6 +1,7 @@
 import { createAuthClient } from "@/lib/supabase/server";
 import { getClientUser } from "@/app/client-actions";
 import { ResetPasswordForm } from "@/components/reset-password-form";
+import { ResendLinkForm } from "@/components/resend-link-form";
 
 export const metadata = {
   title: "Votre mot de passe — Propul'Sound DJ",
@@ -37,12 +38,13 @@ export default async function ReinitialiserPage({
       ) : (
         <div className="space-y-4 rounded-xl border border-border p-6 text-center">
           <p className="text-sm text-muted-foreground">
-            Ce lien est invalide ou a expiré. Faites une nouvelle demande depuis la page de connexion
-            (« Mot de passe oublié » ou « Première connexion »).
+            Ce lien est invalide ou a expiré. Demandez un nouveau lien ci-dessous — il vous sera
+            envoyé à l&apos;e-mail de votre devis.
           </p>
+          <ResendLinkForm />
           <a
             href="/connexion"
-            className="inline-block rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition hover:brightness-110"
+            className="inline-block text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             Retour à la connexion
           </a>
