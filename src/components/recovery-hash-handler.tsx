@@ -29,20 +29,17 @@ export function RecoveryHashHandler() {
       .catch(() => null)
       .then(() => {
         window.history.replaceState(null, "", window.location.pathname + window.location.search);
-        // Navigation explicite (et non router.refresh()) dans tous les cas :
-        // elle garantit un rendu serveur FRAIS qui voit les cookies de session
-        // tout juste écrits — un refresh sur la page courante peut arriver trop
-        // tôt et afficher « lien invalide » alors que la session est établie.
-        // Récupération de mot de passe → formulaire de nouveau mot de passe.
-        // Invitation / première connexion → idem (le client n'a que son mot de
-        // passe à choisir). Inscription classique (mdp choisi sur le formulaire)
-        // → espace client. Le lien peut atterrir sur la racine du site quand
-        // Supabase écrase le redirect_to : la navigation explicite s'en affranchit.
-        if (type === "signup") {
-          router.replace("/mon-espace");
+        const cible = type === "signup" ? "/mon-espace" : "/connexion/reinitialiser";
+        // CAS CRITIQUE : si le navigateur est DÉJÀ sur la page cible (atterrissage
+        // direct depuis Supabase quand redirect_to est accepté), router.replace()
+        // vers la même URL est un no-op — le rendu serveur ne relit jamais les
+        // cookies tout juste écrits et le client voit « lien invalide » alors
+        // que sa session est active. Un paramètre anti-cache force une vraie
+        // navigation (requête RSC fraîche qui porte les cookies de session).
+        if (window.location.pathname === cible) {
+          router.replace(`${cible}?_r=${Date.now()}`);
         } else {
-          // recovery, invite, magiclink… → définition / changement de mdp.
-          router.replace("/connexion/reinitialiser");
+          router.replace(cible);
         }
       });
   }, [router]);

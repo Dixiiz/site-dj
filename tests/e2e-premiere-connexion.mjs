@@ -73,9 +73,19 @@ try {
   // ── A) Premier clic : compte inexistant → invitation → mot de passe ──
   const ctxA = await browser.newContext();
   const pageA = await ctxA.newPage();
-  await pageA.goto(envelopeUrl, { waitUntil: "domcontentloaded", timeout: 90000 });
-  await pageA.waitForURL("**/connexion/reinitialiser**", { timeout: 90000 });
-  await pageA.waitForSelector("#password", { timeout: 60000 });
+  const urlsA = [];
+  pageA.on("framenavigated", (f) => f === pageA.mainFrame() && urlsA.push(f.url()));
+  try {
+    await pageA.goto(envelopeUrl, { waitUntil: "domcontentloaded", timeout: 90000 });
+    await pageA.waitForURL("**/connexion/reinitialiser**", { timeout: 90000 });
+    await pageA.waitForSelector("#password", { timeout: 60000 });
+  } catch (e) {
+    console.log("❌ Échec scénario A — parcours :");
+    for (const u of urlsA) console.log("   →", u.length > 120 ? u.slice(0, 120) + "…" : u);
+    console.log("   URL courante :", pageA.url().slice(0, 120));
+    console.log("   Texte visible :", (await pageA.locator("body").innerText().catch(() => "?")).slice(0, 300).replace(/\n+/g, " | "));
+    throw e;
+  }
   check("A1. Clic du lien → formulaire « Votre mot de passe »", pageA.url().includes("/connexion/reinitialiser"));
   check("A2. Champs mot de passe + confirmation affichés", (await pageA.locator("#confirm").count()) > 0);
   await pageA.fill("#password", MDP_1);
@@ -83,8 +93,9 @@ try {
   await pageA.click("button:has-text('Enregistrer et accéder à mon espace')");
   await pageA.waitForURL("**/mon-espace**", { timeout: 90000 });
   check("A3. Mot de passe enregistré → arrivée sur /mon-espace", true);
-  const nameVisible = await pageA.getByText("Test E2E Premiere").first().isVisible().catch(() => false);
-  check("A4. L'espace client affiche bien le nom du devis", nameVisible);
+  console.log("   Parcours A :", urlsA.map((u) => u.split("#")[0].slice(0, 80)).join(" → "));
+  const nameVisible = await pageA.getByText("Formule Test E2E").first().isVisible().catch(() => false);
+  check("A4. L'espace client affiche bien le devis du client", nameVisible);
   await ctxA.close();
 
 
