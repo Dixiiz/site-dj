@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resendFirstLoginLink, deleteClientAccount } from "@/app/client-actions";
 import { SubmitButton } from "@/components/submit-button";
@@ -19,6 +20,17 @@ type Compte = {
 
 export default async function AdminComptesPage() {
   const supabase = createAdminClient();
+
+  // Message flash du bouton « Envoyer / Renvoyer un accès » (cookie posé par
+  // resendFirstLoginLink) : confirme l'envoi ou signale l'échec — un envoi
+  // raté ne doit jamais passer inaperçu.
+  let flash: { ok: boolean; msg: string } | null = null;
+  try {
+    const raw = (await cookies()).get("dj_admin_flash")?.value;
+    flash = raw ? (JSON.parse(raw) as { ok: boolean; msg: string }) : null;
+  } catch {
+    flash = null;
+  }
 
   const [{ data: usersData }, { data: quotes }] = await Promise.all([
     supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
@@ -59,6 +71,19 @@ export default async function AdminComptesPage() {
       <p className="mt-1 text-sm text-muted-foreground">
         Tous les comptes créés sur l’espace client, avec leurs devis.
       </p>
+
+      {flash ? (
+        <div
+          className={`mt-4 rounded-lg border px-4 py-3 text-sm ${
+            flash.ok
+              ? "border-green-500/40 bg-green-500/10 text-green-300"
+              : "border-destructive/50 bg-destructive/10 text-destructive"
+          }`}
+        >
+          {flash.ok ? "✓ " : "⚠ "}
+          {flash.msg}
+        </div>
+      ) : null}
 
       <div className="mt-6 overflow-x-auto rounded-xl border border-border">
         <table className="w-full min-w-[720px] text-left text-sm">

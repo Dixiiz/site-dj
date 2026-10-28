@@ -333,7 +333,13 @@ export default async function ClientQuotePage({
             <p className="mt-1 text-muted-foreground">
               Vous avez demandé :{" "}
               {pendingOptions.length > 0
-                ? pendingOptions.map((o) => o.name).join(", ")
+                ? pendingOptions
+                    .map((o) =>
+                      (o.price_cents ?? 0) > 0
+                        ? `${o.name} (${formatEuros(o.price_cents)})`
+                        : o.name
+                    )
+                    .join(", ")
                 : "aucune option"}
               . Nous vous répondons dès que possible.
             </p>

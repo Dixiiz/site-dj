@@ -24,19 +24,27 @@ export function RecoveryHashHandler() {
 
     const type = params.get("type");
     const supabase = createBrowserAuthClient();
-    supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(() => {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
-      // Récupération de mot de passe → formulaire de nouveau mot de passe.
-      // Activation de compte → espace client (le lien atterrit parfois sur la
-      // racine du site à cause du redirect_to écrasé par Supabase).
-      if (type === "recovery") {
-        router.replace("/connexion/reinitialiser");
-      } else if (type === "signup") {
-        router.replace("/mon-espace");
-      } else {
-        router.refresh();
-      }
-    });
+    supabase.auth
+      .setSession({ access_token: accessToken, refresh_token: refreshToken })
+      .catch(() => null)
+      .then(() => {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        // Navigation explicite (et non router.refresh()) dans tous les cas :
+        // elle garantit un rendu serveur FRAIS qui voit les cookies de session
+        // tout juste écrits — un refresh sur la page courante peut arriver trop
+        // tôt et afficher « lien invalide » alors que la session est établie.
+        // Récupération de mot de passe → formulaire de nouveau mot de passe.
+        // Invitation / première connexion → idem (le client n'a que son mot de
+        // passe à choisir). Inscription classique (mdp choisi sur le formulaire)
+        // → espace client. Le lien peut atterrir sur la racine du site quand
+        // Supabase écrase le redirect_to : la navigation explicite s'en affranchit.
+        if (type === "signup") {
+          router.replace("/mon-espace");
+        } else {
+          // recovery, invite, magiclink… → définition / changement de mdp.
+          router.replace("/connexion/reinitialiser");
+        }
+      });
   }, [router]);
 
   return null;

@@ -1,0 +1,163 @@
+// E2E « première connexion » : rejoue le parcours complet d'un client, dans un
+// vrai navigateur (Playwright), contre le serveur de dev local :
+//   A) Clic du lien enveloppe reçu par e-mail (compte inexistant, devis oui)
+//      → création du compte (invite Supabase) → formulaire mot de passe
+//      → enregistrement → arrivée sur /mon-espace.
+//   B) RE-clic du même lien (cas Seb : 1er clic pas terminé) → lien recovery
+//      frais → nouveau mot de passe → /mon-espace.
+//   C) Connexion classique avec e-mail + mot de passe (le mdp choisi en B).
+//   D) Lien enveloppe pour un e-mail sans compte NI devis → redirection /connexion.
+// Puis vérification en base (compte confirmé, dernière connexion) et NETTOYAGE
+// complet (suppression du compte de test et du devis de test).
+// Usage : node tests/e2e-premiere-connexion.mjs [http://localhost:3313]
+import { readFileSync } from "node:fs";
+import { createHmac } from "node:crypto";
+import { chromium } from "playwright";
+import { createClient } from "@supabase/supabase-js";
+
+const base = process.argv[2] ?? "http://localhost:3313";
+const env = Object.fromEntries(
+  readFileSync(new URL("../.env.local", import.meta.url), "utf8")
+    .split("\n")
+    .filter((l) => l.includes("=") && !l.trim().startsWith("#"))
+    .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim().replace(/^["']|["']$/g, "")])
+);
+
+const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
+const anon = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
+
+let failures = 0;
+function check(label, ok, extra = "") {
+  console.log(`${ok ? "✅" : "❌"} ${label}${extra ? ` — ${extra}` : ""}`);
+  if (!ok) failures++;
+}
+
+// Reproduction exacte de signerLienPremiereConnexion (src/lib/lien-premiere-connexion.ts)
+function signerLien(email) {
+  const payload = Buffer.from(JSON.stringify({ email: email.toLowerCase(), iat: Date.now() })).toString("base64url");
+  const signature = createHmac("sha256", env.SUPABASE_SERVICE_ROLE_KEY).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+}
+
+const stamp = Date.now();
+const EMAIL = `e2e-premiere-${stamp}@test-propulsound.local`;
+const MDP_1 = "E2e-Mdp-2026!";
+const MDP_2 = "E2e-Mdp-2027!";
+const envelopeUrl = `${base}/connexion/demarrer?q=${encodeURIComponent(signerLien(EMAIL))}`;
+
+// ── Préparation : devis de test (condition d'existence du compte auto) ──
+const { data: quote, error: quoteError } = await admin
+  .from("quotes")
+  .insert({
+    customer_name: "Test E2E Premiere",
+    customer_email: EMAIL,
+    formula_name: "Formule Test E2E",
+    formula_price_cents: 100000,
+    total_cents: 100000,
+    status: "attente_signature",
+  })
+  .select("id")
+  .single();
+if (quoteError || !quote) {
+  console.error("❌ Impossible de créer le devis de test :", quoteError?.message);
+  process.exit(1);
+}
+console.log(`Devis de test créé : ${quote.id} pour ${EMAIL}\n`);
+
+const browser = await chromium.launch();
+try {
+  // ── A) Premier clic : compte inexistant → invitation → mot de passe ──
+  const ctxA = await browser.newContext();
+  const pageA = await ctxA.newPage();
+  await pageA.goto(envelopeUrl, { waitUntil: "domcontentloaded", timeout: 90000 });
+  await pageA.waitForURL("**/connexion/reinitialiser**", { timeout: 90000 });
+  await pageA.waitForSelector("#password", { timeout: 60000 });
+  check("A1. Clic du lien → formulaire « Votre mot de passe »", pageA.url().includes("/connexion/reinitialiser"));
+  check("A2. Champs mot de passe + confirmation affichés", (await pageA.locator("#confirm").count()) > 0);
+  await pageA.fill("#password", MDP_1);
+  await pageA.fill("#confirm", MDP_1);
+  await pageA.click("button:has-text('Enregistrer et accéder à mon espace')");
+  await pageA.waitForURL("**/mon-espace**", { timeout: 90000 });
+  check("A3. Mot de passe enregistré → arrivée sur /mon-espace", true);
+  const nameVisible = await pageA.getByText("Test E2E Premiere").first().isVisible().catch(() => false);
+  check("A4. L'espace client affiche bien le nom du devis", nameVisible);
+  await ctxA.close();
+
+
+  // ── B) Re-clic du même lien (nouveau navigateur, non connecté) : recovery ──
+  const ctxB = await browser.newContext();
+  const pageB = await ctxB.newPage();
+  await pageB.goto(envelopeUrl, { waitUntil: "domcontentloaded", timeout: 90000 });
+  await pageB.waitForURL("**/connexion/reinitialiser**", { timeout: 90000 });
+  await pageB.waitForSelector("#password", { timeout: 60000 });
+  check("B1. Re-clic du même mail → formulaire mot de passe (pas de « lien invalide »)", true);
+  await pageB.fill("#password", MDP_2);
+  await pageB.fill("#confirm", MDP_2);
+  await pageB.click("button:has-text('Enregistrer et accéder à mon espace')");
+  await pageB.waitForURL("**/mon-espace**", { timeout: 90000 });
+  check("B2. Nouveau mot de passe enregistré → /mon-espace", true);
+  await ctxB.close();
+
+  // ── C) Connexion classique avec le mot de passe choisi en B ──
+  const ctxC = await browser.newContext();
+  const pageC = await ctxC.newPage();
+  await pageC.goto(`${base}/connexion`, { waitUntil: "domcontentloaded", timeout: 90000 });
+  await pageC.fill("#email", EMAIL);
+  await pageC.fill("#password", MDP_2);
+  await pageC.click("button:has-text('Se connecter')");
+  await pageC.waitForURL("**/mon-espace**", { timeout: 90000 });
+  check("C1. Connexion e-mail + mot de passe → /mon-espace", true);
+  await ctxC.close();
+
+  // ── C2) Vérification API : le mot de passe B fonctionne (et pas l'A) ──
+  const { error: errB } = await anon.auth.signInWithPassword({ email: EMAIL, password: MDP_2 });
+  check("C2. signInWithPassword : le mot de passe final est actif", !errB, errB?.message);
+  const { error: errA } = await anon.auth.signInWithPassword({ email: EMAIL, password: MDP_1 });
+  check("C3. L'ancien mot de passe (A) est bien remplacé", Boolean(errA));
+
+  // ── D) Lien enveloppe pour un e-mail inconnu (ni compte ni devis) ──
+  const ctxD = await browser.newContext();
+  const pageD = await ctxD.newPage();
+  await pageD.goto(
+    `${base}/connexion/demarrer?q=${encodeURIComponent(signerLien(`inconnu-${stamp}@test-propulsound.local`))}`,
+    { waitUntil: "domcontentloaded", timeout: 90000 }
+  );
+  await pageD.waitForURL("**/connexion**", { timeout: 60000 });
+  check("D1. E-mail sans compte ni devis → redirection vers /connexion", pageD.url().includes("/connexion"));
+  await ctxD.close();
+
+  // ── Vérifications en base ──
+  const { data: users } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const u = users?.users?.find((x) => x.email?.toLowerCase() === EMAIL);
+  check("E1. Compte présent dans Supabase Auth", Boolean(u));
+  check("E2. E-mail confirmé", Boolean(u?.email_confirmed_at ?? u?.confirmed_at));
+  check("E3. Une connexion enregistrée (last_sign_in_at)", Boolean(u?.last_sign_in_at));
+} finally {
+  // ── Nettoyage : compte + devis de test ──
+  try {
+    const { data: users } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    for (const u of users?.users ?? []) {
+      if (u.email?.toLowerCase().includes(`e2e-premiere-${stamp}`)) {
+        await admin.auth.admin.deleteUser(u.id);
+        console.log("🧹 Compte de test supprimé :", u.email);
+      }
+    }
+  } catch (e) {
+    console.error("Nettoyage compte :", e?.message ?? e);
+  }
+  try {
+    await admin.from("quotes").delete().eq("customer_email", EMAIL);
+    console.log("🧹 Devis de test supprimé");
+  } catch (e) {
+    console.error("Nettoyage devis :", e?.message ?? e);
+  }
+  await browser.close();
+}
+
+console.log(failures === 0 ? "\n🎉 TOUS LES TESTS PASSENT" : `\n💥 ${failures} échec(s)`);
+process.exit(failures === 0 ? 0 : 1);
+

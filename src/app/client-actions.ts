@@ -336,12 +336,25 @@ export async function sendFirstLoginLink(formData: FormData) {
   return await sendFirstLoginEmail(email, name, envelopeLink, false);
 }
 
-// Variante « fire and forget » pour les formulaires admin (bouton « Renvoyer
-// un accès » de /admin/comptes) : la server action d'un <form> doit renvoyer
-// void, contrairement à sendFirstLoginLink dont le résultat est affiché au
-// client sur la page de connexion.
+// Variante « fire and forget » pour les formulaires admin (boutons « Envoyer /
+// Renvoyer un accès » de /admin/comptes) : la server action d'un <form> doit
+// renvoyer void. On stocke le résultat dans un cookie flash (60 s) que la page
+// admin affiche — sinon un échec d'envoi (ex : Resend indisponible) passerait
+// TOTALEMENT inaperçu : on croirait le mail parti alors que le client n'a rien
+// reçu.
 export async function resendFirstLoginLink(formData: FormData) {
-  await sendFirstLoginLink(formData);
+  const result = await sendFirstLoginLink(formData);
+  const { cookies } = await import("next/headers");
+  const store = await cookies();
+  store.set(
+    "dj_admin_flash",
+    JSON.stringify({
+      ok: Boolean(result?.ok),
+      msg: result?.ok ? result.message : (result?.error ?? "Échec de l'envoi."),
+    }),
+    { maxAge: 60, httpOnly: true, sameSite: "lax", path: "/" }
+  );
+  revalidatePath("/admin/comptes");
 }
 
 // Envoi Resend du lien « première connexion » (rédaction différente selon que

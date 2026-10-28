@@ -143,8 +143,14 @@ export function ClientOptionsEditor({
                     {option.name}
                   </span>
                 </span>
-                <span className="shrink-0 text-muted-foreground">
-                  {checked ? formatEuros(option.price_cents * qty) : formatEuros(0)}
+                <span
+                  className={`shrink-0 text-muted-foreground ${pendingRemoval ? "line-through opacity-80" : ""}`}
+                >
+                  {/* Prix réel de l'option (et non 0 €) : une option décochée
+                      doit rester lisible — le client doit voir ce qu'elle coûte
+                      avant de la cocher. Pour une suppression demandée, le prix
+                      est barré comme le nom. */}
+                  {formatEuros(option.price_cents * qty)}
                 </span>
               </button>
               {/* Quantité pour les pistolets CO2 (modifiable, soumise à validation) */}
