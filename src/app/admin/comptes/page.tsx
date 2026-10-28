@@ -85,83 +85,84 @@ export default async function AdminComptesPage() {
         </div>
       ) : null}
 
-      <div className="mt-6 overflow-x-auto rounded-xl border border-border">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3">Client</th>
-              <th className="px-4 py-3">E-mail</th>
-              <th className="px-4 py-3">Compte créé le</th>
-              <th className="px-4 py-3">Dernière connexion</th>
-              <th className="px-4 py-3 text-center">Devis</th>
-              <th className="px-4 py-3 text-center">En cours</th>
-              <th className="px-4 py-3 text-center">Confirmés</th>
-              <th className="px-4 py-3 text-center">Accès</th>
-              <th className="px-4 py-3 text-center">Supprimer</th>
-            </tr>
-          </thead>
-          <tbody>
-            {comptes.map((c) => (
-              <tr key={c.id} className="border-b border-border/60 last:border-0">
-                <td className="px-4 py-3 font-medium">{c.name}</td>
-                <td className="px-4 py-3">
-                  <Link
-                    href={`/admin/devis?q=${encodeURIComponent(c.email)}`}
-                    className="text-accent underline-offset-2 hover:underline"
-                  >
-                    {c.email}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {c.createdAt ? new Date(c.createdAt).toLocaleDateString("fr-FR") : "—"}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {c.lastSignIn ? new Date(c.lastSignIn).toLocaleDateString("fr-FR") : "Jamais"}
-                </td>
-                <td className="px-4 py-3 text-center font-semibold">{c.devisTotal}</td>
-                <td className="px-4 py-3 text-center">{c.devisEnCours}</td>
-                <td className="px-4 py-3 text-center">{c.devisConfirmes}</td>
-                <td className="px-4 py-3 text-center">
-                  {/* Renvoie au client un e-mail « première connexion » : il
-                      ne lui reste que son mot de passe à choisir (utile pour
-                      les comptes jamais connectés). */}
-                  <form action={resendFirstLoginLink}>
-                    <input type="hidden" name="email" value={c.email} />
-                    <SubmitButton
-                      pendingLabel="…"
-                      className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:border-accent hover:text-accent disabled:opacity-50"
-                    >
-                      {c.lastSignIn ? "Renvoyer un accès" : "Envoyer un accès"}
-                    </SubmitButton>
-                  </form>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  {/* Supprime le compte Auth : messages, playlists et fichiers
-                      du client partent en cascade ; les devis restent (ils sont
-                      rattachés par e-mail) — le client peut recréer un compte. */}
-                  <form action={deleteClientAccount}>
-                    <input type="hidden" name="user_id" value={c.id} />
-                    <input type="hidden" name="email" value={c.email} />
-                    <SubmitButton
-                      pendingLabel="…"
-                      confirm={`Supprimer définitivement le compte de ${c.name} (${c.email}) ?\n\nSes messages, playlists et fichiers seront perdus ; ses devis seront conservés. Il pourra recréer un compte avec le même e-mail.`}
-                      className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:border-destructive hover:text-destructive disabled:opacity-50"
-                    >
-                      Supprimer
-                    </SubmitButton>
-                  </form>
-                </td>
-              </tr>
-            ))}
-            {comptes.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
-                  Aucun compte client pour le moment.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+      {/* Cartes responsive : chaque compte est une carte autonome — les actions
+          « Accès » et « Supprimer » restent toujours visibles, sans scroll
+          horizontal quel que soit l'écran. */}
+      <div className="mt-6 grid gap-3 md:grid-cols-2">
+        {comptes.map((c) => (
+          <article
+            key={c.id}
+            className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4"
+          >
+            {/* Identité */}
+            <div className="min-w-0">
+              <p className="truncate font-medium">{c.name}</p>
+              <Link
+                href={`/admin/devis?q=${encodeURIComponent(c.email)}`}
+                className="block truncate text-sm text-accent underline-offset-2 hover:underline"
+              >
+                {c.email}
+              </Link>
+            </div>
+
+            {/* Infos + devis */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span>Créé le {c.createdAt ? new Date(c.createdAt).toLocaleDateString("fr-FR") : "—"}</span>
+              <span>
+                ·{" "}
+                {c.lastSignIn
+                  ? `Connecté le ${new Date(c.lastSignIn).toLocaleDateString("fr-FR")}`
+                  : "Jamais connecté"}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 text-xs">
+              <span className="rounded-full border border-border px-2 py-0.5">
+                {c.devisTotal} devis{c.devisTotal > 1 ? "s" : ""}
+              </span>
+              <span className="rounded-full border border-yellow-500/40 bg-yellow-500/10 px-2 py-0.5 text-yellow-300">
+                {c.devisEnCours} en cours
+              </span>
+              <span className="rounded-full border border-green-500/40 bg-green-500/10 px-2 py-0.5 text-green-300">
+                {c.devisConfirmes} confirmé{c.devisConfirmes > 1 ? "s" : ""}
+              </span>
+            </div>
+
+            {/* Actions : toujours visibles, côte à côte */}
+            <div className="mt-auto flex flex-wrap gap-2 border-t border-border/60 pt-3">
+              {/* Renvoie au client un e-mail « première connexion » : il ne lui
+                  reste que son mot de passe à choisir (utile pour les comptes
+                  jamais connectés). */}
+              <form action={resendFirstLoginLink}>
+                <input type="hidden" name="email" value={c.email} />
+                <SubmitButton
+                  pendingLabel="Envoi…"
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:border-accent hover:text-accent disabled:opacity-50"
+                >
+                  {c.lastSignIn ? "Renvoyer un accès" : "Envoyer un accès"}
+                </SubmitButton>
+              </form>
+              {/* Supprime le compte Auth : messages, playlists et fichiers du
+                  client partent en cascade ; les devis restent (ils sont
+                  rattachés par e-mail) — le client peut recréer un compte. */}
+              <form action={deleteClientAccount}>
+                <input type="hidden" name="user_id" value={c.id} />
+                <input type="hidden" name="email" value={c.email} />
+                <SubmitButton
+                  pendingLabel="…"
+                  confirm={`Supprimer définitivement le compte de ${c.name} (${c.email}) ?\n\nSes messages, playlists et fichiers seront perdus ; ses devis seront conservés. Il pourra recréer un compte avec le même e-mail.`}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:border-destructive hover:text-destructive disabled:opacity-50"
+                >
+                  Supprimer
+                </SubmitButton>
+              </form>
+            </div>
+          </article>
+        ))}
+        {comptes.length === 0 ? (
+          <p className="rounded-xl border border-border px-4 py-8 text-center text-muted-foreground md:col-span-2">
+            Aucun compte client pour le moment.
+          </p>
+        ) : null}
       </div>
     </main>
   );
