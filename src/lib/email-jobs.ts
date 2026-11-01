@@ -173,7 +173,10 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
   }
 
   // ---------- 2. Demande d'avis après la soirée ----------
-  const yesterday = new Date(now - 1 * 86400_000).toISOString().slice(0, 10);
+  // Envoyée J+2 après la soirée (pas le lendemain — laisse le client souffler
+  // un peu, détaille ses photos et se remémore la soirée). La fenêtre reste
+  // ouverte 30 jours après la soirée au maximum.
+  const twoDaysAgo = new Date(now - 2 * 86400_000).toISOString().slice(0, 10);
   const monthAgo = new Date(now - 30 * 86400_000).toISOString().slice(0, 10);
 
   const { data: toReview } = await supabase
@@ -181,7 +184,7 @@ export async function sendScheduledEmails(): Promise<{ relances: number; avis: n
     .select("id, customer_name, customer_email, event_date, notes")
     .eq("status", "confirme")
     .gte("event_date", monthAgo)
-    .lte("event_date", yesterday)
+    .lte("event_date", twoDaysAgo)
     .limit(20);
 
   for (const q of toReview ?? []) {

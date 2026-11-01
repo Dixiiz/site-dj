@@ -243,7 +243,7 @@ export async function buildDevisPdf(
       : "Afin de confirmer votre réservation, merci de retourner le devis daté et signé. " +
         "Aucun acompte n'est demandé pour ce devis : le règlement s'effectue par virement " +
         "(libellé : nom de l'organisateur, numéro de contrat), chèque ou espèces, au plus tard " +
-        "le jour de la prestation (ou selon l'échéancier convenu dans l'espace client).");
+        "le jour du montage du matériel (ou selon l'échéancier convenu dans l'espace client).");
   const wrapCount = (txt: string, size: number, font: PDFFont, maxW: number) => {
     const words = txt.split(" ");
     let n = 1, cur = "";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { updateQuoteAdmin, estimateTravelAdmin } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
 import { ADMIN_PACK_LIST } from "@/lib/packs";
@@ -87,7 +87,8 @@ export function AdminQuoteEdit({
   );
   const [travelDist, setTravelDist] = useState(String(quote.travel_distance_km ?? ""));
   const [travelFee, setTravelFee] = useState(euros(quote.travel_fee_cents));
-  const [extraFee, setExtraFee] = useState(euros(quote.extra_fee_cents));
+  // Supplément saisi à la main (null = pas de saisie : le calcul auto prime).
+  const [extraFee, setExtraFee] = useState<string | null>(null);
   const [extraLabel, setExtraLabel] = useState(quote.extra_fee_label ?? "");
   // Horaires contrôlés : le supplément « heures supplémentaires » est
   // recalculé en direct quand ils changent (bug : le prix ne suivait pas).
@@ -97,9 +98,6 @@ export function AdminQuoteEdit({
   const [endTime, setEndTime] = useState(
     quote.end_time ?? parseTime(quote.notes, "Fin") ?? ""
   );
-  // Dès que l'admin écrit dans « Supplément » (péage…), l'auto-remplissage
-  // cède la main : la valeur saisie prime.
-  const [extraFeeTouched, setExtraFeeTouched] = useState(false);
   const [travelBusy, setTravelBusy] = useState(false);
   const [travelMsg, setTravelMsg] = useState<string | null>(null);
 
@@ -168,17 +166,18 @@ export function AdminQuoteEdit({
   const autoExtraCents =
     autoExtraHours != null ? autoExtraHours * extraRateCents : null;
 
-  useEffect(() => {
-    if (autoExtraCents != null && !extraFeeTouched) {
-      setExtraFee(euros(autoExtraCents));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoExtraCents, extraFeeTouched]);
+  // Valeur affichée du supplément : la saisie manuelle prime ; sinon le
+  // recalcul automatique des horaires ; sinon le supplément enregistré sur
+  // le devis. Valeur DÉRIVÉE (et non un setState dans un effet) : zéro rendu
+  // en cascade et le prix suit toujours les horaires en direct.
+  const extraFeeShown =
+    extraFee ??
+    (autoExtraCents != null ? euros(autoExtraCents) : euros(quote.extra_fee_cents));
 
   const total =
     Math.round(Number.parseFloat(packPrice.replace(",", ".")) * 100 || 0) +
     Math.round(Number.parseFloat(travelFee.replace(",", ".")) * 100 || 0) +
-    Math.round(Number.parseFloat(extraFee.replace(",", ".")) * 100 || 0) +
+    Math.round(Number.parseFloat(extraFeeShown.replace(",", ".")) * 100 || 0) +
     selectedOptions.reduce((sum, o) => sum + o.price, 0) +
     // ⚠️ manualLinesTotal est en euros (saisie du formulaire) : on convertit
     // en centimes comme le reste du calcul, sinon une ligne de 250 € ne
@@ -297,14 +296,11 @@ export function AdminQuoteEdit({
           <label className={label}>Supplément (heures supp, péage…) (€)</label>
           <input
             name="extra_fee"
-            value={extraFee}
-            onChange={(e) => {
-              setExtraFee(e.target.value);
-              setExtraFeeTouched(true);
-            }}
+            value={extraFeeShown}
+            onChange={(e) => setExtraFee(e.target.value)}
             className={input}
           />
-          {extraFeeTouched ? (
+          {extraFee != null ? (
             <p className="mt-1 text-[11px] text-muted-foreground">
               Valeur saisie à la main — elle prime sur le calcul automatique.
             </p>

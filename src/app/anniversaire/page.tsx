@@ -32,7 +32,7 @@ const data: EventLandingData = {
     { q: "Quel budget pour un anniversaire avec DJ ?", a: "Les formules démarrent pour des soirées de quelques heures et évoluent avec la durée et les options. Le configurateur en ligne affiche votre tarif en direct, sans surprise." },
     { q: "Peut-on organiser la fête à la maison ?", a: "Oui : l'installation est prévue pour les maisons, jardins et petites salles. Le niveau sonore est ajusté à l'endroit et aux voisins." },
     { q: "Comment choisir la musique ?", a: "Dans votre espace client en ligne : titres indispensables, styles à éviter, demandes spéciales. Vous gardez le contrôle, sans vous occuper de la technique." },
-    { q: "Est-il possible de payer en plusieurs fois ?", a: "Oui : le paiement en plusieurs fois (2 à 10×) est disponible directement dans votre espace client, échéance par échéance." },
+    { q: "Est-il possible de payer en plusieurs fois ?", a: "Oui : le paiement en plusieurs fois (2 à 10×, à raison d'une échéance par mois) est disponible directement dans votre espace client, échéance par échéance." },
   ],
   extraSection: {
     title: "Anniversaire : tous les formats",

@@ -12,6 +12,7 @@ import { EMAIL_FROM, buildEmailHtml, buildEmailText } from "@/lib/emails";
 import { signerLienPremiereConnexion } from "@/lib/lien-premiere-connexion";
 import { ADMIN_PACK_LIST } from "@/lib/packs";
 import { formatEuros } from "@/lib/money";
+import { acompteCents } from "@/lib/installments";
 import { findUpsell } from "@/lib/upsell";
 
 // ---------- Recherche du compte client (cache) ----------
@@ -1801,7 +1802,7 @@ export async function signClientDocument(formData: FormData) {
                   title: "Aucun acompte à envoyer",
                   lines: [
                     "<strong>Bonne nouvelle : aucun acompte n'est demandé pour votre devis</strong> — votre date est d'ores et déjà <strong>verrouillée</strong>.",
-                    "Le règlement se fera plus tard (dans votre espace client, par carte ou virement, en une fois ou étalé), au plus tard le jour de la prestation.",
+                    "Le règlement se fera plus tard (dans votre espace client, par carte ou virement, en une fois ou étalé), au plus tard le jour du montage du matériel.",
                     "En attendant, renseignez votre <strong>playlist</strong> (temps forts + piste de danse) — elle vous attend dans votre espace !",
                   ],
                 },
@@ -3462,7 +3463,7 @@ function soldeRestantDe(quote: {
   ) {
     return total;
   }
-  return Math.max(0, total - Math.floor((total * 0.008) / 10) * 1000);
+  return Math.max(0, total - acompteCents(total));
 }
 
 // Le client choisit de régler le solde SUR PLACE le jour de la soirée
@@ -4233,9 +4234,10 @@ export async function creerEcheancier(formData: FormData) {
     };
   }
 
-  // Même plafond temporel que l'aperçu client (installments.ts) : un nombre
-  // d'échéances trop grand forcerait un espacement absurde (< 7 jours) entre
-  // deux échéances. Ex. soirée dans 12 jours → 2 échéances max.
+  // Même plafond temporel que l'aperçu client (installments.ts) : une seule
+  // échéance par mois calendaire, l'acompte comptant comme le 1ᵉʳ paiement.
+  // Ex. acompte en novembre, soirée en février → 4 paiements max ; soirée le
+  // mois même → pas d'échéancier (acompte + solde).
   const maxNombre = maxEcheancesPourDate(quote.event_date);
   if (nombre > maxNombre) {
     return {
@@ -4247,9 +4249,7 @@ export async function creerEcheancier(formData: FormData) {
   // Montant de l'acompte (20 % du total, même règle que le devis PDF :
   // le solde est arrondi à la dizaine inférieure). Aucun acompte quand
   // l'admin l'a désactivé pour ce devis.
-  const soldeStandard = Math.floor((total_cents * 0.008) / 10) * 1000;
-  const acompte =
-    quote.acompte_required === false ? 0 : Math.max(0, total_cents - soldeStandard);
+  const acompte = quote.acompte_required === false ? 0 : acompteCents(total_cents);
 
   // Planchers revalidés avec le vrai total : le format demandé doit faire
   // partie des niveaux disponibles (150 € min/échéance, x4+ dès 1 000 €).

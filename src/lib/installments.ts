@@ -11,7 +11,11 @@ export const ECHEANCE_MIN_CENTS = 15_000;
 export const ECHEANCIER_LONG_MIN_CENTS = 100_000;
 
 export function acompteCents(totalCents: number): number {
-  const solde = Math.floor((totalCents * 0.008) / 10) * 1000;
+  // Acompte ≈ 20 % du total. Le solde (≈ 80 %) est arrondi à la dizaine
+  // d'euros inférieure (1 000 centimes) : l'acompte récupère l'arrondi.
+  // totalCents / 1250 = (totalCents × 0,8) / 1 000 — division entière donc
+  // exacte, aucune erreur de virgule flottante possible.
+  const solde = Math.floor(totalCents / 1250) * 1000;
   return Math.max(0, totalCents - solde);
 }
 
@@ -60,9 +64,12 @@ export function niveauxDisponibles(totalCents: number): number[] {
 
 // ---------- Contraintes de date ----------
 // La soirée approche ? Un échéancier n'a de sens que si les échéances peuvent
-// tomber AVANT la soirée, avec un espacement raisonnable (minimum 7 jours).
-// Même garde-fou que le serveur (creerEcheancier) : il faut au moins 10 jours
-// « utiles » avant la soirée, c.-à-d. une soirée à 12 jours ou plus.
+// tomber AVANT la soirée, avec AU PLUS une échéance par mois calendaire.
+// L'acompte compte comme le 1ᵉʳ paiement (dans le mois en cours) ; ensuite
+// une échéance par mois jusqu'au mois de la soirée. Ex. acompte en novembre :
+// soirée en décembre → 2 paiements, soirée en février → 4 paiements.
+// Une soirée dans le mois même (ou trop proche) n'offre pas d'échéancier :
+// règlement acompte + solde, comme d'habitude.
 
 // Jours entiers entre aujourd'hui (midi) et la soirée (null si date absente
 // ou invalide).
@@ -75,23 +82,39 @@ export function joursAvantSoiree(eventDate: string | null): number | null {
   return Math.floor((event.getTime() - today.getTime()) / 86400_000);
 }
 
-// L'échéancier est-il proposable du tout pour cette date de soirée ?
-// Date inconnue (null) = on ne bloque pas (le serveur validera de toute façon).
-export function echeancierPossiblePourDate(eventDate: string | null): boolean {
-  const jours = joursAvantSoiree(eventDate);
-  return jours === null ? true : jours - 2 >= 10;
-}
-
-// Nombre max d'échéances pour cette date : la 1ʳᵉ tombe à J+3, puis espacement
-// d'au moins 7 jours, la dernière au plus tard 2 jours avant la soirée
-// (ex. 2× dès 12 jours de délai ; 10× à partir de 79 jours).
+// Nombre max d'échéances pour cette date : une échéance par mois calendaire,
+// l'acompte comptant comme le 1ᵉʳ paiement (ce mois-ci). Ex. acompte en
+// novembre, soirée en février → 4 paiements max (nov, déc, janv, févr).
+// La dernière échéance tombe au plus tard 2 jours avant la soirée ; il faut
+// au moins 10 jours « utiles » avant la soirée (soirée à 12 jours ou plus),
+// même garde-fou que le serveur (creerEcheancier).
+// Date inconnue ou illisible → 0 : sans date de soirée, aucun échéancier ne
+// peut être garanti AVANT la soirée (le serveur le refuserait de toute façon).
 export function maxEcheancesPourDate(eventDate: string | null): number {
   const jours = joursAvantSoiree(eventDate);
-  if (jours === null) return 10;
+  if (jours === null) return 0;
   const daysUntil = jours - 2;
   if (daysUntil < 10) return 0;
+  const event = new Date(`${eventDate}T12:00:00`);
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  // Écart de mois calendaires entre aujourd'hui et la soirée (0 = même mois).
+  const moisEcart =
+    (event.getFullYear() - today.getFullYear()) * 12 +
+    (event.getMonth() - today.getMonth());
+  // 1ᵉʳ paiement (acompte) ce mois-ci, puis une échéance par mois jusqu'au
+  // mois de la soirée. Écart de 3 mois → 4 paiements au total.
   // Clamp à 10 : le site ne propose jamais plus de 10 échéances.
-  return Math.min(10, Math.max(2, Math.floor((daysUntil - 3) / 7) + 1));
+  return Math.min(10, Math.max(1, moisEcart + 1));
+}
+
+// L'échéancier est-il proposable du tout pour cette date de soirée ?
+// Date inconnue ou illisible → non : autant ne pas montrer des options que
+// le serveur refuserait (« Ce devis n'a pas de date d'événement »).
+export function echeancierPossiblePourDate(eventDate: string | null): boolean {
+  const jours = joursAvantSoiree(eventDate);
+  if (jours === null) return false;
+  return jours - 2 >= 10 && maxEcheancesPourDate(eventDate) >= 2;
 }
 
 // Formats disponibles pour un total ET une date de soirée : planchers

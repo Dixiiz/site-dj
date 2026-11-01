@@ -24,17 +24,17 @@ const sections = [
   {
     title: "3. Devis et réservation",
     content:
-      "Le devis en ligne est gratuit et précise la formule, les options, le lieu, la date et le prix. La réservation devient effective après acceptation du devis, signature du contrat (électronique ou papier) et versement de l'acompte de réservation (20 % sauf mention contraire). La date n'est définitivement bloquée qu'à réception de l'acompte ; tant que l'acompte n'est pas reçu, la date peut être attribuée à un autre client.",
+      "Le devis en ligne est gratuit et précise la formule, les options, le lieu, la date et le prix. La réservation devient effective après acceptation du devis, signature du contrat (électronique ou papier) et versement de l'acompte de réservation (20 % sauf mention contraire), matérialisant un engagement ferme et définitif des deux parties. Les prix indiqués dans le devis sont garantis 15 jours à compter de son envoi. La date n'est définitivement bloquée qu'à réception de l'acompte ; tant que l'acompte n'est pas reçu, la date peut être attribuée à un autre client.",
   },
   {
     title: "4. Paiement",
     content:
-      "L'acompte et, le cas échéant, le solde peuvent être réglés en ligne par carte bancaire via Stripe (paiement sécurisé) ou par virement. Le solde est exigé au plus tard le jour de l'événement, sauf accord écrit contraire. Une facture est délivrée sur demande ou automatiquement selon les modalités convenues.",
+      "L'acompte et, le cas échéant, le solde peuvent être réglés en ligne par carte bancaire via Stripe (paiement sécurisé) ou par virement ; le solde peut aussi être réglé sur place le jour de l'événement, par chèque ou en espèces, si vous avez choisi cette option dans l'espace client. Après déduction de l'acompte, le solde restant est exigé au plus tard le jour du montage du matériel, sauf échéancier validé dans l'espace client (un paiement par mois calendaire, l'acompte constituant la première échéance) ou accord contraire. Le montant final peut évoluer si des options sont souscrites ; chaque supplément fait l'objet d'une facture séparée, sous réserve de disponibilité. Tout retard de paiement entraîne des intérêts au taux prévu par l'article L441-6 du Code de commerce (intérêt légal multiplié par trois), exigibles de plein droit et sans rappel. Une facture est délivrée sur demande ou automatiquement selon les modalités convenues.",
   },
   {
     title: "5. Annulation et report",
     content:
-      "En cas d'annulation par le client moins de 30 jours avant l'événement, l'acompte reste acquis. En cas d'annulation par Propul'Sound DJ (force majeure : maladie, accident, etc.), l'intégralité des sommes versées est remboursée. Tout report est possible sous réserve de disponibilité de la nouvelle date, sans frais supplémentaires.",
+      "L'acompte versé à la signature du contrat matérialise un engagement ferme et définitif des deux parties ; aucune annulation ne peut intervenir, sauf en cas de force majeure dûment justifiée (événement extérieur, imprévisible et insurmontable, dont la preuve incombe à la partie qui l'invoque). Tout changement de date fait office d'annulation : si la nouvelle date est disponible, un nouveau contrat sera proposé. En cas d'annulation imputable à un cas de force majeure dûment démontré par le client, l'acompte et les éventuelles pénalités prévues sont restitués. En cas de force majeure côté Propul'Sound DJ, un DJ partenaire sera recherché pour réaliser la prestation ; à défaut d'alternative, aucune indemnisation ne pourra être réclamée. La loi accorde au client un délai de rétractation de 14 jours à compter de la signature du contrat (art. L121-29 du Code de la consommation) : l'acompte est alors intégralement restitué.",
   },
 ];
 
@@ -42,7 +42,7 @@ const sections2 = [
   {
     title: "6. Obligations du client",
     content:
-      "Le client garantit la disponibilité et la conformité des accès électriques et de l'espace d'installation, ainsi que le respect des réglementations applicables (déclarations SONUM/SACEM, autorisations administratives, niveau sonore). Le client est responsable d'informer ses invités de la présence éventuelle de photographies/vidéos et d'obtenir leur autorisation, conformément à l'article 11 du contrat (droit à l'image).",
+      "Le client garantit la disponibilité et la conformité des accès électriques et de l'espace d'installation, ainsi que le respect des réglementations applicables (déclarations SACEM et SPRE (si événement public), autorisations administratives, niveau sonore). Le client est responsable d'informer ses invités de la présence éventuelle de photographies/vidéos et d'obtenir leur autorisation, conformément à l'article 11 du contrat (droit à l'image).",
   },
   {
     title: "7. Responsabilité",
@@ -71,7 +71,7 @@ export default function ConditionsUtilisationPage() {
             Conditions d&apos;utilisation et de vente
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">
-            Dernière mise à jour : septembre 2026.
+            Dernière mise à jour : novembre 2026.
           </p>
         </FadeIn>
         <div className="mt-10 space-y-8">

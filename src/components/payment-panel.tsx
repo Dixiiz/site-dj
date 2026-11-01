@@ -279,7 +279,7 @@ export default function PaymentPanel({
   const acompte = acompteRequis ? acompteCents(total) : 0;
   const solde = Math.max(0, total - acompte);
   // Plafond temporel : combien d'échéances max sont possibles avant la soirée
-  // (espacement min. 7 jours, dernière échéance au plus tard 2 jours avant).
+  // (une seule échéance par mois, dernière au plus tard 2 jours avant).
   const maxN = maxEcheancesPourDate(eventDate);
   const echeancierPossible = echeancierPossiblePourDate(eventDate);
   const dejaPaye = rows.filter((r) => r.status === "payee").length;
@@ -551,9 +551,9 @@ export default function PaymentPanel({
                   on l'explique au lieu d'afficher des options inapplicables. */}
               {!echeancierPossible ? (
                 <p className="mt-3 rounded-lg border border-orange-500/40 bg-orange-500/10 px-3 py-2 text-xs font-medium text-orange-600">
-                  La soirée est dans {joursAvantSoiree(eventDate)} jours — trop
-                  proche pour proposer un échéancier. Réglez en une fois (carte
-                  ou virement) ou sur place le jour de la soirée.
+                  {!eventDate
+                    ? "La date de votre soirée n'est pas encore définie : l'échéancier sera disponible dès qu'elle sera confirmée. En attendant, réglez en une fois (carte ou virement) ou sur place le jour de la soirée."
+                    : "La soirée est trop proche pour proposer un échéancier (une seule échéance par mois). Réglez en une fois (carte ou virement) ou sur place le jour de la soirée."}
                 </p>
               ) : (
               <>

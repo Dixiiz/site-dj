@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useSyncExternalStore, useState } from "react";
 import { AdminQuotePlaylist, eventMoments } from "@/components/admin-quote-playlist";
 import { AdminRdvRequests } from "@/components/rdv-call";
 import { AdminQuoteDocuments } from "@/components/admin-quote-documents";
@@ -34,18 +34,21 @@ export function AdminQuoteLazyFolder({
   initialFiles: FileRowLite[];
   initialRdvs: RdvRowLite[];
 }) {
-  const [open, setOpen] = useState(false);
   const [rootEl, setRootEl] = useState<HTMLDivElement | null>(null);
 
-  // L'état « ouvert » vient du <details> parent : on l'écoute directement.
-  useEffect(() => {
-    const details = rootEl?.closest("details");
-    if (!details) return;
-    const onToggle = () => setOpen(details.open);
-    details.addEventListener("toggle", onToggle);
-    setOpen(details.open);
-    return () => details.removeEventListener("toggle", onToggle);
-  }, [rootEl]);
+  // L'état « ouvert » vient du <details> parent : lecture directe de
+  // details.open via useSyncExternalStore — aucun setState dans un effet,
+  // donc aucun rendu en cascade.
+  const open = useSyncExternalStore(
+    (onChange) => {
+      const details = rootEl?.closest("details");
+      if (!details) return () => {};
+      details.addEventListener("toggle", onChange);
+      return () => details.removeEventListener("toggle", onChange);
+    },
+    () => rootEl?.closest("details")?.open ?? false,
+    () => false
+  );
 
   // Synchronisation avec les props après revalidation serveur (AutoRefresh,
   // actions…), même pattern que la conversation.

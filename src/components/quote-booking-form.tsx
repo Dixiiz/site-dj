@@ -993,8 +993,9 @@ function RecapInstallments({
       ) : (
         <span className="flex items-center gap-1 text-muted-foreground">
           <CreditCard className="size-3.5" aria-hidden />
-          Étaler : non — la soirée est trop proche, le règlement se fera en une
-          fois ou le jour J.
+          {eventDate
+            ? "Étaler : non — la soirée est trop proche, le règlement se fera en une fois ou le jour J."
+            : "Étaler : choisissez d'abord la date de votre soirée pour voir les options de règlement étalé."}
         </span>
       )}
       {detail && niveau ? (
