@@ -1,0 +1,332 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-inter);
+  --font-heading: var(--font-fjalla);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-highlight: var(--highlight);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* Thème clair (par défaut sur la classe html sans .dark) */
+  --background: oklch(0.985 0.006 250);
+  --foreground: oklch(0.24 0.04 265);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.04 265);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.04 265);
+  --primary: oklch(0.546 0.215 262.9);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.93 0.02 255);
+  --secondary-foreground: oklch(0.3 0.04 262);
+  --muted: oklch(0.95 0.01 255);
+  --muted-foreground: oklch(0.48 0.03 258);
+  --accent: oklch(0.62 0.14 232);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.637 0.208 25.3);
+  --border: oklch(0.24 0.04 265 / 12%);
+  --input: oklch(0.24 0.04 265 / 16%);
+  --ring: oklch(0.62 0.14 232);
+  --chart-1: oklch(0.546 0.215 262.9);
+  --chart-2: oklch(0.62 0.14 232);
+  --chart-3: oklch(0.714 0.143 254.6);
+  --chart-4: oklch(0.372 0.039 257.3);
+  --chart-5: oklch(0.48 0.03 258);
+  --radius: 0.75rem;
+  --sidebar: oklch(0.965 0.008 250);
+  --sidebar-foreground: oklch(0.24 0.04 265);
+  --sidebar-primary: oklch(0.546 0.215 262.9);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.93 0.02 255);
+  --sidebar-accent-foreground: oklch(0.3 0.04 262);
+  --sidebar-border: oklch(0.24 0.04 265 / 12%);
+  --sidebar-ring: oklch(0.62 0.14 232);
+  --highlight: oklch(0.55 0.16 254);
+  --accent-2: oklch(0.6 0.22 350);
+}
+
+.dark {
+  --background: oklch(0.208 0.040 265.8);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.279 0.037 260.0);
+  --card-foreground: oklch(1 0 0);
+  --popover: oklch(0.279 0.037 260.0);
+  --popover-foreground: oklch(1 0 0);
+  --primary: oklch(0.546 0.215 262.9);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.372 0.039 257.3);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.251 0.050 265.0);
+  --muted-foreground: oklch(0.711 0.035 256.8);
+  --accent: oklch(0.754 0.139 232.7);
+  --accent-foreground: oklch(0.208 0.040 265.8);
+  --destructive: oklch(0.637 0.208 25.3);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.754 0.139 232.7);
+  --chart-1: oklch(0.546 0.215 262.9);
+  --chart-2: oklch(0.754 0.139 232.7);
+  --chart-3: oklch(0.714 0.143 254.6);
+  --chart-4: oklch(0.372 0.039 257.3);
+  --chart-5: oklch(0.711 0.035 256.8);
+  --sidebar: oklch(0.208 0.040 265.8);
+  --sidebar-foreground: oklch(1 0 0);
+  --sidebar-primary: oklch(0.546 0.215 262.9);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.279 0.037 260.0);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.754 0.139 232.7);
+  --highlight: oklch(0.714 0.143 254.6);
+  /* Magenta "lumière de soirée" : seconde couleur d'accent, à utiliser avec parcimonie */
+  --accent-2: oklch(0.72 0.19 350);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  h1,
+  h2 {
+    font-family: var(--font-heading), sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer utilities {
+  /* Police display (logo, titres forts) — remplace les font-family en dur */
+  .font-display {
+    font-family: var(--font-heading), sans-serif;
+  }
+  /* Bouton principal : un seul style sur tout le site */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 font-medium text-primary-foreground shadow-lg transition hover:brightness-110;
+  }
+  /* Bouton secondaire : contour discret, même géométrie */
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-border px-6 py-3 font-medium transition hover:border-accent hover:text-accent;
+  }
+  /* Bouton phare : dégradé néon bleu → magenta (identité "show lumière") */
+  .btn-gradient {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-8 py-3 font-medium text-white shadow-lg transition hover:brightness-110 active:scale-[0.98];
+    background-image: linear-gradient(100deg, var(--color-accent), var(--color-accent-2));
+    box-shadow: 0 8px 30px -8px var(--color-accent);
+  }
+  /* Texte en dégradé bleu néon → magenta (titres à mettre en scène) */
+  .text-gradient-neon {
+    background-image: linear-gradient(100deg, var(--color-accent), var(--color-accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .glow-hover {
+    transition: transform 300ms ease, box-shadow 300ms ease, border-color 300ms ease;
+  }
+  .glow-hover:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 0 0 1px var(--accent), 0 8px 30px -8px var(--accent);
+    border-color: var(--accent);
+  }
+  .text-glow {
+    text-shadow: 0 0 20px oklch(0.754 0.139 232.7 / 40%);
+  }
+}
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Interdit tout déplacement horizontal de la page (mobile) */
+html,
+body {
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+  scroll-behavior: smooth;
+}
+
+/* Mobile : pas de flash de surlignage au tap (rendu natif, plus propre) */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Tactile (mobiles + tablettes) : les champs de saisie restent à 16px minimum.
+   En dessous, iOS zoome automatiquement la page au focus — très pénible.
+   Sur desktop (souris) le style shadcn md:text-sm est conservé. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
+  textarea,
+  select {
+    font-size: max(16px, 1em);
+  }
+
+  /* Les champs shadcn (data-slot) prennent une hauteur tactile confortable
+     (44px) sans toucher au style desktop. */
+  [data-slot="input"],
+  [data-slot="textarea"] {
+    min-height: 44px;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}
+
+/* Tactile : les flèches de navigation du calendrier (react-day-picker) passent
+   à 44px — la norme de zone de tap Apple/Google — sans toucher au style desktop. */
+@media (pointer: coarse) {
+  .rdp-button_previous,
+  .rdp-button_next {
+    width: 44px !important;
+    height: 44px !important;
+  }
+}
+
+/* Accessibilité : les utilisateurs sensibles au mouvement obtiennent une
+   expérience statique (désactive les animations CSS + le scroll fluide). */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mise en évidence d'une section arrivée depuis un lien d'e-mail
+   (ex : /mon-espace/devis/xxx#acompte) : halo + léger grossissement */
+@keyframes anchor-flash {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-accent) 0%, transparent);
+    transform: scale(1);
+  }
+  35% {
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-accent) 45%, transparent);
+    transform: scale(1.02);
+  }
+  70% {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent) 30%, transparent);
+    transform: scale(1.01);
+  }
+}
+.anchor-flash {
+  animation: anchor-flash 1.4s ease-in-out 2;
+  scroll-margin-top: 96px;
+}
+
+/* Timeline : apparition en cascade des lignes quand le panneau s'ouvre */
+@keyframes timeline-row {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.timeline-row {
+  animation: timeline-row 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Onglets : léger fondu + montée du contenu à chaque changement */
+@keyframes tab-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.tab-anim {
+  animation: tab-fade 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Conseil de jeu : cascade des lignes à l'ouverture du panneau */
+@keyframes conseil-row {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.conseil-row {
+  animation: conseil-row 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Défilement fluide partout (admin + client) */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Ouverture animée des accordéons <details> dans l'admin uniquement
+   (progressive enhancement Chrome 131+ : ignorée ailleurs, aucun risque) */
+.admin-shell details::details-content {
+  block-size: 0;
+  overflow-y: clip;
+  transition:
+    content-visibility 260ms allow-discrete,
+    block-size 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.admin-shell details[open]::details-content {
+  block-size: auto;
+}

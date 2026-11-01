@@ -1,0 +1,1039 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+import { formatEuros } from "@/lib/money";
+import Link from "next/link";
+import {
+  BookOpen,
+  CreditCard,
+  FileText,
+  Mail,
+  MessageSquare,
+  Receipt,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+import { CaPerimetreSelect } from "@/components/ca-perimetre-select";
+import { DashboardDetail } from "@/components/dashboard-detail";
+import { ValidateEcheanceButton } from "@/components/validate-echeance-button";
+import { ValidateAcompteButton } from "@/components/validate-acompte-button";
+import { ConfirmSoldeButton } from "@/components/confirm-solde-button";
+import { BackfillStripeButton } from "@/components/backfill-stripe-button";
+import { SupprimerAcompteButton } from "@/components/supprimer-acompte-button";
+import { AdminStats } from "@/components/admin-stats";
+import { AdminPushButton } from "@/components/admin-push-button";
+
+export const dynamic = "force-dynamic";
+
+// Affiche un montant en euros à partir de centimes.
+function eur(cents: unknown) {
+  const n = Number(cents ?? 0);
+  return formatEuros(Number.isFinite(n) ? n : 0);
+}
+
+const STATUT_LABEL: Record<string, string> = {
+  nouveau: "Nouveau",
+  contacte: "Contacté",
+  attente_acompte: "Acompte attendu",
+};
+
+export default async function AdminDashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ vue?: string; ca?: string }>;
+}) {
+  const { vue, ca } = await searchParams;
+  // Périmètre des CA affichés : « tous » (DJ + Menuiserie, même entreprise),
+  // « dj » ou « menuiserie ». Rubriques URSSAF distinctes affichées en détail.
+  const avecDj = ca !== "menuiserie";
+  const avecMenu = ca !== "dj";
+  const supabase = createAdminClient();
+  const now = new Date();
+  const year = now.getFullYear();
+  const monthPrefix = `${year}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const todayIso = now.toLocaleDateString("fr-CA");
+
+  // Tous les devis confirmés, triés par date d'événement.
+  // (Requêtes en parallèle pour un chargement rapide du tableau de bord.)
+  const [confirmedRes, devisAttenteRes, devisRecentsRes, facturesRes, echeanciersRes, allQuotesRes, menuiserieRes] = await Promise.all([
+    supabase
+      .from("quotes")
+      .select("id, customer_name, formula_name, total_cents, event_date, event_location, status, created_at, notes, acompte_paid_at, acompte_required")
+      .eq("status", "confirme")
+      .order("event_date", { ascending: true }),
+    supabase
+      .from("quotes")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["nouveau", "contacte", "attente_acompte"]),
+    supabase
+      .from("quotes")
+      .select("id, customer_name, formula_name, status, created_at")
+      .in("status", ["nouveau", "contacte", "attente_acompte"])
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase.storage.from("client-files").list("admin/factures-libres", { limit: 100 }),
+    supabase
+      .from("payment_schedule")
+      .select("id, numero, total, amount_cents, due_date, status, valide_urssaf, paid_at, quote_id, quotes(id, customer_name, formula_name)")
+      .order("due_date", { ascending: true }),
+    // Tous les devis (léger) : entonnoir de conversion des statistiques.
+    supabase.from("quotes").select("id, status"),
+    // Documents menuiserie (CA fusionné : rubrique URSSAF « vente de biens »).
+    supabase
+      .from("menuiserie_docs")
+      .select("id, numero, client_nom, type, total_cents, statut, date_edition, urssaf_declare, urssaf_mois, facture_lien")
+      .order("date_edition", { ascending: false }),
+  ]);
+  const confirmed = confirmedRes.data;
+  const devisAttente = devisAttenteRes.count ?? 0;
+  const devisRecents = devisRecentsRes.data;
+  const nbFactures = (facturesRes.data ?? []).filter((f) => f.name.endsWith(".pdf")).length;
+
+  // Échéanciers : toutes les échéances, avec les infos client.
+  const echeancesEnCours = (echeanciersRes.data ?? []).map((row) => {
+    const q = (Array.isArray(row.quotes) ? row.quotes[0] : row.quotes) as
+      | { customer_name: string | null; formula_name: string | null }
+      | null;
+    return {
+      id: row.id,
+      quoteId: row.quote_id,
+      client: q?.customer_name ?? "Client",
+      numero: row.numero,
+      totalEcheances: row.total,
+      amountCents: row.amount_cents,
+      dueDate: row.due_date,
+      status: row.status,
+      valideUrssaf: Boolean(row.valide_urssaf),
+      paidAt: row.paid_at,
+    };
+  });
+  // Carte "Échéances en cours" : impayées du MOIS ACTUEL seulement (ce que
+  // tu es censé recevoir ce mois-ci).
+  const echeancesDuMois = echeancesEnCours.filter((e) => e.dueDate.startsWith(monthPrefix));
+  // Reçues mais pas encore confirmées URSSAF (toutes périodes).
+  const echeancesAConfirmer = echeancesEnCours.filter((e) => e.status === "payee" && !e.valideUrssaf);
+  // Confirmées URSSAF (attribuées au mois de la date limite de l'échéance).
+  const echeancesValidees = echeancesEnCours.filter((e) => e.status === "payee" && e.valideUrssaf);
+  // Devis avec échéancier : leur argent est suivi échéance par échéance
+  // (ils sont exclus du calcul de solde par devis pour éviter les doubles comptes).
+  const echeancierQuoteIds = new Set(echeancesEnCours.map((e) => e.quoteId));
+
+  // Progression d'échéancier par devis : nombre d'échéances réglées / total et
+  // montants payés / dus — alimente la barre de progression sous chaque ligne.
+  const progressionParDevis = new Map<
+    string,
+    { payees: number; total: number; payeCents: number; totalCents: number }
+  >();
+  for (const e of echeancesEnCours) {
+    const p = progressionParDevis.get(e.quoteId) ?? {
+      payees: 0,
+      total: 0,
+      payeCents: 0,
+      totalCents: 0,
+    };
+    p.total = Math.max(p.total, e.totalEcheances);
+    p.totalCents += e.amountCents;
+    if (e.status === "payee") {
+      p.payees += 1;
+      p.payeCents += e.amountCents;
+    }
+    progressionParDevis.set(e.quoteId, p);
+  }
+
+  const montant = (q: { total_cents: unknown }) => {
+    const n = Number(q.total_cents ?? 0);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const allConfirmed = confirmed ?? [];
+  const upcoming = allConfirmed.filter((q) => (q.event_date ?? "") >= todayIso);
+
+  // ---- Chiffres clés ----
+  const soldeDe = (q: { total_cents: unknown; notes?: unknown; acompte_required?: unknown }) => {
+    const notes = String(q.notes ?? "");
+    const total = montant(q);
+    // Solde FIGÉ : [[solde-montant:centimes]] = montant réellement reçu comme
+    // solde, indépendant du marqueur acompte (cas d'un acompte supprimé car
+    // jamais encaissé — le solde validé ne doit pas changer).
+    const soldeFixe = /\[\[solde-montant:(\d+)\]\]/.exec(notes);
+    if (soldeFixe) return Number(soldeFixe[1]);
+    // L'acompte RÉELLEMENT réglé, stocké via [[acompte:centimes]]
+    // (renseignable dans l'édition de la soirée sur /admin/import).
+    const marker = /\[\[acompte:(\d+)\]\]/.exec(notes);
+    if (marker) return Math.max(0, total - Number(marker[1]));
+    // Sans acompte renseigné : facture libre → total dû. Devis du site →
+    // règle standard du devis PDF (solde arrondi à la dizaine inférieure).
+    if (notes.includes("[[facture-libre]]")) return total;
+    if (notes.includes("[[import-avant-site]]")) return total;
+    // Devis sans acompte : tout le montant est le solde.
+    if (q.acompte_required === false) return total;
+    return Math.max(0, total - Math.floor((total * 0.8) / 10) * 10);
+  };
+  // Solde validé = le DJ a confirmé avoir reçu le solde après la soirée
+  // (marqueur [[solde-valide:date]] posé via le bouton "Valider le solde").
+  const soldeValide = (q: { notes: unknown }) =>
+    (String(q.notes ?? "")).includes("[[solde-valide:");
+
+  // Solde réglé EN LIGNE par le client (carte via Stripe, ou virement
+  // confirmé) : marqueurs [[solde-en-ligne:date]] + [[solde-en-ligne-net:]].
+  // Compté AUTOMATIQUEMENT dans le CA URSSAF du mois de réception.
+  const soldeEnLigneDe = (q: { notes?: unknown }) =>
+    /\[\[solde-en-ligne:(\d{4}-\d{2}-\d{2})\]\]/.exec(String(q.notes ?? ""))?.[1] ?? null;
+  const soldeEnLigneNetDe = (q: {
+    notes?: unknown;
+    total_cents: unknown;
+    acompte_required?: unknown;
+  }) => {
+    const net = /\[\[solde-en-ligne-net:(\d+)\]\]/.exec(String(q.notes ?? ""));
+    return net ? Number(net[1]) : soldeDe(q);
+  };
+  // Le client a choisi de payer le solde sur place le jour J.
+  const soldeSurPlaceDe = (q: { notes?: unknown }) =>
+    /\[\[solde-sur-place:([a-z]+)\]\]/.exec(String(q.notes ?? ""))?.[1] ?? null;
+  // Le client a déclaré avoir envoyé le solde par virement (à confirmer).
+  const soldeDeclareDe = (q: { notes?: unknown }) =>
+    /\[\[solde-declare:(\d{4}-\d{2}-\d{2})\]\]/.exec(String(q.notes ?? ""))?.[1] ?? null;
+
+  // Acompte reçu pour un devis SANS échéancier : marqueur [[acompte:centimes]]
+  // (posé par le webhook Stripe avec le montant réel, ou renseigné à la main
+  // dans /admin/import), sinon acompte standard du devis (règle du PDF :
+  // 20 %, solde arrondi au multiple de 10 inférieur).
+  const acompteDe = (q: { total_cents: unknown; notes?: unknown; acompte_required?: unknown }) => {
+    const marker = /\[\[acompte:(\d+)\]\]/.exec(String(q.notes ?? ""));
+    if (marker) return Number(marker[1]);
+    // Devis sans acompte : rien n'est attendu ni compté.
+    if (q.acompte_required === false) return 0;
+    return montant(q) - Math.floor((montant(q) * 0.8) / 10) * 10;
+  };
+  // Base URSSAF = NET réellement encaissé : frais Stripe déduits via le
+  // marqueur [[acompte-net:centimes]] (posé par le webhook). Sans marqueur
+  // (virement, espèces, paiement sur place) : le montant complet compte.
+  const acompteNetDe = (q: { total_cents: unknown; notes?: unknown }) => {
+    const net = /\[\[acompte-net:(\d+)\]\]/.exec(String(q.notes ?? ""));
+    if (net) return Number(net[1]);
+    return acompteDe(q);
+  };
+  // Échéanciers : net de chaque échéance mémorisé par le webhook via
+  // [[echeance-net:numero:centimes]] ; sinon (virement, sur place) le brut.
+  const notesParDevis = new Map(
+    allConfirmed.map((q) => [q.id, String(q.notes ?? "")])
+  );
+  const netEcheance = (quoteId: string, numero: number, brut: number) => {
+    const m = new RegExp(`\\[\\[echeance-net:${numero}:(\\d+)\\]\\]`).exec(
+      notesParDevis.get(quoteId) ?? ""
+    );
+    return m ? Number(m[1]) : brut;
+  };
+  const acompteRecu = (q: { acompte_paid_at?: unknown; notes?: unknown }) =>
+    Boolean(q.acompte_paid_at) || /\[\[acompte:\d+\]\]/.test(String(q.notes ?? ""));
+  const acompteValide = (q: { notes?: unknown }) =>
+    String(q.notes ?? "").includes("[[acompte-valide:");
+
+  // Acomptes reçus (hors échéancier) non encore validés pour l'URSSAF :
+  // à confirmer pour les compter dans le CA du mois de leur réception.
+  const acomptesAValider = allConfirmed.filter(
+    (q) => acompteRecu(q) && !acompteValide(q) && !echeancierQuoteIds.has(q.id)
+  );
+  // Acomptes validés : comptés dans le CA URSSAF du mois de réception
+  // (acompte_paid_at). Le solde de la même soirée sera compté séparément
+  // après l'événement — aucun double comptage.
+  const acomptesValides = allConfirmed.filter(
+    (q) => acompteRecu(q) && acompteValide(q) && !echeancierQuoteIds.has(q.id)
+  );
+  const urssafAcomptes = acomptesValides
+    .filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix))
+    .reduce((sum, q) => sum + acompteNetDe(q), 0);
+  // Soldes réglés EN LIGNE (carte Stripe ou virement confirmé) : comptés
+  // AUTOMATIQUEMENT dans l'URSSAF du mois de réception — aucune validation
+  // manuelle nécessaire.
+  const urssafSoldesEnLigne = allConfirmed
+    .filter((q) => {
+      const d = soldeEnLigneDe(q);
+      return d && d.startsWith(monthPrefix) && !echeancierQuoteIds.has(q.id);
+    })
+    .reduce((sum, q) => sum + soldeEnLigneNetDe(q), 0);
+  // Soldes envoyés par virement et déclarés par le client : à confirmer à
+  // réception (bouton « Reçu — compter dans l'URSSAF » du panneau Paiements).
+  const soldesDeclaresAConfirmer = allConfirmed.filter(
+    (q) => soldeDeclareDe(q) && !soldeEnLigneDe(q) && !echeancierQuoteIds.has(q.id)
+  );
+  // CA URSSAF du mois inclut aussi les échéances d'échéancier confirmées
+  // (attribuées au mois de leur date limite) — en NET de frais Stripe.
+  const urssafEcheances = echeancesValidees
+    .filter((e) => e.dueDate.startsWith(monthPrefix))
+    .reduce((sum, e) => sum + netEcheance(e.quoteId, e.numero, e.amountCents), 0);
+
+  // CA de l'année : tous les événements confirmés qui se déroulent cette année.
+  const caAnnee = allConfirmed
+    .filter((q) => (q.event_date ?? "").startsWith(String(year)))
+    .reduce((sum, q) => sum + montant(q), 0);
+
+  // CA URSSAF du mois : soirées du mois TERMINÉES dont le solde a été
+  // validé. Au 1er du mois, la carte repart de 0 €.
+  // Seul le SOLDE compte : l'acompte a déjà été déclaré le mois où il a
+  // été reçu (il ne doit pas être déclaré deux fois).
+  const ceMoisJouees = allConfirmed.filter(
+    (q) => (q.event_date ?? "").startsWith(monthPrefix) && (q.event_date ?? "") <= todayIso
+  );
+  const encaisse = ceMoisJouees.filter((q) => soldeValide(q) && !soldeEnLigneDe(q));
+  const caMoisQuotes = encaisse.reduce((sum, q) => sum + soldeDe(q), 0);
+  const attenteValidation = ceMoisJouees.filter((q) => !soldeValide(q) && !soldeEnLigneDe(q));
+  // Le CA URSSAF du mois inclut aussi les échéances d'échéancier confirmées
+  // (attribuées au mois de leur date limite).
+  const caMois = caMoisQuotes + urssafEcheances + urssafAcomptes + urssafSoldesEnLigne;
+
+  // CA à venir : confirmé, pas encore joué.
+  const caAVenir = upcoming.reduce((sum, q) => sum + montant(q), 0);
+
+  // Soirées terminées (toutes périodes) dont le solde reste à valider :
+  // visible dans le détail de la carte, pour ne rien oublier.
+  // Les devis avec échéancier en sont exclus : leur argent est suivi
+  // échéance par échéance (voir « Soldes à valider » / échéanciers).
+  const aValiderToutes = allConfirmed
+    .filter(
+      (q) =>
+        (q.event_date ?? "") <= todayIso &&
+        !soldeValide(q) &&
+        !echeancierQuoteIds.has(q.id)
+    );
+  // Soldes réglés en ligne : déjà comptés automatiquement dans l'URSSAF
+  // (bucket urssafSoldesEnLigne) — ils restent listés pour mémoire/avis mais
+  // ne sont plus « à encaisser ».
+  const soldesAEncaisser = aValiderToutes.filter((q) => !soldeEnLigneDe(q));
+  const soldeAValiderToutes = soldesAEncaisser.reduce((sum, q) => sum + soldeDe(q), 0);
+
+  const prochaines = upcoming.slice(0, 5);
+  const aujourdhui = now.toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  /* SUITE-RENDU */
+
+  // ---- CA Menuiserie (même entreprise ; rubrique URSSAF distincte :
+  // « vente de biens et marchandises » vs « prestation de services » DJ) ----
+  type MenuiserieDocRow = {
+    id: string;
+    numero: string;
+    client_nom: string;
+    type: string;
+    total_cents: number;
+    statut: string;
+    date_edition: string;
+    urssaf_declare: boolean | null;
+    urssaf_mois: string | null;
+    facture_lien: string | null;
+  };
+  const menuDocs = (menuiserieRes.data ?? []) as MenuiserieDocRow[];
+  const menuFactures = menuDocs.filter((f) => f.type === "facture");
+  // Encaissé = facture marquée « paye » (même règle que le module Menuiserie).
+  const menuPayees = menuFactures.filter((f) => f.statut === "paye");
+  // À déclarer : payées mais pas encore basculées « déclaré URSSAF ».
+  const menuADeclarer = menuPayees.filter((f) => !f.urssaf_declare);
+  const menuADeclarerCents = menuADeclarer.reduce((s, f) => s + f.total_cents, 0);
+  // Encaissé d'un mois = factures payées éditées ce mois.
+  const menuCentsDuMois = (prefix: string) =>
+    menuPayees
+      .filter((f) => (f.date_edition ?? "").startsWith(prefix))
+      .reduce((s, f) => s + f.total_cents, 0);
+  const menuCaMois = menuCentsDuMois(monthPrefix);
+  // CA facturé de l'année : factures émises (hors brouillons).
+  const menuFactureAnnee = menuFactures
+    .filter(
+      (f) => f.statut !== "brouillon" && (f.date_edition ?? "").startsWith(String(year)),
+    )
+    .reduce((s, f) => s + f.total_cents, 0);
+  // CA à venir menuiserie : devis acceptés pas encore convertis en facture.
+  const menuDevisAcceptes = menuDocs.filter(
+    (f) => f.type === "devis" && f.statut === "accepte" && !f.facture_lien,
+  );
+  const menuCaAVenir = menuDevisAcceptes.reduce((s, f) => s + f.total_cents, 0);
+  // Totaux affichés selon le périmètre choisi (?ca=dj | menuiserie | tous).
+  const caAnneeAffiche = (avecDj ? caAnnee : 0) + (avecMenu ? menuFactureAnnee : 0);
+  const caMoisAffiche = (avecDj ? caMois : 0) + (avecMenu ? menuCaMois : 0);
+  const caAVenirAffiche = (avecDj ? caAVenir : 0) + (avecMenu ? menuCaAVenir : 0);
+  // Ligne de détail générique pour les panneaux CA.
+  const menuRow = (f: MenuiserieDocRow, label: string) => ({
+    id: f.id,
+    customerName: f.client_nom,
+    formulaName: label,
+    eventLocation: "",
+    eventDate: (f.date_edition ?? "").slice(0, 10),
+    totalCents: f.total_cents,
+    notes: "",
+    status: f.statut,
+  });
+
+  // ---- Statistiques : CA URSSAF par mois + entonnoir de conversion ----
+  const totalPct = (part: number, total: number) =>
+    total > 0 ? Math.round((part / total) * 100) : null;
+
+  // ---- Statistiques : CA URSSAF par mois + entonnoir de conversion ----
+  const MONTH_LABELS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+  const monthly = Array.from({ length: 12 }, (_, m) => {
+    const prefix = `${year}-${String(m + 1).padStart(2, "0")}`;
+    const soldes = allConfirmed
+      .filter((q) => (q.event_date ?? "").startsWith(prefix) && soldeValide(q) && !echeancierQuoteIds.has(q.id))
+      .reduce((sum, q) => sum + soldeDe(q), 0);
+    const echeances = echeancesValidees
+      .filter((e) => e.dueDate.startsWith(prefix))
+      .reduce((sum, e) => sum + netEcheance(e.quoteId, e.numero, e.amountCents), 0);
+    // Acomptes reçus ce mois et validés URSSAF (base nette de frais Stripe).
+    const acomptes = acomptesValides
+      .filter((q) => String(q.acompte_paid_at ?? "").startsWith(prefix))
+      .reduce((sum, q) => sum + acompteNetDe(q), 0);
+    return {
+      label: MONTH_LABELS[m],
+      dj: avecDj ? soldes + echeances + acomptes : 0,
+      menu: avecMenu ? menuCentsDuMois(prefix) : 0,
+    };
+  });
+  const allQuotes = allQuotesRes.data ?? [];
+  const countStatus = (...statuses: string[]) =>
+    allQuotes.filter((q) => statuses.includes(q.status ?? "")).length;
+  const funnel = [
+    { label: "Demandes reçues", count: allQuotes.length, hint: "devis + sur mesure" },
+    {
+      label: "En cours de discussion",
+      count: countStatus("nouveau", "contacte", "attente_signature", "attente_acompte"),
+    },
+    {
+      label: "Confirmées",
+      count: countStatus("confirme"),
+      hint:
+        totalPct(countStatus("confirme"), allQuotes.length) === null
+          ? undefined
+          : `${totalPct(countStatus("confirme"), allQuotes.length)} % du total`,
+    },
+    {
+      label: "Refusées / annulées",
+      count: countStatus("refuse", "annule"),
+    },
+  ];
+
+  // Données des cartes et panneaux de détail (rendu instantané côté client).
+  const mapDetailRow = (q: (typeof upcoming)[number]) => ({
+    id: q.id,
+    customerName: q.customer_name,
+    formulaName: q.formula_name,
+    eventLocation: q.event_location ?? "",
+    eventDate: q.event_date ?? "",
+    totalCents: montant(q),
+    notes: String(q.notes ?? ""),
+    status: q.status ?? "",
+  });
+
+  // ---- Anciennes périodes URSSAF : détail mois par mois ----
+  // Un mois fait partie des « périodes » dès qu'il contient au moins un
+  // encaissement validé, réglé en ligne, un acompte validé ou une échéance
+  // d'échéancier confirmée — exactement les mêmes ingrédients que la carte
+  // du mois courant, appliqués à un autre préfixe AAAA-MM.
+  const entreesDuMois = (prefix: string) => {
+    const encaisseMois = allConfirmed.filter(
+      (q) =>
+        (q.event_date ?? "").startsWith(prefix) &&
+        (q.event_date ?? "") <= todayIso &&
+        soldeValide(q) &&
+        !soldeEnLigneDe(q) &&
+        !echeancierQuoteIds.has(q.id)
+    );
+    const lignes: Array<
+      ReturnType<typeof mapDetailRow> & {
+        afficheCents?: number;
+        type?: "solde" | "acompte" | "echeance";
+        soldeEnLigneLe?: string | null;
+      }
+    > = [
+      // Soldes validés après soirée — montant = solde réel (pas le total).
+      ...encaisseMois.map((q) => ({
+        ...mapDetailRow(q),
+        afficheCents: soldeDe(q),
+        type: "solde" as const,
+      })),
+      // Soldes réglés EN LIGNE ce mois (carte ou virement confirmé) :
+      // comptés automatiquement, base nette de frais Stripe.
+      ...allConfirmed
+        .filter((q) => {
+          const d = soldeEnLigneDe(q);
+          return d && d.startsWith(prefix) && !echeancierQuoteIds.has(q.id);
+        })
+        .map((q) => ({
+          ...mapDetailRow(q),
+          afficheCents: soldeEnLigneNetDe(q),
+          type: "solde" as const,
+          soldeEnLigneLe: soldeEnLigneDe(q),
+        })),
+      // Acomptes reçus ce mois et validés URSSAF (base nette).
+      ...acomptesValides
+        .filter((q) => String(q.acompte_paid_at ?? "").startsWith(prefix))
+        .map((q) => ({
+          ...mapDetailRow(q),
+          afficheCents: acompteNetDe(q),
+          type: "acompte" as const,
+          formulaName: "Acompte — net après frais Stripe",
+          eventDate: String(q.acompte_paid_at ?? "").slice(0, 10),
+          eventLocation: "",
+        })),
+      // Échéances d'échéancier confirmées ce mois (base nette).
+      ...echeancesValidees
+        .filter((e) => e.dueDate.startsWith(prefix))
+        .map((e) => ({
+          ...mapDetailRow({
+            id: e.quoteId,
+            customer_name: e.client,
+            formula_name: "",
+            event_date: e.dueDate,
+            event_location: null,
+            total_cents: 0,
+            notes: "",
+            status: "confirme",
+            created_at: "",
+            acompte_paid_at: null,
+            acompte_required: null,
+          }),
+          afficheCents: netEcheance(e.quoteId, e.numero, e.amountCents),
+          type: "echeance" as const,
+          formulaName: `Échéancier ${e.numero}/${e.totalEcheances} — net après frais Stripe`,
+          eventLocation: "",
+        })),
+    ];
+    return lignes;
+  };
+
+  // Détails URSSAF des 12 derniers mois écoulés (hors mois courant, déjà
+  // accessible via la carte), uniquement ceux qui contiennent des entrées.
+  const detailsUrssaf: Record<string, { titre: string; rows: ReturnType<typeof entreesDuMois> }> = {};
+  for (let i = 1; i <= 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const prefix = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const rows = entreesDuMois(prefix);
+    if (rows.length === 0) continue;
+    detailsUrssaf[`urssaf:${prefix}`] = {
+      titre: `CA ${prefix} (URSSAF) — encaissements validés (nets de frais Stripe)`,
+      rows,
+    };
+  }
+
+  const details = {
+    "ca-annee": {
+      titre: `CA signé ${year} — détail des événements`,
+      rows: [
+        ...allConfirmed
+          .filter((q) => (q.event_date ?? "").startsWith(String(year)))
+          .map(mapDetailRow),
+        // Factures Menuiserie de l'année (rubrique « vente de biens »).
+        ...(avecMenu
+          ? menuFactures
+              .filter(
+                (f) =>
+                  f.statut !== "brouillon" &&
+                  (f.date_edition ?? "").startsWith(String(year)),
+              )
+              .map((f) => menuRow(f, `Menuiserie — facture ${f.numero} (vente de biens)`))
+          : []),
+      ],
+    },
+    urssaf: {
+      titre: `CA ${monthPrefix} (URSSAF) — encaissements validés (nets de frais Stripe)`,
+      rows: [
+        // Soldes validés après soirée — montant = solde réel (pas le total).
+        ...encaisse.map((q) => ({
+          ...mapDetailRow(q),
+          afficheCents: soldeDe(q),
+          type: "solde" as const,
+        })),
+        // Soldes réglés EN LIGNE ce mois (carte ou virement confirmé) :
+        // comptés automatiquement, base nette de frais Stripe.
+        ...allConfirmed
+          .filter((q) => {
+            const d = soldeEnLigneDe(q);
+            return d && d.startsWith(monthPrefix) && !echeancierQuoteIds.has(q.id);
+          })
+          .map((q) => ({
+            ...mapDetailRow(q),
+            afficheCents: soldeEnLigneNetDe(q),
+            type: "solde" as const,
+            soldeEnLigneLe: soldeEnLigneDe(q),
+          })),
+        // Acomptes reçus ce mois et validés URSSAF (base nette).
+        ...acomptesValides
+          .filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix))
+          .map((q) => ({
+            id: q.id,
+            customerName: q.customer_name,
+            formulaName: "Acompte — net après frais Stripe",
+            eventLocation: "",
+            eventDate: String(q.acompte_paid_at ?? "").slice(0, 10),
+            totalCents: acompteNetDe(q),
+            notes: String(q.notes ?? ""),
+            status: q.status ?? "",
+            afficheCents: acompteNetDe(q),
+            type: "acompte" as const,
+          })),
+        // Échéances d'échéancier confirmées ce mois (base nette).
+        ...echeancesValidees
+          .filter((e) => e.dueDate.startsWith(monthPrefix))
+          .map((e) => ({
+            id: e.id,
+            customerName: e.client,
+            formulaName: `Échéancier ${e.numero}/${e.totalEcheances} — net après frais Stripe`,
+            eventLocation: "",
+            eventDate: e.dueDate,
+            totalCents: netEcheance(e.quoteId, e.numero, e.amountCents),
+            notes: "",
+            status: "confirme",
+            afficheCents: netEcheance(e.quoteId, e.numero, e.amountCents),
+            type: "echeance" as const,
+          })),
+        // Factures Menuiserie payées ce mois (rubrique « vente de biens »).
+        ...(avecMenu
+          ? menuPayees
+              .filter((f) => (f.date_edition ?? "").startsWith(monthPrefix))
+              .map((f) => menuRow(f, `Menuiserie (vente de biens) — facture ${f.numero}`))
+          : []),
+      ],
+      solde: true,
+    },
+    solde: {
+      titre: "Soldes à valider — soirées terminées, solde non confirmé",
+      rows: aValiderToutes.map((q) => ({
+        ...mapDetailRow(q),
+        afficheCents: soldeDe(q),
+        soldeEnLigneLe: soldeEnLigneDe(q),
+        soldeSurPlaceMode: soldeSurPlaceDe(q),
+        soldeDeclareLe: soldeDeclareDe(q),
+        // Déjà compté automatiquement (réglé en ligne) : hors total du panneau.
+        horsTotal: Boolean(soldeEnLigneDe(q)),
+      })),
+      solde: true,
+    },
+    "ca-avenir": {
+      titre: "CA à venir — soirées restantes",
+      rows: [
+        ...upcoming.map(mapDetailRow),
+        // Devis Menuiserie acceptés pas encore facturés.
+        ...(avecMenu
+          ? menuDevisAcceptes.map((f) =>
+              menuRow(f, `Menuiserie — devis ${f.numero} accepté (non facturé)`),
+            )
+          : []),
+      ],
+    },
+  };
+
+  return (
+    <main className="mx-auto w-full max-w-5xl space-y-8 px-4 py-8">
+      {/* En-tête */}
+      <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h1 className="text-2xl font-semibold">Tableau de bord</h1>
+            <p className="mt-1 text-sm capitalize text-muted-foreground">{aujourdhui}</p>
+          </div>
+          <Link
+            href="/admin/devis"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          >
+            + Nouveau devis reçu ? Voir les demandes
+          </Link>
+          <AdminPushButton vapidPublicKey={process.env.VAPID_PUBLIC_KEY ?? ""} />
+        </div>
+
+      <CaPerimetreSelect value={ca ?? "tous"} />
+
+      <DashboardDetail
+        initialVue={vue}
+        cards1={[
+          {
+            vue: "ca-annee",
+            label: `CA signé ${year} — cliquer pour le détail`,
+            value: eur(caAnneeAffiche),
+            hint: avecMenu
+              ? `${allConfirmed.length} événement(s) DJ + factures Menuiserie (${eur(menuFactureAnnee)}) cette année`
+              : `${allConfirmed.length} événement(s) confirmé(s) cette année`,
+            hero: true,
+            accentLabel: true,
+            icon: <TrendingUp className="size-4" aria-hidden />,
+          },
+          {
+            vue: "urssaf",
+            label: "CA encaissé ce mois — à déclarer (URSSAF)",
+            value: eur(caMoisAffiche),
+            hint: `${avecMenu && menuADeclarerCents > 0 ? `Menuiserie à déclarer : ${eur(menuADeclarerCents)} (vente de biens) · ` : ""}${avecMenu && menuCaMois > 0 ? `dont Menuiserie ${eur(menuCaMois)} ce mois · ` : ""}${encaisse.length} soirée(s) validée(s) · ${
+              urssafAcomptes > 0
+                ? `${acomptesValides.filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix)).length} acompte(s) validé(s) · `
+                : ""
+            }${
+              urssafEcheances > 0
+                ? `${echeancesValidees.filter((e) => e.dueDate.startsWith(monthPrefix)).length} échéance(s) d'échéancier · `
+                : ""
+            }${
+              attenteValidation.length > 0
+                ? `${attenteValidation.length} solde(s) en attente de validation`
+                : "tout est validé ✓"
+            }`,
+            hero: true,
+            icon: <Receipt className="size-4" aria-hidden />,
+          },
+        ]}
+        cards2={[
+          { vue: "echeanciers", label: "Échéances en cours", value: String(echeancesDuMois.length), hint: "échéance(s) à recevoir ce mois-ci — clic pour le détail" },
+          { vue: "solde", label: "Soldes à valider", value: eur(soldeAValiderToutes + soldesDeclaresAConfirmer.reduce((s, q) => s + soldeDe(q), 0) + echeancesAConfirmer.reduce((s, e) => s + netEcheance(e.quoteId, e.numero, e.amountCents), 0) + acomptesAValider.reduce((s, q) => s + acompteNetDe(q), 0)), hint: `${soldesAEncaisser.length + soldesDeclaresAConfirmer.length} solde(s) + ${echeancesAConfirmer.length} échéance(s) + ${acomptesAValider.length} acompte(s) — valider pour compter dans l'URSSAF (soldes réglés en ligne : comptés automatiquement)` },
+          { vue: "ca-avenir", label: "CA à venir (déjà signé)", value: eur(caAVenirAffiche), hint: `${avecMenu && menuDevisAcceptes.length > 0 ? `${menuDevisAcceptes.length} devis Menuiserie accepté(s) · ` : ""}${upcoming.length} soirée(s) confirmée(s) restante(s)` },
+          { vue: "devis", href: "/admin/devis", label: "Devis en attente", value: String(devisAttente ?? 0), hint: "à relancer ou traiter" },
+        ]}
+        details={details}
+        detailsUrssaf={detailsUrssaf}
+        echeanciersPanel={
+          <div className="animate-in fade-in slide-in-from-bottom-2 space-y-3 rounded-xl border border-border bg-card p-5 duration-300">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 font-medium">
+                <CreditCard className="size-4 text-accent" aria-hidden />
+                Échéances en cours — à recevoir ce mois-ci
+              </h2>
+              <span className="text-xs text-muted-foreground">Cliquez à nouveau sur la carte pour fermer</span>
+            </div>
+            {echeancesDuMois.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Aucune échéance impayée ce mois-ci ✓
+              </p>
+            ) : (
+              <ul className="divide-y divide-border rounded-lg border border-border">
+                {echeancesDuMois.map((e) => {
+                  const prog = progressionParDevis.get(e.quoteId);
+                  const pct =
+                    prog && prog.total > 0
+                      ? Math.round((prog.payees / prog.total) * 100)
+                      : 0;
+                  return (
+                    <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+                      <div className="min-w-0">
+                        <Link
+                          href={`/admin/devis?focus=${e.quoteId}`}
+                          className="font-medium transition-colors hover:text-accent hover:underline"
+                          title="Ouvrir ce devis dans la liste"
+                        >
+                          {e.client}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">
+                          Échéance {e.numero}/{e.totalEcheances} — avant le{" "}
+                          {new Date(`${e.dueDate}T12:00:00`).toLocaleDateString("fr-FR", {
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </p>
+                      </div>
+                      <span className="font-medium">{eur(e.amountCents)}</span>
+                      {prog && prog.total > 0 && (
+                        <div className="w-full">
+                          <div
+                            className="h-1.5 overflow-hidden rounded-full bg-muted"
+                            role="progressbar"
+                            aria-valuenow={pct}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label={`Échéancier de ${e.client} : ${prog.payees} échéances réglées sur ${prog.total}`}
+                          >
+                            <div
+                              className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-emerald-500" : "bg-accent"}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <p className="mt-1 text-[11px] text-muted-foreground">
+                            {prog.payees}/{prog.total} échéance{prog.total > 1 ? "s" : ""} réglée
+                            {prog.payees > 1 ? "s" : ""} · {eur(prog.payeCents)} sur {eur(prog.totalCents)}
+                          </p>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        }
+        soldeRecusPanel={
+          <div className="animate-in fade-in slide-in-from-bottom-2 space-y-3 rounded-xl border border-border bg-card p-5 duration-300">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 font-medium">
+                <Receipt className="size-4 text-accent" aria-hidden />
+                Paiements reçus à confirmer
+              </h2>
+              <div className="flex items-center gap-3">
+                <BackfillStripeButton />
+                <span className="text-xs text-muted-foreground">Cliquez à nouveau sur la carte pour fermer</span>
+              </div>
+            </div>
+
+            {/* Acomptes reçus (hors échéancier) : valider pour compter dans
+                le CA URSSAF du mois de leur réception. */}
+            {acomptesAValider.length > 0 ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Acomptes reçus — devis sans échéancier
+                </p>
+                <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+                  {acomptesAValider.map((q) => (
+                    <li key={q.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+                      <div className="min-w-0">
+                        <Link
+                          href={`/admin/devis?focus=${q.id}`}
+                          className="font-medium transition-colors hover:text-accent hover:underline"
+                          title="Ouvrir ce devis dans la liste"
+                        >
+                          {q.customer_name}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">
+                          Acompte reçu le{" "}
+                          {q.acompte_paid_at
+                            ? new Date(q.acompte_paid_at).toLocaleDateString("fr-FR")
+                            : "à la main"}{" "}
+                          · soirée le {q.event_date ? new Date(`${q.event_date}T12:00:00`).toLocaleDateString("fr-FR") : "?"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium">{eur(acompteNetDe(q))}</span>
+                        <ValidateAcompteButton id={q.id} customerName={q.customer_name ?? ""} validated={false} />
+                        <SupprimerAcompteButton id={q.id} customerName={q.customer_name ?? ""} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {/* Acomptes déjà validés : possibilité de retrait en cas d'erreur. */}
+            {acomptesValides
+              .filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix))
+              .length > 0 ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Acomptes déjà comptés ce mois
+                </p>
+                <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+                  {acomptesValides
+                    .filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix))
+                    .map((q) => (
+                      <li key={q.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+                        <div className="min-w-0">
+                          <Link
+                            href={`/admin/devis?focus=${q.id}`}
+                            className="font-medium transition-colors hover:text-accent hover:underline"
+                          >
+                            {q.customer_name}
+                          </Link>
+                          <p className="text-xs text-muted-foreground">
+                            Reçu le{" "}
+                            {q.acompte_paid_at
+                              ? new Date(q.acompte_paid_at).toLocaleDateString("fr-FR")
+                              : "?"}{" "}
+                            — dans le CA URSSAF ✓
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium">{eur(acompteNetDe(q))}</span>
+                          <ValidateAcompteButton id={q.id} customerName={q.customer_name ?? ""} validated={true} />
+                          <SupprimerAcompteButton id={q.id} customerName={q.customer_name ?? ""} />
+                        </div>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {/* Soldes envoyés par virement (déclarés par le client) : à
+                confirmer à réception — comptés ensuite automatiquement dans
+                l'URSSAF du mois. */}
+            {soldesDeclaresAConfirmer.length > 0 ? (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Soldes envoyés par virement — à confirmer
+                </p>
+                <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+                  {soldesDeclaresAConfirmer.map((q) => (
+                    <li key={q.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+                      <div className="min-w-0">
+                        <Link
+                          href={`/admin/devis?focus=${q.id}`}
+                          className="font-medium transition-colors hover:text-accent hover:underline"
+                          title="Ouvrir ce devis dans la liste"
+                        >
+                          {q.customer_name}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">
+                          Solde déclaré le{" "}
+                          {soldeDeclareDe(q)
+                            ? new Date(`${soldeDeclareDe(q)}T12:00:00`).toLocaleDateString("fr-FR")
+                            : "?"}
+                          {" · "}soirée le{" "}
+                          {q.event_date ? new Date(`${q.event_date}T12:00:00`).toLocaleDateString("fr-FR") : "?"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium">{eur(soldeDe(q))}</span>
+                        <ConfirmSoldeButton id={q.id} customerName={q.customer_name ?? ""} confirmed={false} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Échéanciers — paiements reçus
+              </p>
+            </div>
+            {echeancesAConfirmer.length === 0 && acomptesAValider.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Aucun paiement en attente de confirmation ✓
+              </p>
+            ) : (
+              <ul className="divide-y divide-border rounded-lg border border-border">
+                {echeancesAConfirmer.map((e) => (
+                  <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+                    <div className="min-w-0">
+                      <Link
+                        href={`/admin/devis?focus=${e.quoteId}`}
+                        className="font-medium transition-colors hover:text-accent hover:underline"
+                        title="Ouvrir ce devis dans la liste"
+                      >
+                        {e.client}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">
+                        Échéance {e.numero}/{e.totalEcheances} — reçue le{" "}
+                        {e.paidAt
+                          ? new Date(e.paidAt).toLocaleDateString("fr-FR")
+                          : new Date(`${e.dueDate}T12:00:00`).toLocaleDateString("fr-FR")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-medium">{eur(e.amountCents)}</span>
+                      <ValidateEcheanceButton id={e.id} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        }
+      />
+
+      {/* SUITE-LISTES */}
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Prochaines dates */}
+        <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="font-medium">Prochaines dates</h2>
+            <Link href="/admin/planning" className="text-xs text-accent hover:underline">
+              Planning →
+            </Link>
+          </div>
+          {prochaines.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Aucune date confirmée à venir.
+            </p>
+          ) : (
+            <ul className="mt-3 divide-y divide-border">
+              {prochaines.map((quote) => (
+                <li key={quote.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <div className="min-w-0">
+                    <Link
+                      href={`/admin/devis?focus=${quote.id}`}
+                      className="block truncate text-sm font-medium transition-colors hover:text-accent hover:underline"
+                      title="Ouvrir ce devis"
+                    >
+                      {quote.customer_name}
+                    </Link>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {quote.formula_name}
+                      {quote.event_location ? ` · ${quote.event_location}` : ""}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm font-medium">
+                      {quote.event_date
+                        ? new Date(`${quote.event_date}T12:00:00`).toLocaleDateString("fr-FR", {
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short",
+                          })
+                        : "—"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{eur(montant(quote))}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {/* Devis à traiter */}
+        <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center gap-2 font-medium">
+              <Mail className="size-4 text-accent" aria-hidden />
+              Devis à traiter ({devisAttente ?? 0})
+            </h2>
+            <Link href="/admin/devis" className="text-xs text-accent hover:underline">
+              Tous les devis →
+            </Link>
+          </div>
+          {(devisRecents ?? []).length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Rien en attente, tout est traité ✓
+            </p>
+          ) : (
+            <ul className="mt-3 divide-y divide-border">
+              {(devisRecents ?? []).map((quote) => (
+                <li key={quote.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <div className="min-w-0">
+                    <Link
+                      href={`/admin/devis?focus=${quote.id}`}
+                      className="block truncate text-sm font-medium transition-colors hover:text-accent hover:underline"
+                      title="Ouvrir ce devis"
+                    >
+                      {quote.customer_name}
+                    </Link>
+                    <p className="truncate text-xs text-muted-foreground">{quote.formula_name}</p>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-accent/40 px-2.5 py-1 text-xs text-accent">
+                    {STATUT_LABEL[quote.status] ?? quote.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      {/* Statistiques : CA mensuel + conversion */}
+      <AdminStats year={year} months={monthly} funnel={funnel} />
+
+      {/* Raccourcis */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        {[
+          { href: "/admin/factures", icon: FileText, label: "Factures libres", extra: `${nbFactures} générée(s)` },
+          { href: `/api/admin/export-ca?annee=${year}`, icon: Receipt, label: "Export comptable (CSV)", extra: `encaissements ${year}` },
+          { href: "/admin/import", icon: BookOpen, label: "Soirées d'avant le site" },
+          { href: "/admin/messages", icon: MessageSquare, label: "Messagerie clients" },
+          { href: "/admin/comptes", icon: Users, label: "Comptes clients" },
+        ].map((shortcut) => (
+          <Link
+            key={shortcut.href}
+            href={shortcut.href}
+            className="rounded-xl border border-border bg-card p-4 text-sm transition-colors hover:border-accent/50"
+          >
+            <span className="flex items-center gap-2">
+              <shortcut.icon className="size-4 text-accent" aria-hidden />
+              <span className="font-medium">{shortcut.label}</span>
+            </span>
+            {shortcut.extra ? (
+              <span className="mt-1 block text-xs text-muted-foreground">{shortcut.extra}</span>
+            ) : null}
+          </Link>
+        ))}
+      </div>
+    </main>
+  );
+}

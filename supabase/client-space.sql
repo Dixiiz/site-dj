@@ -1,0 +1,105 @@
+-- ============================================================
+-- Espace client : messagerie + playlist (souhaits / blacklist)
+-- À exécuter dans Supabase → SQL Editor
+-- ============================================================
+
+-- Messagerie liée à un devis
+create table if not exists quote_messages (
+  id uuid primary key default gen_random_uuid(),
+  quote_id uuid not null references quotes(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  sender text not null check (sender in ('client', 'admin')),
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+-- Musiques : souhaits par temps fort + blacklist
+create table if not exists playlist_tracks (
+  id uuid primary key default gen_random_uuid(),
+  quote_id uuid not null references quotes(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  moment text not null,
+  title text not null,
+  artist text,
+  kind text not null default 'souhait' check (kind in ('souhait', 'blacklist')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists quote_messages_quote_idx on quote_messages (quote_id, created_at);
+create index if not exists playlist_tracks_quote_idx on playlist_tracks (quote_id, created_at);
+
+-- RLS activé : les clients passent par le serveur Next (service role),
+-- aucune table n'est accessible directement depuis le navigateur.
+alter table quote_messages enable row level security;
+alter table playlist_tracks enable row level security;
+
+-- ============ ÉCHÉANCIER DE PAIEMENT (2 à 10 fois) ============
+-- À exécuter une fois dans le SQL Editor Supabase :
+create table if not exists payment_schedule (
+  id uuid primary key default gen_random_uuid(),
+  quote_id uuid not null references quotes(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete set null,
+  numero int not null,
+  total int not null,
+  amount_cents integer not null,
+  due_date date not null,
+  status text not null default 'a_payer' check (status in ('a_payer', 'payee')),
+  paid_at timestamptz,
+  reminder_sent_at timestamptz,
+  unique (quote_id, numero)
+);
+
+alter table payment_schedule enable row level security;
+
+-- Les clients passent par le serveur Next (service role) : aucune table
+-- accessible directement depuis le navigateur.
+alter table playlist_tracks add column if not exists preview_url text;
+alter table playlist_tracks add column if not exists artwork_url text;
+
+-- Espace client : options en attente de validation admin + pastille nouveautés
+alter table quotes add column if not exists pending_options jsonb;
+alter table quotes add column if not exists has_unread_updates boolean not null default false;
+
+-- Détails de devis demandés par le client (lieu, date, horaires, pack) en
+-- attente de validation admin. JSON : { event_location, event_date,
+-- start_time, end_time, formula_name, formula_price_cents, message }.
+alter table quotes add column if not exists pending_details jsonb;
+
+-- Fichiers envoyés par les clients (MP3, MP4, documents…)
+create table if not exists quote_files (
+  id uuid primary key default gen_random_uuid(),
+  quote_id uuid not null references quotes(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  storage_path text not null,
+  mime_type text,
+  size_bytes bigint,
+  created_at timestamptz not null default now()
+);
+
+-- Rattachement d'un fichier à un temps fort (null = divers)
+alter table quote_files add column if not exists moment text;
+
+-- Fichiers envoyés par l'admin (contrat, devis signé, documents officiels)
+alter table quote_files add column if not exists from_admin boolean not null default false;
+
+-- Nom personnalisé donné au devis par le client
+alter table quotes add column if not exists client_label text;
+
+-- Signature en ligne des documents par le client
+alter table quote_files add column if not exists signed_name text;
+alter table quote_files add column if not exists signed_at timestamptz;
+alter table quote_files add column if not exists signed_ip text;
+alter table quote_files add column if not exists signed_consent boolean not null default false;
+
+-- L'admin peut ouvrir la conversation même si le client n'a pas encore de compte
+alter table quote_messages alter column user_id drop not null;
+alter table quote_files alter column user_id drop not null;
+
+-- Type de document côté admin : simple ou à signer par le client
+alter table quote_files add column if not exists doc_kind text not null default 'info';
+
+create index if not exists quote_files_quote_idx on quote_files (quote_id, created_at);
+
+alter table quote_files enable row level security;
+

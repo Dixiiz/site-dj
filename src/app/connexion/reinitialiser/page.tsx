@@ -1,0 +1,55 @@
+import { createAuthClient } from "@/lib/supabase/server";
+import { getClientUser } from "@/app/client-actions";
+import { ResetPasswordForm } from "@/components/reset-password-form";
+import { ResendLinkForm } from "@/components/resend-link-form";
+
+export const metadata = {
+  title: "Votre mot de passe — Propul'Sound DJ",
+  description: "Définissez le mot de passe de votre espace client Propul'Sound DJ.",
+};
+
+export default async function ReinitialiserPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ code?: string }>;
+}) {
+  // Deux formats de lien possibles :
+  //  - ?code=… : flux PKCE classique, échangé côté serveur ci-dessous ;
+  //  - #access_token=… : liens admin (première connexion, invitation et
+  //    réinitialisation — envoyés via Resend), gérés côté navigateur par le
+  //    RecoveryHashHandler global (layout racine), qui établit la session puis
+  //    redirige ici (type=recovery).
+  const { code } = await searchParams;
+  if (code) {
+    const supabase = await createAuthClient();
+    await supabase.auth.exchangeCodeForSession(code).catch(() => {});
+  }
+
+  const user = await getClientUser();
+
+  return (
+    <main className="mx-auto w-full max-w-md px-4 py-16">
+      <h1 className="mb-2 text-center text-2xl font-semibold">Votre mot de passe</h1>
+      <p className="mb-6 text-center text-sm text-muted-foreground">
+        Choisissez le mot de passe de votre espace client — il vous servira à chaque connexion.
+      </p>
+      {user ? (
+        <ResetPasswordForm email={user.email} />
+      ) : (
+        <div className="space-y-4 rounded-xl border border-border p-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            Ce lien est invalide ou a expiré. Demandez un nouveau lien ci-dessous — il vous sera
+            envoyé à l&apos;e-mail de votre devis.
+          </p>
+          <ResendLinkForm />
+          <a
+            href="/connexion"
+            className="inline-block text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Retour à la connexion
+          </a>
+        </div>
+      )}
+    </main>
+  );
+}

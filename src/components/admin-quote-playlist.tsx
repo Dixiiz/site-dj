@@ -1,0 +1,227 @@
+type Track = {
+  id: string;
+  moment: string;
+  title: string;
+  artist: string | null;
+  kind: string;
+  preview_url: string | null;
+  artwork_url: string | null;
+};
+
+type FileRow = {
+  id: string;
+  name: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  moment: string | null;
+  doc_kind: string;
+};
+
+const DANCE = "Soirée / Piste de danse";
+
+function sizeLabel(bytes: number | null) {
+  if (!bytes) return "";
+  if (bytes > 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+  return `${Math.round(bytes / 1024)} Ko`;
+}
+
+function fileIcon(mime: string | null) {
+  if (mime?.startsWith("video")) return "";
+  if (mime?.startsWith("audio")) return "";
+  return "";
+}
+
+function trackRow(track: Track) {
+  return (
+    <li
+      key={track.id}
+      className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm sm:gap-3"
+    >
+      {track.artwork_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={track.artwork_url}
+          alt=""
+          width={36}
+          height={36}
+          className="h-9 w-9 shrink-0 rounded-md object-cover"
+        />
+      ) : null}
+      <div className="min-w-0 flex-1 basis-40">
+        <p className="truncate">
+          <span className="font-medium">{track.title}</span>
+          {track.artist ? (
+            <span className="text-muted-foreground"> — {track.artist}</span>
+          ) : null}
+        </p>
+      </div>
+      {track.preview_url ? (
+        <audio controls preload="none" src={track.preview_url} className="h-8 w-full min-w-0 sm:w-44" />
+      ) : null}
+    </li>
+  );
+}
+
+function fileRow(quoteId: string, file: FileRow) {
+  return (
+    <li
+      key={file.id}
+      className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 px-2.5 py-1.5 text-xs sm:gap-3"
+    >
+      <span className="shrink-0">{fileIcon(file.mime_type)}</span>
+      <div className="min-w-0 flex-1 basis-32">
+        <p className="truncate font-medium">{file.name}</p>
+        <p className="text-[11px] text-muted-foreground">{sizeLabel(file.size_bytes)}</p>
+      </div>
+      <a
+        href={`/api/files/${file.id}`}
+        className="rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
+      >
+        ↓
+      </a>
+    </li>
+  );
+}
+
+// Temps forts selon le type d'événement (mariage / anniversaire / pro).
+export function eventMoments(formulaName: string | null | undefined): string[] {
+  return /mariage|essential|deluxe|ultime/i.test(formulaName ?? "")
+    ? [
+ "Cérémonie laïque",
+ "Cocktail / Vin d'honneur",
+ "Entrée des mariés",
+ "Dessert",
+ "Ouverture de bal",
+      ]
+    : ["Entrée en salle", "Animation", "Dessert"];
+}
+
+// Playlist du devis : même présentation en 2 colonnes que le client.
+// Alimentée par le bundle déjà chargé (AdminQuoteLazyFolder) : plus aucune
+// requête propre — les données viennent en props.
+export function AdminQuotePlaylist({
+  quoteId,
+  moments,
+  initialTracks,
+  initialFiles,
+}: {
+  quoteId: string;
+  moments: string[];
+  initialTracks: Track[];
+  initialFiles: FileRow[];
+}) {
+  const all = initialTracks ?? [];
+  const allFiles = initialFiles ?? [];
+  const dance = all.filter((t) => t.moment === DANCE && t.kind === "souhait");
+  const wishes = all.filter((t) => t.kind === "souhait");
+  const danceBlacklist = all.filter(
+    (t) => t.moment === DANCE && t.kind === "blacklist"
+  );
+  const danceFiles = allFiles.filter((f) => f.moment === DANCE);
+  const miscFiles = allFiles.filter((f) => !f.moment && f.doc_kind !== "a_signer");
+
+  return (
+    <div className="grid items-start gap-4 lg:grid-cols-2">
+      {/* Gauche : soirée / danse + blacklist */}
+      <div className="rounded-xl border border-border p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-medium text-accent">Soirée / Piste de danse</h3>
+          <span className="text-xs text-muted-foreground">{dance.length}/30 titres</span>
+        </div>
+
+        <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-accent">
+          À passer ({dance.length})
+        </p>
+        {dance.length > 0 ? (
+          <ul className="mt-2 space-y-2">{dance.map(trackRow)}</ul>
+        ) : (
+          <p className="mt-2 text-xs text-muted-foreground">Aucun titre.</p>
+        )}
+
+        <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-red-400">
+          À ne PAS passer ({danceBlacklist.length})
+        </p>
+        {danceBlacklist.length > 0 ? (
+          <ul className="mt-2 space-y-2">{danceBlacklist.map(trackRow)}</ul>
+        ) : (
+          <p className="mt-2 text-xs text-red-400/70">Aucune musique blacklistée.</p>
+        )}
+
+        {danceFiles.length > 0 ? (
+          <>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Fichiers de la soirée
+            </p>
+            <ul className="mt-2 space-y-1.5">{danceFiles.map((f) => fileRow(quoteId, f))}</ul>
+          </>
+        ) : null}
+      </div>
+
+      {/* Droite : chaque temps fort avec ses musiques et ses fichiers */}
+      <div className="space-y-4">
+        {moments.map((moment) => {
+          const momentTracks = all.filter(
+            (t) => t.kind === "souhait" && t.moment === moment
+          );
+          const momentFiles = allFiles.filter((f) => f.moment === moment);
+          if (momentTracks.length === 0 && momentFiles.length === 0) return null;
+          return (
+            <div key={moment} className="rounded-xl border border-border p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-medium text-accent">{moment}</h3>
+                <span className="text-xs text-muted-foreground">
+                  {momentTracks.length}/4 musique{momentTracks.length > 1 ? "s" : ""}
+                </span>
+              </div>
+              {momentTracks.length > 0 ? (
+                <ul className="mt-3 space-y-2">{momentTracks.map(trackRow)}</ul>
+              ) : null}
+              {momentFiles.length > 0 ? (
+                <ul className="mt-3 space-y-1.5">
+                  {momentFiles.map((f) => fileRow(quoteId, f))}
+                </ul>
+              ) : null}
+            </div>
+          );
+        })}
+
+        {/* Temps forts personnalisés créés par le client */}
+        {[
+          ...new Set(
+            wishes
+              .map((t) => t.moment)
+              .filter((m) => m !== DANCE && !moments.includes(m))
+          ),
+        ].map((moment) => {
+          const momentTracks = wishes.filter((t) => t.moment === moment);
+          const momentFiles = allFiles.filter((f) => f.moment === moment);
+          return (
+            <div key={moment} className="rounded-xl border border-border p-4">
+              <h3 className="font-medium text-accent">{moment} </h3>
+              <ul className="mt-3 space-y-2">{momentTracks.map(trackRow)}</ul>
+              {momentFiles.length > 0 ? (
+                <ul className="mt-3 space-y-1.5">
+                  {momentFiles.map((f) => fileRow(quoteId, f))}
+                </ul>
+              ) : null}
+            </div>
+          );
+        })}
+
+        {miscFiles.length > 0 ? (
+          <div className="rounded-xl border border-border p-4">
+            <h3 className="font-medium text-muted-foreground">Autres fichiers</h3>
+            <ul className="mt-3 space-y-1.5">{miscFiles.map((f) => fileRow(quoteId, f))}</ul>
+          </div>
+        ) : null}
+
+        {all.length === 0 && allFiles.length === 0 ? (
+          <div className="rounded-xl border border-border p-4 text-sm text-muted-foreground">
+            Aucune musique ni fichier pour le moment.
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+

@@ -1,0 +1,1012 @@
+"use client";
+
+import { useSyncExternalStore, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import { CreditCard, MapPin } from "lucide-react";
+import { format } from "date-fns";
+import { fr as frLocale } from "date-fns/locale";
+import { fr } from "react-day-picker/locale";
+import { toast } from "sonner";
+import { estimateTravelFee, getUnavailableDates, getPlaceAddress, enrichSuggestions, searchAddresses, submitQuoteAndBooking } from "@/app/actions";
+import { FadeIn } from "@/components/fade-in";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
+const emptySubscribe = () => () => {};
+import { formatEuros } from "@/lib/money";
+import { track } from "@vercel/analytics";
+import {
+  acompteCents,
+  echeancierPossiblePourDate,
+  maxEcheancesPourDate,
+  montantsEcheances,
+  niveauxDisponiblesPourDate,
+} from "@/lib/installments";
+import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
+import type { Formula, QuoteOption } from "@/lib/types";
+
+type TravelState = { distanceKm: number; feeCents: number } | null;
+
+function dateKey(value: Date) {
+  const y = value.getFullYear();
+  const m = String(value.getMonth() + 1).padStart(2, "0");
+  const d = String(value.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function toMinutes(time: string) {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
+const END_TIMES = [
+  "19:00", "19:30", "20:00", "20:30",
+  "21:00", "21:30", "22:00", "22:30",
+  "23:00", "23:30", "00:00", "00:30", "01:00", "01:30",
+  "02:00", "02:30", "03:00", "03:30", "04:00", "04:30", "05:00",
+  "05:30", "06:00",
+];
+
+function isMariageFormula(name: string) {
+  return name.toLowerCase().includes("mariage");
+}
+
+type PackInfo = {
+  name: string;
+  priceCents: number;
+  baseMinutes: number;
+  extraRateCents: number;
+  defaultStart: string;
+  defaultEnd: string;
+};
+
+export function QuoteBookingForm({
+  formulas,
+  options,
+}: {
+  formulas: Formula[];
+  options: QuoteOption[];
+}) {
+  const [formulaId, setFormulaId] = useState(formulas[0]?.id ?? "");
+  const [pack, setPack] = useState<PackInfo | null>(null);
+  const [notes, setNotes] = useState("");
+  const [optionIds, setOptionIds] = useState<string[]>([]);
+  const [co2Qty, setCo2Qty] = useState<1 | 2>(1);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [unavailableDates, setUnavailableDates] = useState<string[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    getUnavailableDates().then((dates) => {
+      if (alive) setUnavailableDates(dates);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const [startTime, setStartTime] = useState(
+    formulas[0] && isMariageFormula(formulas[0].name) ? "15:00" : "20:00"
+  );
+  const [endTime, setEndTime] = useState("");
+  const [eventLocation, setEventLocation] = useState("");
+  const [suggestions, setSuggestions] = useState<
+    { label: string; subtitle: string; detail: string; placeId: string }[]
+  >([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  // Adresse complète associée à la suggestion choisie (ex : "Place du Château,
+  // Blois"), utilisée en coulisse pour le calcul des frais de déplacement.
+  const [fullLocation, setFullLocation] = useState("");
+  const [travel, setTravel] = useState<TravelState>(null);
+  const [wantCeremony, setWantCeremony] = useState(false);
+  const [wantCocktail, setWantCocktail] = useState(false);
+  const [travelPending, startTravelTransition] = useTransition();
+  // L'utilisateur a-t-il modifié manuellement les horaires ? Sinon, un
+  // changement de pack réapplique les horaires par défaut du pack.
+  const userTouchedTimesRef = useRef(false);
+  const [pending, startTransition] = useTransition();
+
+  // Le mini récap est rendu dans un portail : il ne doit apparaître qu'après
+  // le montage (document.body n'existe pas côté serveur).
+  // true après l'hydratation, false pendant le rendu serveur.
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
+
+  // Mini récap flottant : visible dès qu'une sélection est faite,
+  // tant que le grand récapitulatif n'est pas à l'écran.
+  const recapRef = useRef<HTMLDivElement>(null);
+  const [recapVisible, setRecapVisible] = useState(false);
+  useEffect(() => {
+    const el = recapRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setRecapVisible(entry.isIntersecting),
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // Analytics du tunnel : on mesure où les visiteurs décrochent.
+  // 1) ouverture du configurateur (une seule fois par visite)
+  useEffect(() => {
+    track("configurateur_vu");
+  }, []);
+
+  // Pré-sélection depuis la section "Nos Formules & Tarifs" (bouton d'un pack).
+  // Pré-remplissage de la date depuis /disponibilites (?date=YYYY-MM-DD).
+  useEffect(() => {
+    const iso = new URLSearchParams(window.location.search).get("date");
+    if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return;
+    const d = new Date(`${iso}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return;
+    const raf = requestAnimationFrame(() => setSelectedDate(d));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // Pré-sélection depuis la section "Nos Formules & Tarifs" (bouton d'un pack).
+  useEffect(() => {
+    function onSelectPack(event: Event) {
+      const detail = (event as CustomEvent<Partial<PackInfo> & { pack?: string }>).detail;
+      const packName = detail?.pack;
+      if (!packName) return;
+      const packKey = packName.toLowerCase();
+      const categoryPatterns: RegExp[] = [
+        /set dj|clé en main|bar|club|pro|association/,
+        /mariage|essential|deluxe|ultime/,
+        /anniversaire|standard|premium/,
+      ];
+      const match = formulas.find((formula) => {
+        const name = formula.name.toLowerCase();
+        return (
+          (categoryPatterns[0].test(packKey) && categoryPatterns[0].test(name)) ||
+          (categoryPatterns[1].test(packKey) && categoryPatterns[1].test(name)) ||
+          (categoryPatterns[2].test(packKey) && categoryPatterns[2].test(name))
+        );
+      });
+      if (match) {
+        setFormulaId(match.id);
+      }
+      setRecapVisible(false); // une sélection vient d'être faite → mini récap immédiat
+      track("pack_selectionne", { pack: packName }); // 2) pack choisi (étape clé du tunnel)
+      setPack({
+        name: packName,
+        priceCents: detail?.priceCents ?? match?.price_cents ?? 0,
+        baseMinutes: detail?.baseMinutes ?? (isMariageFormula(packName) ? 480 : 360),
+        extraRateCents: detail?.extraRateCents ?? EXTRA_HOUR_RATE_CENTS,
+        defaultStart: detail?.defaultStart ?? "20:00",
+        defaultEnd: detail?.defaultEnd ?? (isMariageFormula(packName) ? "04:00" : "02:00"),
+      });
+      // Horaires : si l'utilisateur n'a rien choisi manuellement, on applique
+      // les horaires par défaut du pack (20:00 en général). S'il a choisi,
+      // on ne touche à rien : le client ne repart pas de zéro.
+      setStartTime((current) =>
+        userTouchedTimesRef.current
+          ? current
+          : detail?.defaultStart || (isMariageFormula(packName) ? "15:00" : "20:00")
+      );
+      setEndTime((current) =>
+        userTouchedTimesRef.current
+          ? current
+          : detail?.defaultEnd || (isMariageFormula(packName) ? "04:00" : "02:00")
+      );
+    }
+    window.addEventListener("propul:select-pack", onSelectPack);
+    function onToggleOption(event: Event) {
+      const detail = (event as CustomEvent<{ name: string; qty?: number }>).detail;
+      const optionName = detail?.name;
+      if (!optionName) return;
+      setRecapVisible(false); // une sélection vient d'être faite → mini récap immédiat
+      if (typeof detail?.qty === "number") {
+        setCo2Qty(detail.qty === 2 ? 2 : 1);
+      }
+      const match = options.find(
+        (option) => option.name.toLowerCase() === optionName.toLowerCase()
+      );
+      if (!match) return;
+      setOptionIds((current) => {
+        const isPresent = current.includes(match.id);
+        // Changement de quantité CO2 : on ne désélectionne pas, on garde coché.
+        if (typeof detail?.qty === "number" && isPresent) return current;
+        return isPresent
+          ? current.filter((id) => id !== match.id)
+          : [...current, match.id];
+      });
+    }
+    window.addEventListener("propul:toggle-option", onToggleOption);
+    return () => {
+      window.removeEventListener("propul:select-pack", onSelectPack);
+      window.removeEventListener("propul:toggle-option", onToggleOption);
+    };
+  }, [formulas, options]);
+
+  // Informe la section tarifs des options cochées (pour la surbrillance des cartes FX).
+  useEffect(() => {
+    const names = options
+      .filter((option) => optionIds.includes(option.id))
+      .map((option) => option.name);
+    window.dispatchEvent(
+      new CustomEvent("propul:options-changed", { detail: { names } })
+    );
+  }, [optionIds, options]);
+
+  const visibleOptions = useMemo(
+    () =>
+      options.filter(
+        (option) => option.formula_id === null || option.formula_id === formulaId
+      ),
+    [options, formulaId]
+  );
+
+  const formula = formulas.find((item) => item.id === formulaId);
+  // La catégorie "mariage" affiche un champ dédié aux marié(e)s.
+  // 1) La formule choisie contient "mariage", OU
+  // 2) le pack sélectionné appartient à la catégorie mariage
+  //    (mots-clés "mariage|essential|deluxe|ultime", cf. mapping des packs,
+  //    ou durée >= 480 min = journée mariage).
+  const isMariageCategory = (() => {
+    if (formula?.name.toLowerCase().includes("mariage")) return true;
+    if (pack) {
+      const name = pack.name.toLowerCase();
+      return /mariage|essential|deluxe|ultime/.test(name) || pack.baseMinutes >= 480;
+    }
+    return false;
+  })();
+  const selectedOptions = visibleOptions.filter((option) =>
+    optionIds.includes(option.id)
+  );
+
+  // Heure de fin incluse dans le forfait : 03:00 (anniversaire) ou 04:00 (mariage).
+  // Le seuil est toujours après minuit : on le ramène lui aussi après 20 h (jour suivant).
+  const isMariage = pack
+    ? pack.baseMinutes >= 480 || isMariageFormula(pack.name)
+    : (formula?.name.toLowerCase().includes("mariage") ?? false);
+  const isBarClub = pack
+    ? /set dj|clé en main|bar|club|pro|association/i.test(pack.name)
+    : false;
+  // Départ dès 14 h pour les mariages, 18 h pour le reste. Pour les packs
+  // Bars/Clubs & Soirées Pro (Set DJ seul, clé en main), l'heure de début la
+  // plus tardive possible est 21 h 30.
+  const startTimes = useMemo(() => {
+    const first = isMariage ? 14 : 18;
+    const last = isBarClub ? 21.5 : 20;
+    const count = Math.round((last - first) * 2) + 1;
+    return Array.from({ length: count }, (_, i) => {
+      const minutes = first * 60 + i * 30;
+      return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+    });
+  }, [isMariage, isBarClub]);
+
+  const startMinutes = toMinutes(startTime);
+  const endMinutes = endTime ? toMinutes(endTime) : null;
+  // Les fins après minuit (00:00–05:00) sont ramenées après 20 h pour comparer.
+  const normalizedEndMinutes =
+    endMinutes != null && endMinutes < 12 * 60 ? endMinutes + 24 * 60 : endMinutes;
+  const invalidOrder =
+    normalizedEndMinutes != null && normalizedEndMinutes <= startMinutes;
+
+  // Le prix du pack couvre baseMinutes de prestation ; chaque demi-heure entamée
+  // au-delà est facturée au tarif horaire du pack (0,5 h = demi tarif).
+  const includedMinutes = pack?.baseMinutes ?? (isMariage ? 480 : 360);
+
+  // Heures de fin proposées : au moins la durée minimale du pack sélectionné
+  // (2 h Set DJ et clé en main Standard, 3 h clé en main Premium,
+  // 6 h anniversaire, 8 h mariage). Les fins après
+  // minuit sont ramenées après 20 h pour comparer avec le début.
+  const allowedEndTimes = END_TIMES.filter((time) => {
+    const m = toMinutes(time);
+    const normalized = m < 12 * 60 ? m + 24 * 60 : m;
+    return normalized >= startMinutes + includedMinutes;
+  });
+
+  const extraRateCents = pack?.extraRateCents ?? EXTRA_HOUR_RATE_CENTS;
+  const extraHours = useMemo(() => {
+    if (normalizedEndMinutes == null || invalidOrder) return 0;
+    const past = normalizedEndMinutes - startMinutes - includedMinutes;
+    // Même règle que la facturation serveur (submitQuote) : chaque heure
+    // entamée est due — l'estimation affichée doit correspondre au devis.
+    return past > 0 ? Math.ceil(past / 60) : 0;
+  }, [normalizedEndMinutes, startMinutes, includedMinutes, invalidOrder]);
+  const extraFeeCents = extraHours * extraRateCents;
+
+  function extraLabel(hours: number) {
+    const minutes = Math.round(hours * 60);
+    if (minutes < 60) return `${minutes} min`;
+    const h = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    return rest > 0 ? `${h} h ${rest}` : `${h} heure${h > 1 ? "s" : ""}`;
+  }
+
+  const co2Option = selectedOptions.find((option) => /co2/i.test(option.name));
+  const co2ExtraCents = co2Option ? (co2Qty - 1) * co2Option.price_cents : 0;
+
+  const total =
+    (pack?.priceCents ?? 0) +
+    selectedOptions.reduce((sum, option) => sum + option.price_cents, 0) +
+    co2ExtraCents +
+    extraFeeCents +
+    (travel?.feeCents ?? 0);
+
+  function onDateChange(date?: Date) {
+    setSelectedDate(date);
+  }
+
+  // Suggestions d'adresses via action serveur (Nominatim), avec debouncing.
+  // Un cache mémoire évite de refaire une requête serveur pour une recherche
+  // déjà effectuée, et le flag "stale" ignore les réponses arrivées après
+  // une frappe plus récente (sinon les anciens résultats écrasent les neufs).
+  const skipFetchRef = useRef(false);
+  const suggestionsCacheRef = useRef<
+    Map<string, { label: string; subtitle: string; detail: string; placeId: string }[]>
+  >(new Map());
+  const latestQueryRef = useRef<string>("");
+  // Incrémenté au clic dans le champ : permet de rouvrir les suggestions
+  // (utile si on a cliqué sur la mauvaise suggestion).
+  const [reopenNonce, setReopenNonce] = useState(0);
+  // Savoir si le champ a le focus : évite de rouvrir la liste quand
+  // l'enrichissement (CP) se termine après que l'utilisateur est parti.
+  const fieldFocusedRef = useRef(false);
+  useEffect(() => {
+    if (skipFetchRef.current) {
+      skipFetchRef.current = false;
+      return;
+    }
+    // Après une sélection, le champ affiche "Nom (CP Ville)" : on retire la
+    // partie entre parenthèses pour retrouver une requête pertinente.
+    const query = eventLocation.replace(/\s*\([^)]*\)\s*$/, "").trim();
+    if (query.length < 2) {
+      const clear = setTimeout(() => setSuggestions([]), 0);
+      return () => clearTimeout(clear);
+    }
+    latestQueryRef.current = query;
+    const timer = setTimeout(async () => {
+      const cached = suggestionsCacheRef.current.get(query);
+      if (cached) {
+        setSuggestions(cached);
+        setShowSuggestions(cached.length > 0);
+        return;
+      }
+      const result = await searchAddresses(query);
+      // Ignore la réponse si l'utilisateur a tapé quelque chose de plus
+      // récent entre-temps (la requête est devenue périmée).
+      if (latestQueryRef.current !== query) return;
+      if (result.ok) {
+        const results = result.results.map((label, index) => ({
+          label,
+          subtitle: result.subtitles?.[index] ?? "",
+          detail: result.details?.[index] ?? label,
+          placeId: result.placeIds?.[index] ?? "",
+        }));
+        suggestionsCacheRef.current.set(query, results);
+        setSuggestions(results);
+        setShowSuggestions(results.length > 0);
+        // Enrichissement en arrière-plan : ajoute "CP Ville" dans les
+        // suggestions (Google ne le fournit pas dans l'autocomplétion).
+        const ids = results.map((r) => r.placeId).filter(Boolean);
+        if (ids.length > 0) {
+          const enriched = await enrichSuggestions(ids);
+          if (latestQueryRef.current !== query || !fieldFocusedRef.current) return;
+          setSuggestions((prev) => {
+            const updated = prev.map((s) => {
+              const extra = enriched.items.find((i) => i.placeId === s.placeId);
+              if (extra && (extra.postalCode || extra.city)) {
+                return { ...s, subtitle: [extra.postalCode, extra.city].filter(Boolean).join(" ") };
+              }
+              return s;
+            });
+            suggestionsCacheRef.current.set(query, updated);
+            return updated;
+          });
+        }
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [eventLocation, reopenNonce]);
+
+  async function chooseSuggestion(label: string, detail: string, placeId: string) {
+    // Récupère d'abord l'adresse complète + CP, PUIS met à jour le champ une
+    // seule fois (deux mises à jour successives relançaient la recherche et
+    // rouvraient la liste : effet de doublon).
+    let full = detail;
+    let postalCode = "";
+    let city = "";
+    if (placeId || detail) {
+      const details = await getPlaceAddress(placeId, detail);
+      if (details.ok) {
+        full = details.address;
+        postalCode = details.postalCode;
+        city = details.city;
+      }
+    }
+    const cpLabel = [postalCode, city].filter(Boolean).join(" ");
+    skipFetchRef.current = true;
+    fieldFocusedRef.current = false;
+    setEventLocation(cpLabel ? `${label} (${cpLabel})` : label);
+    setFullLocation(full);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    // Estimation automatique des frais de déplacement, sans clic.
+    startTravelTransition(async () => {
+      const fd = new FormData();
+      fd.set("event_location_full", full);
+      const result = await estimateTravelFee(fd);
+      if (result && result.ok) {
+        setTravel({ distanceKm: result.estimate.distanceKm, feeCents: result.estimate.feeCents });
+      } else if (result && !result.ok) {
+        setTravel(null);
+        toast.error(result.error);
+      }
+    });
+  }
+
+  function onEstimateTravel() {
+    const address = (fullLocation || eventLocation).trim();
+    if (!address) {
+      toast.error("Indique d'abord le lieu de l'événement.");
+      return;
+    }
+    startTravelTransition(async () => {
+      const fd = new FormData();
+      fd.set("event_location", address);
+      const result = await estimateTravelFee(fd);
+      if (result && result.ok) {
+        setTravel({ distanceKm: result.estimate.distanceKm, feeCents: result.estimate.feeCents });
+        toast.success(`Distance estimée : ${result.estimate.distanceKm} km`);
+      } else if (result && !result.ok) {
+        setTravel(null);
+        toast.error(result.error);
+      }
+    });
+  }
+
+  function onSubmit(formData: FormData) {
+    track("devis_envoye"); // 3) soumission du devis (mesure la fin du tunnel)
+    startTransition(async () => {
+      const result = await submitQuoteAndBooking(formData);
+      if (result && !result.ok) {
+        toast.error(result.error);
+      }
+    });
+  }
+
+  return (
+    <form action={onSubmit} className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+      <input type="hidden" name="formula_id" value={formulaId} />
+      <input type="hidden" name="event_date" value={selectedDate ? dateKey(selectedDate) : ""} />
+      <input type="hidden" name="start_time" value={startTime} />
+      <input type="hidden" name="end_time" value={endTime} />
+      <input type="hidden" name="extra_hours" value={extraHours} />
+      <input type="hidden" name="pack_name" value={pack?.name ?? ""} />
+      <input type="hidden" name="pack_price_cents" value={pack?.priceCents ?? ""} />
+      <input type="hidden" name="pack_base_minutes" value={pack?.baseMinutes ?? ""} />
+      <input type="hidden" name="pack_extra_rate_cents" value={pack?.extraRateCents ?? ""} />
+      {optionIds.map((id) => (
+        <input key={id} type="hidden" name="option_ids" value={id} />
+      ))}
+      <input type="hidden" name="co2_qty" value={co2Qty} />
+      <input type="hidden" name="travel_distance_km" value={travel?.distanceKm ?? ""} />
+      <input type="hidden" name="travel_fee_cents" value={travel?.feeCents ?? ""} />
+      <input type="hidden" name="event_location_full" value={fullLocation} />
+
+      <div className="space-y-6">
+        <FadeIn delay={0.1}>
+          <h2 className="mb-3 text-xl font-medium">Lieu de réception</h2>
+          {/* overflow-visible : sans ça, la liste des suggestions (en absolu)
+              est coupée par l'overflow-hidden du Card et seule la 1re apparaît. */}
+          <Card className="overflow-visible">
+            <CardContent className="space-y-2 pt-1 overflow-visible">
+              <div className="space-y-1.5 relative z-30">
+                <Label htmlFor="event_location">Lieu de réception</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="event_location"
+                    name="event_location"
+                    placeholder="Adresse, ville ou nom du domaine"
+                    autoComplete="off"
+                    value={eventLocation}
+                    onChange={(event) => {
+                      setEventLocation(event.target.value);
+                      // Saisie manuelle : l'adresse complète de la suggestion
+                      // n'est plus fiable, on la réinitialise.
+                      setFullLocation("");
+                    }}
+                    onFocus={() => {
+                      fieldFocusedRef.current = true;
+                      // Réouvre les suggestions au clic : soit elles sont déjà
+                      // en mémoire, soit on relance la recherche (via le nonce).
+                      if (eventLocation.trim().length >= 2) setReopenNonce((n) => n + 1);
+                    }}
+                    onBlur={() => {
+                      fieldFocusedRef.current = false;
+                      // Ferme les suggestions quand on clique ailleurs.
+                      // (Le clic sur une suggestion est protégé via
+                      // onMouseDown ci-dessus, donc sans risque de course.)
+                      setTimeout(() => setShowSuggestions(false), 150);
+                    }}
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 shrink-0 border-border px-4"
+                    onClick={onEstimateTravel}
+                    disabled={travelPending}
+                  >
+                    {travelPending ? "Calcul…" : "Recalculer"}
+                  </Button>
+                </div>
+                {showSuggestions && suggestions.length > 0 ? (
+                  <ul className="absolute z-30 w-full overflow-hidden rounded-lg border border-border bg-card shadow-xl">
+                    {suggestions.map((suggestion) => (
+                      <li key={`${suggestion.label}-${suggestion.placeId || suggestion.detail}`}>
+                        <button
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-accent/10"
+                          // Empêche le blur du champ au clic sur la suggestion :
+                          // la sélection se fait via onClick, sans délai.
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() =>
+                            chooseSuggestion(
+                              suggestion.label,
+                              suggestion.detail,
+                              suggestion.placeId
+                            )
+                          }
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <MapPin className="size-3.5 shrink-0 text-accent" aria-hidden />
+                            {suggestion.label}
+                          </span>
+                          {suggestion.subtitle ? (
+                            <span className="block text-xs text-muted-foreground">
+                              {suggestion.subtitle}
+                            </span>
+                          ) : null}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {travel ? (
+                  <p className="text-sm text-muted-foreground">
+                    Frais de déplacement estimés :{" "}
+                    {travel.feeCents === 0
+                      ? "offerts (30 km gratuits)"
+                      : formatEuros(travel.feeCents)}{" "}
+                    ({travel.distanceKm} km)
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    30 km offerts autour de Blois, puis 0,80 €/km (aller-retour).
+                    Les frais se calculent automatiquement dès que vous choisissez un lieu
+                    suggéré. Péages en sus au réel.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </FadeIn>
+
+        <FadeIn delay={0.1}>
+          <h2 className="mb-3 text-xl font-medium">Horaires &amp; date</h2>
+          <Card>
+            <CardContent className="space-y-4 pt-1">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="start_time_select" className="text-base">
+                    Heure de début
+                  </Label>
+                  <select
+                    id="start_time_select"
+                    value={startTime}
+                    onChange={(event) => {
+                      userTouchedTimesRef.current = true;
+                      setStartTime(event.target.value);
+                    }}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-3 text-lg font-medium"
+                  >
+                    {startTimes.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="end_time_select" className="text-base">
+                    Heure de fin
+                  </Label>
+                  <select
+                    id="end_time_select"
+                    value={allowedEndTimes.includes(endTime) ? endTime : ""}
+                    onChange={(event) => {
+                      userTouchedTimesRef.current = true;
+                      setEndTime(event.target.value);
+                    }}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-3 text-lg font-medium"
+                  >
+                    <option value="">Choisir…</option>
+                    {allowedEndTimes.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {invalidOrder ? (
+                <p className="text-sm text-red-400">
+                  L&apos;heure de fin doit être après l&apos;heure de début.
+                </p>
+              ) : extraHours > 0 ? (
+                <p className="text-sm text-accent">
+                  {extraLabel(extraHours)} supplémentaires (au-delà des{" "}
+                  {Math.round(includedMinutes / 60)} h incluses) —{" "}
+                  {formatEuros(extraFeeCents)} ajoutés au devis.
+                </p>
+              ) : endTime ? (
+                <p className="text-sm text-muted-foreground">
+                  ✓ Cette heure de fin est incluse dans le forfait.
+                </p>
+              ) : null}
+
+              {isMariage && startMinutes < toMinutes("18:00") ? (
+                <div className="space-y-2 rounded-lg border border-border p-3">
+                  <p className="text-sm font-medium">
+                    Vous commencez avant 18 h — souhaitez-vous de la sonorisation en plus ?
+                  </p>
+                  <button
+                    type="button"
+                    aria-pressed={wantCeremony}
+                    onClick={() => setWantCeremony((v) => !v)}
+                    className={`w-full rounded-md border px-3 py-2.5 text-left text-sm transition-colors ${
+                      wantCeremony
+                        ? "border-accent bg-accent/15 text-foreground"
+                        : "border-border hover:border-accent/60 hover:bg-accent/10"
+                    }`}
+                  >
+                    {wantCeremony ? "✓ " : ""}Sonorisation de la cérémonie laïque
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={wantCocktail}
+                    onClick={() => setWantCocktail((v) => !v)}
+                    className={`w-full rounded-md border px-3 py-2.5 text-left text-sm transition-colors ${
+                      wantCocktail
+                        ? "border-accent bg-accent/15 text-foreground"
+                        : "border-border hover:border-accent/60 hover:bg-accent/10"
+                    }`}
+                  >
+                    {wantCocktail ? "✓ " : ""}Sonorisation du cocktail / vin d&apos;honneur
+                  </button>
+                </div>
+              ) : isMariage && startMinutes === toMinutes("18:00") ? (
+                <div className="space-y-2 rounded-lg border border-border p-3">
+                  <p className="text-sm font-medium">Début à 18 h</p>
+                  <button
+                    type="button"
+                    aria-pressed={wantCocktail}
+                    onClick={() => setWantCocktail((v) => !v)}
+                    className={`w-full rounded-md border px-3 py-2.5 text-left text-sm transition-colors ${
+                      wantCocktail
+                        ? "border-accent bg-accent/15 text-foreground"
+                        : "border-border hover:border-accent/60 hover:bg-accent/10"
+                    }`}
+                  >
+                    {wantCocktail ? "✓ " : ""}Sonorisation du cocktail / vin d&apos;honneur
+                  </button>
+                </div>
+              ) : !isMariage && !isBarClub && startMinutes === toMinutes("18:00") ? (
+                <div className="space-y-2 rounded-lg border border-border p-3">
+                  <p className="text-sm font-medium">Début à 18 h</p>
+                  <button
+                    type="button"
+                    aria-pressed={wantCocktail}
+                    onClick={() => setWantCocktail((v) => !v)}
+                    className={`w-full rounded-md border px-3 py-2.5 text-left text-sm transition-colors ${
+                      wantCocktail
+                        ? "border-accent bg-accent/15 text-foreground"
+                        : "border-border hover:border-accent/60 hover:bg-accent/10"
+                    }`}
+                  >
+                    {wantCocktail ? "✓ " : ""}Sonorisation de l&apos;apéritif / cocktail
+                  </button>
+                </div>
+              ) : null}
+
+              <Calendar
+                mode="single"
+                locale={fr}
+                selected={selectedDate}
+                onSelect={onDateChange}
+                disabled={[
+                  { before: new Date() },
+                  (date: Date) => unavailableDates.includes(dateKey(date)),
+                ]}
+                className="w-full"
+                modifiers={{ indisponible: (date: Date) => unavailableDates.includes(dateKey(date)) }}
+                modifiersClassNames={{ indisponible: "text-red-400 line-through opacity-60" }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Les dates déjà réservées ou indisponibles sont en{" "}
+                <span className="text-red-400">rouge</span> et non sélectionnables.
+              </p>
+              {invalidOrder ? (
+                <p className="text-sm text-red-400">
+                  L&apos;heure de fin doit être après l&apos;heure de début.
+                </p>
+              ) : null}
+            </CardContent>
+          </Card>
+        </FadeIn>
+
+        <FadeIn delay={0.15} className="grid gap-3 sm:grid-cols-2">
+          <h2 className="sm:col-span-2 text-xl font-medium">Mes coordonnées</h2>
+          <div className="space-y-1.5">
+            <Label htmlFor="customer_first_name">Prénom</Label>
+            <Input id="customer_first_name" name="customer_first_name" required autoComplete="given-name" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="customer_last_name">Nom</Label>
+            <Input id="customer_last_name" name="customer_last_name" required autoComplete="family-name" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="customer_email">E-mail</Label>
+            <Input id="customer_email" name="customer_email" type="email" required />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="customer_phone">Téléphone</Label>
+            <Input id="customer_phone" name="customer_phone" />
+          </div>
+          {isMariageCategory ? (
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label htmlFor="spouses">
+                Prénom(s) et nom(s) des marié(e)s{" "}
+                <span className="text-xs font-normal text-muted-foreground">
+                  (facultatif)
+                </span>
+              </Label>
+              <Input
+                id="spouses"
+                name="spouses"
+                placeholder="Ex. Marie Dubois & Pierre Martin"
+                autoComplete="off"
+              />
+            </div>
+          ) : null}
+          <div className="sm:col-span-2 space-y-1.5">
+            <Label htmlFor="notes">Message</Label>
+            <Textarea
+              id="notes"
+              name="notes"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder="Ambiance souhaitée, contraintes…"
+            />
+          </div>
+        </FadeIn>
+      </div>
+
+      <FadeIn as="aside" delay={0.2} className="lg:sticky lg:top-24 h-fit">
+        <div id="recap-devis" ref={recapRef} className="scroll-mt-24">
+        <Card className="border border-accent/20 shadow-[0_0_40px_-15px_var(--accent)]">
+          <CardHeader>
+            <CardTitle>Récapitulatif</CardTitle>
+            <CardDescription>
+              Ta demande est enregistrée et tu reçois une réponse rapide.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between gap-4">
+              <span>{pack?.name ?? "Aucun pack sélectionné"}</span>
+              <span>{formatEuros(pack?.priceCents ?? 0)}</span>
+            </div>
+            {selectedOptions.map((option) => {
+              const isCo2 = /co2/i.test(option.name);
+              return (
+                <div
+                  key={option.id}
+                  className="flex justify-between gap-4 text-muted-foreground"
+                >
+                  <span>
+                    {option.name}
+                    {isCo2 && co2Qty === 2 ? " × 2" : ""}
+                  </span>
+                  <span>
+                    {formatEuros(option.price_cents * (isCo2 ? co2Qty : 1))}
+                  </span>
+                </div>
+              );
+            })}
+            {extraHours > 0 ? (
+              <div className="flex justify-between gap-4 text-muted-foreground">
+                <span>
+                  Heures supplémentaires ({extraHours} × {formatEuros(extraRateCents)})
+                </span>
+                <span>{formatEuros(extraFeeCents)}</span>
+              </div>
+            ) : null}
+            {travel && travel.feeCents > 0 ? (
+              <div className="flex justify-between gap-4 text-muted-foreground">
+                <span>Frais de déplacement aller-retour ({travel.distanceKm} km)</span>
+                <span>{formatEuros(travel.feeCents)}</span>
+              </div>
+            ) : null}
+            <div className="flex justify-between border-t border-border pt-3 text-lg font-medium">
+              <span>Total estimé</span>
+              {/* key={total} : à chaque changement de montant, l'ancien nombre
+                  disparaît et le nouveau apparaît en fondu/zoom — feedback
+                  immédiat quand on ajoute une option ou change les horaires. */}
+              <span key={total} className="animate-in text-accent duration-300 fade-in zoom-in-95">
+                {formatEuros(total)}
+              </span>
+            </div>
+            {total > 0 ? (
+              <RecapInstallments
+                total={total}
+                eventDate={selectedDate ? dateKey(selectedDate) : null}
+              />
+            ) : null}
+            <Button
+              type="submit"
+              className="h-12 w-full text-base font-medium active:scale-[0.98]"
+              size="lg"
+              disabled={pending || !formulaId || !selectedDate || !endTime || invalidOrder || !allowedEndTimes.includes(endTime)}
+            >
+              {pending ? "Enregistrement…" : "Envoyer ma demande de devis"}
+            </Button>
+            <p className="text-center text-xs leading-relaxed text-muted-foreground">
+              En envoyant ce formulaire, vous acceptez que vos données
+              (nom, e-mail, téléphone, détails de l&apos;événement) soient
+              utilisées uniquement pour traiter votre demande. Vos données ne
+              sont jamais vendues —{" "}
+              <a
+                href="/politique-de-confidentialite"
+                className="underline underline-offset-2 hover:text-accent"
+              >
+                politique de confidentialité
+              </a>
+              .
+            </p>
+          </CardContent>
+        </Card>
+        </div>
+      </FadeIn>
+
+      {/* Mini récapitulatif flottant, rendu hors du FadeIn parent (sinon il
+          hérite de son opacité 0 tant que la page n'a pas été défilée). */}
+      {mounted &&
+        createPortal(
+          <AnimatePresence>
+            {!recapVisible && (pack || selectedOptions.length > 0) ? (
+              <motion.div
+                initial={{ opacity: 0, y: 32, x: "-50%" }}
+                animate={{ opacity: 1, y: 0, x: "-50%" }}
+                exit={{ opacity: 0, y: 32, x: "-50%" }}
+                transition={{ duration: 0.35, ease: [0.21, 0.47, 0.32, 0.98] }}
+                className="fixed bottom-4 left-1/2 z-50 w-max max-w-[calc(100vw-1.5rem)]"
+              >
+                <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-full border border-accent/30 bg-background/90 px-5 py-2.5 text-sm shadow-[0_0_40px_-10px_var(--accent)] backdrop-blur-md">
+                  <span className="font-medium">
+                    {pack?.name ?? (selectedOptions.length > 0 ? "Votre sélection" : "Devis")}
+                  </span>
+                  {selectedDate ? (
+                    <span className="text-muted-foreground">
+                      {format(selectedDate, "d MMM", { locale: frLocale })}
+                    </span>
+                  ) : null}
+                  {selectedOptions.length > 0 ? (
+                    <span className="text-muted-foreground">
+                      {selectedOptions.length} option{selectedOptions.length > 1 ? "s" : ""}
+                    </span>
+                  ) : null}
+                  <span className="h-1 w-1 rounded-full bg-accent" />
+                  <span className="font-semibold text-accent">{formatEuros(total)}</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      document
+                        .getElementById("recap-devis")
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                    }
+                    className="inline-flex min-h-11 items-center rounded-full border border-accent/40 px-4 text-xs text-accent transition-all duration-200 hover:bg-accent/15 active:scale-95"
+                  >
+                    Voir le récap
+                  </button>
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>,
+          document.body
+        )}
+    </form>
+  );
+}
+
+// Ligne minimaliste d'échéancier dans le récapitulatif : chips x2…xN,
+// le clic affiche une seule ligne de détail. Aucun encadré verbeux.
+// Date-aware : pas de chips (ou un message) quand la soirée choisie est trop
+// proche pour un échéancier, et plafond du nombre d'échéances possibles.
+function RecapInstallments({
+  total,
+  eventDate,
+}: {
+  total: number;
+  eventDate: string | null;
+}) {
+  const [niveau, setNiveau] = useState<number | null>(null);
+  const dispo = niveauxDisponiblesPourDate(total, eventDate);
+  const maxN = maxEcheancesPourDate(eventDate);
+  const possible = echeancierPossiblePourDate(eventDate);
+  // Garde : si la date change pendant qu'un niveau est sélectionné et le rend
+  // indisponible, le détail ne s'affiche plus.
+  const detail =
+    niveau && dispo.includes(niveau) ? montantsEcheances(total, niveau) : null;
+
+  return (
+    <div className="pt-1 text-xs">
+      {possible ? (
+        <div className="flex flex-wrap items-center gap-1">
+          <span className="mr-1 flex items-center gap-1 text-muted-foreground">
+            <CreditCard className="size-3.5" aria-hidden />
+            Étaler :
+          </span>
+          {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
+            const ok = dispo.includes(n);
+            return (
+              <button
+                key={n}
+                type="button"
+                disabled={!ok}
+                onClick={() => setNiveau(niveau === n ? null : n)}
+                aria-pressed={niveau === n}
+                title={
+                  ok
+                    ? `Voir en ${n} fois`
+                    : n > maxN
+                      ? `La soirée est trop proche : au maximum ${maxN} échéances possibles`
+                      : "Minimum 150 € par échéance (x4+ dès 1 000 €)"
+                }
+                className={`inline-flex min-h-9 items-center rounded-full px-3 font-medium transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-25 ${
+                  niveau === n
+                    ? "bg-accent text-white"
+                    : ok
+                      ? "border border-accent/40 text-accent hover:bg-accent/15"
+                      : "border border-border/50 text-muted-foreground"
+                }`}
+              >
+                {n}×
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <span className="flex items-center gap-1 text-muted-foreground">
+          <CreditCard className="size-3.5" aria-hidden />
+          Étaler : non — la soirée est trop proche, le règlement se fera en une
+          fois ou le jour J.
+        </span>
+      )}
+      {detail && niveau ? (
+        <p className="mt-1.5 animate-in fade-in slide-in-from-bottom-1 text-muted-foreground duration-200">
+          {niveau}× ={" "}
+          <span className="font-medium text-foreground">{formatEuros(detail.first)}</span>{" "}
+          puis {niveau - 1} × {formatEuros(detail.rest)} — la 1ʳᵉ échéance couvre
+          l&apos;acompte ({formatEuros(acompteCents(total))}). Frais inclus. À
+          choisir dans ton espace client.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+

@@ -1,0 +1,375 @@
+import { QuoteStatusSelect } from "@/components/quote-status-select";
+import { AdminQuoteEdit } from "@/components/admin-quote-edit";
+import { SubmitButton } from "@/components/submit-button";
+import { SendAccessButton } from "@/components/send-access-button";
+import { sendUpsellEmail } from "@/app/client-actions";
+import { AvisRelanceButton } from "./avis-relance-button";
+import { formatEuros } from "@/lib/money";
+import { computeExtraHours, formatExtraHours } from "@/lib/booking-extra";
+import { findUpsell } from "@/lib/upsell";
+import type { SelectedOption } from "@/lib/types";
+
+type Quote = {
+  id: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string | null;
+  event_location: string | null;
+  event_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  notes: string | null;
+  formula_name: string;
+  formula_price_cents: number | null;
+  travel_distance_km: number | null;
+  travel_fee_cents: number | null;
+  extra_fee_cents: number | null;
+  extra_fee_label: string | null;
+  total_cents: number | null;
+  timeline?: { time: string; label: string }[] | null;
+  created_at: string;
+  status: string;
+  acompte_declared_at?: string | null;
+  acompte_paid_at?: string | null;
+  acompte_required?: boolean | null;
+};
+
+function Row({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value) return null;
+  return (
+    <div className="flex gap-2">
+      <span className="w-44 shrink-0 text-muted-foreground">{label}</span>
+      <span className="text-foreground/90">{value}</span>
+    </div>
+  );
+}
+
+// Le champ "notes" agrège plusieurs infos : on les extrait proprement.
+function parseNotes(notes: string | null) {
+  const n = notes ?? "";
+  return {
+    message: n.match(/Message : ([\s\S]*)$/)?.[1]?.trim() || null,
+    extraHours: n.match(/Heures supplémentaires : ([^(|]+?)(?: \([\d.]+ €\))? \|/)?.[1]?.trim() || null,
+    extraFee: n.match(/Heures supplémentaires : .*?\(([\d.]+) €\)/)?.[1] || null,
+    co2Units: n.match(/Pistolets CO2 : (\d+) unités?/)?.[1] || null,
+  };
+}
+
+export function AdminQuoteDetails({
+  quote,
+  options,
+  supplements = [],
+  schedule,
+}: {
+  quote: Quote;
+  options: SelectedOption[];
+  supplements?: SelectedOption[];
+  schedule?: { numero: number; total: number; amount_cents: number; due_date: string; status: string }[];
+}) {
+  const extras = (quote.extra_fee_cents ?? 0) + (quote.travel_fee_cents ?? 0);
+  const parsed = parseNotes(quote.notes);
+  // Heures supplémentaires : notes du client d'abord, sinon recalcul depuis
+  // les horaires du devis (anciens devis sans mention dans les notes).
+  const computedExtraHours = computeExtraHours(quote);
+  const payees = (schedule ?? []).filter((s) => s.status === "payee").length;
+  const totalSchedule = (schedule ?? []).length;
+  // Montée en gamme : e-mail pré-rédigé pour les packs d'entrée (Essential,
+  // Pack Standard, Clé en main Standard). Masqué si le devis est refusé/annulé.
+  const upsell = /refuse|annule/.test(quote.status) ? null : findUpsell(quote.formula_name);
+
+  return (
+    <div className="space-y-4 border-t border-border px-4 pb-4 pt-4 text-sm animate-in fade-in slide-in-from-top-1 duration-300">
+      {/* Devis sans acompte : la signature suffit à confirmer la soirée */}
+      {quote.acompte_required === false ? (
+        <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          Aucun acompte demandé pour ce devis — confirmé dès la signature, le
+          règlement se fait le jour de la prestation (ou via un échéancier).
+        </div>
+      ) : null}
+      {/* Suivi de l'acompte : payé, déclaré en attente de réception, ou rien */}
+      {quote.acompte_paid_at || quote.acompte_declared_at ? (
+        <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 px-3 py-2 text-xs">
+          {quote.acompte_paid_at ? (
+            <span className="font-medium text-green-400">
+              Acompte réglé le{" "}
+              {new Date(quote.acompte_paid_at).toLocaleDateString("fr-FR", {
+                dateStyle: "long",
+              })}
+              {" — "}
+              {new Date(quote.acompte_paid_at).toLocaleTimeString("fr-FR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          ) : (
+            <span className="text-orange-300">
+              Acompte déclaré envoyé par le client le{" "}
+              {new Date(quote.acompte_declared_at!).toLocaleDateString("fr-FR")} —
+              à confirmer à réception du virement.
+            </span>
+          )}
+        </div>
+      ) : null}
+      {schedule && schedule.length > 0 ? (
+        <div className="space-y-1.5">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Échéancier de paiement
+          </h3>
+          <div className="flex items-center justify-between text-xs">
+            <span>
+              {payees}/{totalSchedule} échéance(s) réglée(s)
+            </span>
+            <span className="text-muted-foreground">
+              {(
+                schedule.filter((s) => s.status === "payee").reduce((sum, s) => sum + s.amount_cents, 0) / 100
+              )
+                .toFixed(2)
+                .replace(".", ",")}{" "}
+              € /{" "}
+              {(
+                schedule.reduce((sum, s) => sum + s.amount_cents, 0) / 100
+              )
+                .toFixed(2)
+                .replace(".", ",")}{" "}
+              €
+            </span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-border">
+            <div
+              className="h-full rounded-full bg-accent transition-all"
+              style={{ width: `${totalSchedule ? (payees / totalSchedule) * 100 : 0}%` }}
+            />
+          </div>
+          <ul className="divide-y divide-border rounded-lg border border-border">
+            {schedule.map((s) => (
+              <li key={s.numero} className="flex items-center justify-between gap-3 px-3 py-2 text-xs">
+                <span>
+                  <span className="font-medium">Échéance {s.numero}/{s.total}</span>
+                  <span className="ml-2 text-muted-foreground">
+                    avant le{" "}
+                    {new Date(`${s.due_date}T12:00:00`).toLocaleDateString("fr-FR")}
+                  </span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="font-medium">
+                    {(s.amount_cents / 100).toFixed(2).replace(".", ",")} €
+                  </span>
+                  {s.status === "payee" ? (
+                    <span className="rounded-full bg-green-500/15 px-2 py-0.5 font-medium text-green-600">
+                      ✓ Payée
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-orange-500/15 px-2 py-0.5 font-medium text-orange-500">
+                      À payer
+                    </span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <div className="space-y-1.5">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Client
+        </h3>
+        <Row label="Nom" value={quote.customer_name} />
+        <Row label="E-mail" value={quote.customer_email} />
+        <Row label="Téléphone" value={quote.customer_phone} />
+        <Row label="Lieu de réception" value={quote.event_location} />
+      </div>
+
+      <div className="space-y-1.5">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Prestation
+        </h3>
+        <Row label="Pack" value={quote.formula_name} />
+        <Row
+          label="Date de l'événement"
+          value={
+            quote.event_date
+              ? new Date(quote.event_date).toLocaleDateString("fr-FR", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })
+              : null
+          }
+        />
+        <Row label="Heure de début" value={quote.start_time} />
+        <Row label="Heure de fin" value={quote.end_time} />
+        <Row
+          label="Heures supplémentaires"
+          value={
+            // N'affiche les heures supplémentaires QUE si un supplément est
+            // réellement facturé (extra_fee_cents > 0).
+            (quote.extra_fee_cents ?? 0) > 0
+              ? parsed.extraHours
+                ? `${parsed.extraHours}${parsed.extraFee ? ` (${parsed.extraFee} €)` : ""}`
+                : computedExtraHours
+                  ? `${formatExtraHours(computedExtraHours)} (${formatEuros(quote.extra_fee_cents ?? 0)})`
+                  : formatEuros(quote.extra_fee_cents ?? 0)
+              : null
+          }
+        />
+        <Row label="Pistolets CO2" value={parsed.co2Units ? `${parsed.co2Units} unité(s)` : null} />
+        <Row
+          label="Déplacement"
+          value={
+            quote.travel_distance_km
+              ? `${quote.travel_distance_km} km aller-retour`
+              : null
+          }
+        />
+      </div>
+
+      {parsed.message ? (
+        <div className="space-y-1.5">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Message du client
+          </h3>
+          <p className="whitespace-pre-wrap rounded-lg border border-border bg-muted/50 p-3 text-foreground/90">
+            {parsed.message}
+          </p>
+        </div>
+      ) : null}
+
+      {quote.timeline && quote.timeline.length > 0 ? (
+        <div className="space-y-1.5">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Timeline de la soirée (renseignée par le client)
+          </h3>
+          <ul className="space-y-1 rounded-lg border border-border bg-muted/50 p-3 text-sm">
+            {quote.timeline.map((row, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="w-14 shrink-0 font-medium text-accent">{row.time || "—"}</span>
+                <span className="text-foreground/90">{row.label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <div className="space-y-1.5">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Options
+        </h3>
+        {options.length === 0 ? (
+          <p className="text-muted-foreground">Aucune option.</p>
+        ) : (
+          options.map((option) => (
+            <div key={option.id ?? option.name} className="flex justify-between gap-2">
+              <span className="text-green-400">✓ {option.name}</span>
+              <span>{formatEuros(option.price_cents ?? 0)}</span>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Lignes supplémentaires manuelles (≠ options du catalogue FX) */}
+      {supplements.length > 0 ? (
+        <div className="space-y-1.5">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Suppléments
+          </h3>
+          {supplements.map((s) => (
+            <div key={s.id ?? s.name} className="flex justify-between gap-2">
+              <span className="text-purple-400">+ {s.name}</span>
+              <span>{formatEuros(s.price_cents ?? 0)}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="space-y-1.5 border-t border-border pt-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Prix détaillé
+        </h3>
+        <div className="flex justify-between">
+          <span>Pack</span>
+          <span>{formatEuros(quote.formula_price_cents ?? 0)}</span>
+        </div>
+        {options.map((option) => (
+          <div
+            key={`p-${option.id ?? option.name}`}
+            className="flex justify-between text-muted-foreground"
+          >
+            <span>{option.name}</span>
+            <span>{formatEuros(option.price_cents ?? 0)}</span>
+          </div>
+        ))}
+        {supplements.map((s) => (
+          <div
+            key={`ps-${s.id ?? s.name}`}
+            className="flex justify-between text-muted-foreground"
+          >
+            <span>{s.name}</span>
+            <span>{formatEuros(s.price_cents ?? 0)}</span>
+          </div>
+        ))}
+        {extras > 0 ? (
+          <div className="flex justify-between text-muted-foreground">
+            <span>
+              Suppléments
+              {quote.extra_fee_label ? ` — ${quote.extra_fee_label}` : " (heures supp, déplacement…)"}
+            </span>
+            <span>{formatEuros(extras)}</span>
+          </div>
+        ) : null}
+        <div className="flex justify-between border-t border-border pt-2 font-semibold">
+          <span>Total</span>
+          <span className="text-accent">{formatEuros(quote.total_cents ?? 0)}</span>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+        <span className="text-xs text-muted-foreground">
+          Devis reçu le{" "}
+          {new Date(quote.created_at).toLocaleString("fr-FR", {
+            dateStyle: "long",
+            timeStyle: "short",
+          })}
+        </span>
+        <div className="flex items-center gap-2">
+          {upsell ? (
+            <form
+              action={async (formData) => {
+                "use server";
+                // La server action renvoie un résultat (ok/error) : on le
+                // consomme ici, un <form action> doit retourner void.
+                await sendUpsellEmail(formData);
+              }}
+              className="shrink-0"
+            >
+              <input type="hidden" name="quote_id" value={quote.id} />
+              <SubmitButton
+                pendingLabel="Envoi…"
+                confirm={`Envoyer l'e-mail « montée en gamme » (${upsell.to}) à ${quote.customer_email} ?`}
+                className="rounded-lg border border-purple-500/50 bg-purple-500/10 px-4 py-1.5 text-xs font-medium text-purple-300 transition-colors hover:bg-purple-500/20"
+              >
+                ↑ Proposer le {upsell.to}
+              </SubmitButton>
+            </form>
+          ) : null}
+          {/* Accès client : envoie l'e-mail « première connexion » (compte créé
+              automatiquement si besoin) — utile pour les devis créés
+              manuellement ou importés, dont le client n'a pas encore d'accès. */}
+          <SendAccessButton quoteId={quote.id} email={quote.customer_email} />
+          {/* Relance manuelle de la demande d'avis : composant client pour
+              afficher l'erreur exacte en toast (l'envoi peut échouer). */}
+          <AvisRelanceButton id={quote.id} />
+          <a
+            href={`/api/admin/fiche/${quote.id}`}
+            className="rounded-lg border border-accent/50 bg-accent/10 px-4 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+          >
+            Fiche soirée PDF
+          </a>
+          <AdminQuoteEdit quote={quote} options={options} />
+          <QuoteStatusSelect id={quote.id} status={quote.status} />
+        </div>
+      </div>
+    </div>
+  );
+}
