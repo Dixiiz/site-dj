@@ -37,9 +37,11 @@ type Quote = {
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value) return null;
   return (
-    <div className="flex gap-2">
-      <span className="w-44 shrink-0 text-muted-foreground">{label}</span>
-      <span className="text-foreground/90">{value}</span>
+    // Mobile : label au-dessus de la valeur (pas de colonne figée 176px qui
+    // écrase la valeur). Desktop (sm+) : label à gauche comme avant.
+    <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-2">
+      <span className="text-muted-foreground sm:w-44 sm:shrink-0">{label}</span>
+      <span className="break-words text-foreground/90">{value}</span>
     </div>
   );
 }
@@ -142,7 +144,7 @@ export function AdminQuoteDetails({
           </div>
           <ul className="divide-y divide-border rounded-lg border border-border">
             {schedule.map((s) => (
-              <li key={s.numero} className="flex items-center justify-between gap-3 px-3 py-2 text-xs">
+              <li key={s.numero} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2 text-xs">
                 <span>
                   <span className="font-medium">Échéance {s.numero}/{s.total}</span>
                   <span className="ml-2 text-muted-foreground">
@@ -260,7 +262,7 @@ export function AdminQuoteDetails({
           <p className="text-muted-foreground">Aucune option.</p>
         ) : (
           options.map((option) => (
-            <div key={option.id ?? option.name} className="flex justify-between gap-2">
+            <div key={option.id ?? option.name} className="flex flex-wrap justify-between gap-x-2 gap-y-0.5">
               <span className="text-green-400">✓ {option.name}</span>
               <span>{formatEuros(option.price_cents ?? 0)}</span>
             </div>
@@ -275,7 +277,7 @@ export function AdminQuoteDetails({
             Suppléments
           </h3>
           {supplements.map((s) => (
-            <div key={s.id ?? s.name} className="flex justify-between gap-2">
+            <div key={s.id ?? s.name} className="flex flex-wrap justify-between gap-x-2 gap-y-0.5">
               <span className="text-purple-400">+ {s.name}</span>
               <span>{formatEuros(s.price_cents ?? 0)}</span>
             </div>

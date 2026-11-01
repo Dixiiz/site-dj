@@ -428,7 +428,7 @@ export default async function DevisPage({
                       ) : null}
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
+                  <div className="flex min-w-0 flex-col items-end gap-1">
                     {options.length > 0 ? (
                       <Badge className="border-green-500/60 text-green-400" variant="outline">
                         {options.length} option{options.length > 1 ? "s" : ""}
@@ -444,27 +444,28 @@ export default async function DevisPage({
                       </Badge>
                     ) : null}
                   </div>
-                  <div className="ml-auto flex items-center gap-3 text-right">
-                    <div>
-                      <div className="font-semibold">{formatEuros(quote.total_cents ?? 0)}</div>
-                      <Badge variant="outline" className={status.className}>
-                        {status.label}
+                  {/* Total + statut : bloc séparé avec ml-auto, capable de passer
+                      en dessous sur mobile (les longs libellés type « Acompte
+                      réglé le… » ne poussent plus la ligne hors écran). */}
+                  <div className="ml-auto flex min-w-0 flex-col items-start gap-1 text-left sm:items-end sm:text-right">
+                    <div className="font-semibold">{formatEuros(quote.total_cents ?? 0)}</div>
+                    <Badge variant="outline" className={status.className}>
+                      {status.label}
+                    </Badge>
+                    {quote.acompte_paid_at ? (
+                      <Badge variant="outline" className="border-green-500/60 text-green-400">
+                        Acompte réglé le {new Date(quote.acompte_paid_at).toLocaleDateString("fr-FR")}
                       </Badge>
-                      {quote.acompte_paid_at ? (
-                        <Badge variant="outline" className="mt-1 border-green-500/60 text-green-400">
-                          Acompte réglé le {new Date(quote.acompte_paid_at).toLocaleDateString("fr-FR")}
-                        </Badge>
-                      ) : quote.acompte_declared_at ? (
-                        <Badge variant="outline" className="mt-1 border-orange-500/60 text-orange-400">
-                          Acompte déclaré envoyé le {new Date(quote.acompte_declared_at).toLocaleDateString("fr-FR")}
-                        </Badge>
-                      ) : null}
-                      {isPast(quote) ? (
-                        <Badge variant="outline" className="mt-1 border-zinc-500/60 text-zinc-400">
-                          {factureEnvoyee(quote) ? "Facture envoyée" : "Soirée passée"}
-                        </Badge>
-                      ) : null}
-                    </div>
+                    ) : quote.acompte_declared_at ? (
+                      <Badge variant="outline" className="border-orange-500/60 text-orange-400">
+                        Acompte déclaré envoyé le {new Date(quote.acompte_declared_at).toLocaleDateString("fr-FR")}
+                      </Badge>
+                    ) : null}
+                    {isPast(quote) ? (
+                      <Badge variant="outline" className="border-zinc-500/60 text-zinc-400">
+                        {factureEnvoyee(quote) ? "Facture envoyée" : "Soirée passée"}
+                      </Badge>
+                    ) : null}
                   </div>
                   {/* Pastille nouveautés client (message, musique, modification) */}
                   {quote.has_unread_updates ? (
