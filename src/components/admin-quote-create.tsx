@@ -5,7 +5,8 @@
 import { useState } from "react";
 import { createCustomQuote, estimateTravelAdmin } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
-import { ADMIN_PACK_LIST, ADMIN_FX_OPTIONS } from "@/components/pricing-section";
+import { ADMIN_PACK_LIST } from "@/lib/packs";
+import { ADMIN_FX_OPTIONS } from "@/lib/fx-catalog";
 
 const euros = (cents: number) => (cents / 100).toFixed(2).replace(".", ",");
 

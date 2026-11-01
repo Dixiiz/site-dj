@@ -19,7 +19,7 @@ import { ClientOptionsEditor } from "@/components/client-options-editor";
 import { ClientDetailsEditor } from "@/components/client-details-editor";
 import { ClientPlaylistEditor } from "@/components/client-playlist-editor";
 import { ClientQuoteMessages } from "@/components/client-quote-messages";
-import { PACK_IMAGES } from "@/components/pricing-section";
+import { PACK_IMAGES } from "@/lib/packs";
 import { getPackOverrides } from "@/lib/site-media";
 import { computeExtraHours, formatExtraHours } from "@/lib/booking-extra";
 import { SignaturePad } from "@/components/signature-pad";

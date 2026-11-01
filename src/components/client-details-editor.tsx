@@ -3,7 +3,7 @@
 import { useTransition, useState } from "react";
 import { updateQuoteDetails, type PendingQuoteDetails } from "@/app/client-actions";
 import { Button } from "@/components/ui/button";
-import { ADMIN_PACK_LIST } from "@/components/pricing-section";
+import { ADMIN_PACK_LIST } from "@/lib/packs";
 
 // Formulaire de demande de modification du devis par le client : lieu, date,
 // horaires, pack. La demande part en attente de validation de l'admin

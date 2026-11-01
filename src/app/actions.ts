@@ -9,7 +9,7 @@ import { getStripe } from "@/lib/stripe";
 import type Stripe from "stripe";
 import { estimateTravelFromAddress } from "@/lib/travel";
 import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
-import { ADMIN_FX_OPTIONS } from "@/components/pricing-section";
+import { ADMIN_FX_OPTIONS } from "@/lib/fx-catalog";
 import { formatEuros } from "@/lib/money";
 import { SITE_URL } from "@/lib/site-url";
 import { EMAIL_FROM } from "@/lib/emails";

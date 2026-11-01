@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { updateQuoteAdmin, estimateTravelAdmin } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
-import { ADMIN_PACK_LIST, ADMIN_FX_OPTIONS } from "@/components/pricing-section";
-import { findFxOption, isFxOption } from "@/lib/fx-catalog";
+import { ADMIN_PACK_LIST } from "@/lib/packs";
+import { ADMIN_FX_OPTIONS, findFxOption, isFxOption } from "@/lib/fx-catalog";
 import { extraMinutes, formatExtraHours, packBaseMinutes } from "@/lib/booking-extra";
 import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
 import type { SelectedOption } from "@/lib/types";

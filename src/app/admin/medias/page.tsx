@@ -20,7 +20,7 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { MediaManager } from "@/components/media-manager";
 import { PackMediaManager } from "@/components/pack-media-manager";
-import { PACK_DEFAULTS } from "@/components/pricing-section";
+import { PACK_DEFAULTS } from "@/lib/packs";
 import { CollapsibleSection } from "@/components/collapsible-section";
 import { GalerieCredits } from "@/components/galerie-credits";
 

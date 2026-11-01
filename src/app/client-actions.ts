@@ -10,7 +10,7 @@ import type { SelectedOption } from "@/lib/types";
 import { SITE_URL } from "@/lib/site-url";
 import { EMAIL_FROM, buildEmailHtml, buildEmailText } from "@/lib/emails";
 import { signerLienPremiereConnexion } from "@/lib/lien-premiere-connexion";
-import { ADMIN_PACK_LIST } from "@/components/pricing-section";
+import { ADMIN_PACK_LIST } from "@/lib/packs";
 import { formatEuros } from "@/lib/money";
 import { findUpsell } from "@/lib/upsell";
 
