@@ -209,7 +209,7 @@ export function CaDetailPanel({
                     {row.eventLocation ? ` · ${row.eventLocation}` : ""}
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-3">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   <div className="text-right">
                     <p className="text-sm font-medium">
                       {row.eventDate

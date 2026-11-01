@@ -269,7 +269,7 @@ export default async function AdminMediasPage() {
 
   return (
     <main className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-medium tracking-tight">Médias du site</h1>
         <Link href="/admin/devis" className="text-sm text-muted-foreground hover:text-foreground">
           ← Devis

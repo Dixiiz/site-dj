@@ -807,7 +807,7 @@ export function QuoteBookingForm({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex justify-between gap-4">
+            <div className="flex flex-wrap justify-between gap-4">
               <span>{pack?.name ?? "Aucun pack sélectionné"}</span>
               <span>{formatEuros(pack?.priceCents ?? 0)}</span>
             </div>
@@ -816,7 +816,7 @@ export function QuoteBookingForm({
               return (
                 <div
                   key={option.id}
-                  className="flex justify-between gap-4 text-muted-foreground"
+                  className="flex flex-wrap justify-between gap-4 text-muted-foreground"
                 >
                   <span>
                     {option.name}
@@ -829,7 +829,7 @@ export function QuoteBookingForm({
               );
             })}
             {extraHours > 0 ? (
-              <div className="flex justify-between gap-4 text-muted-foreground">
+              <div className="flex flex-wrap justify-between gap-4 text-muted-foreground">
                 <span>
                   Heures supplémentaires ({extraHours} × {formatEuros(extraRateCents)})
                 </span>
@@ -837,12 +837,12 @@ export function QuoteBookingForm({
               </div>
             ) : null}
             {travel && travel.feeCents > 0 ? (
-              <div className="flex justify-between gap-4 text-muted-foreground">
+              <div className="flex flex-wrap justify-between gap-4 text-muted-foreground">
                 <span>Frais de déplacement aller-retour ({travel.distanceKm} km)</span>
                 <span>{formatEuros(travel.feeCents)}</span>
               </div>
             ) : null}
-            <div className="flex justify-between border-t border-border pt-3 text-lg font-medium">
+            <div className="flex flex-wrap justify-between gap-4 border-t border-border pt-3 text-lg font-medium">
               <span>Total estimé</span>
               {/* key={total} : à chaque changement de montant, l'ancien nombre
                   disparaît et le nouveau apparaît en fondu/zoom — feedback

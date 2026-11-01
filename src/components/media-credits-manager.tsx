@@ -132,7 +132,7 @@ export function MediaCreditsManager({
       <div className="mt-3 space-y-3">
         {Object.entries(credits).map(([name, photos]) => (
           <div key={name} className="rounded-lg border border-border bg-card p-3">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-medium">{name}</p>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">{photos.length} photo(s)</span>

@@ -16,7 +16,7 @@ export default async function MonEspaceLayout({ children }: { children: ReactNod
       <SiteHeader />
       {/* Barre espace client : retour, mon espace, déconnexion */}
       <div className="border-b border-border bg-background/60">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-2">
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between px-4 py-2">
           <div className="flex items-center gap-3 text-sm">
             <ClientBack />
             <Link

@@ -270,12 +270,12 @@ export default async function ClientQuotePage({
       <section className="rounded-xl border border-border bg-muted/50 p-5">
         <h2 className="font-medium">Récapitulatif</h2>
         <div className="mt-3 space-y-2 text-sm">
-          <div className="flex justify-between gap-4">
+          <div className="flex flex-wrap justify-between gap-4">
             <span>Pack</span>
             <span>{formatEuros(quote.formula_price_cents)}</span>
           </div>
           {selectedOptions.map((option) => (
-            <div key={option.id} className="flex justify-between gap-4 text-muted-foreground">
+            <div key={option.id} className="flex flex-wrap justify-between gap-4 text-muted-foreground">
               <span>
                 {option.name}
                 {option.qty && option.qty > 1 ? ` × ${option.qty}` : ""}
@@ -284,7 +284,7 @@ export default async function ClientQuotePage({
             </div>
           ))}
           {quote.travel_fee_cents > 0 ? (
-            <div className="flex justify-between gap-4 text-muted-foreground">
+            <div className="flex flex-wrap justify-between gap-4 text-muted-foreground">
               <span>
                 Déplacement ({quote.travel_distance_km ?? "?"} km aller-retour)
               </span>
@@ -292,7 +292,7 @@ export default async function ClientQuotePage({
             </div>
           ) : null}
           {(quote.extra_fee_cents ?? 0) > 0 ? (
-            <div className="flex justify-between gap-4 text-muted-foreground">
+            <div className="flex flex-wrap justify-between gap-4 text-muted-foreground">
               <span>
                 {quote.extra_fee_label ??
                   `Heures supplémentaires${extraHoursShown ? ` (${formatExtraHours(extraHoursShown)})` : ""}`}
@@ -300,7 +300,7 @@ export default async function ClientQuotePage({
               <span>{formatEuros(quote.extra_fee_cents)}</span>
             </div>
           ) : null}
-          <div className="flex justify-between border-t border-border pt-3 text-base font-medium">
+          <div className="flex flex-wrap justify-between border-t border-border pt-3 text-base font-medium">
             <span>Total</span>
             <span>{formatEuros(quote.total_cents)}</span>
           </div>

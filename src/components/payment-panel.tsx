@@ -610,7 +610,7 @@ export default function PaymentPanel({
             </p>
             <ul className="divide-y divide-border rounded-lg border border-border bg-background text-sm">
               {lignesBrouillon.map((l) => (
-                <li key={l.numero} className="flex items-center justify-between gap-3 p-2.5">
+                <li key={l.numero} className="flex flex-wrap items-center justify-between gap-3 p-2.5">
                   <div>
                     <span className="font-medium">
                       Échéance {l.numero}/{brouillon}
@@ -687,7 +687,7 @@ export default function PaymentPanel({
                 const premiereAPayer = rows.find((x) => x.status === "a_payer");
                 const payable = r.status === "a_payer" && premiereAPayer?.numero === r.numero;
                 return (
-                <li key={r.numero} className={`flex items-center justify-between gap-3 p-3 text-sm ${r.status === "a_payer" && !payable ? "opacity-60" : ""}`}>
+                <li key={r.numero} className={`flex flex-wrap items-center justify-between gap-3 p-3 text-sm ${r.status === "a_payer" && !payable ? "opacity-60" : ""}`}>
                   <div>
                     <span className="font-medium">
                       Échéance {r.numero}/{r.total}

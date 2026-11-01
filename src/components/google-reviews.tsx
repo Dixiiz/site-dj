@@ -102,7 +102,7 @@ export async function GoogleReviews() {
           return (
             <FadeIn key={`${name}-${index}`} delay={index * 0.05}>
               <figure className="flex h-full flex-col rounded-xl border border-border bg-card/60 p-5">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-medium">{name}</span>
                   {review.rating != null && <Stars rating={review.rating} />}
                 </div>

@@ -58,7 +58,7 @@ export function InvoiceAdjustments({
       {rows.length > 0 && (
         <ul className="mt-2 space-y-1">
           {rows.map((r, i) => (
-            <li key={i} className="flex items-center justify-between gap-2 text-xs">
+            <li key={i} className="flex flex-wrap items-center justify-between gap-2 text-xs">
               <span className="truncate">
                 {r.label}{" "}
                 <span className={r.amount_cents < 0 ? "text-red-400" : "text-green-400"}>

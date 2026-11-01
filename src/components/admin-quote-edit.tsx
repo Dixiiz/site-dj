@@ -497,7 +497,7 @@ export function AdminQuoteEdit({
       </div>
 
       {/* Total auto */}
-      <div className="flex items-center justify-between rounded-lg border border-accent/40 bg-primary/10 px-4 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-accent/40 bg-primary/10 px-4 py-2">
         <span className="text-sm text-muted-foreground">Total recalculé automatiquement</span>
         <span className="text-lg font-medium text-accent">
           {(total / 100).toFixed(2).replace(".", ",")} €
@@ -530,7 +530,7 @@ export function AdminQuoteEdit({
       </label>
       <input type="hidden" name="options_raw" value={selectedOptions.map((o) => `${o.name} | ${(o.price / 100).toFixed(2).replace(".", ",")}`).join("\n")} />
       <input type="hidden" name="total" value={(total / 100).toFixed(2).replace(".", ",")} />
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <SubmitButton
           pendingLabel="Enregistrement…"
           className="rounded-lg bg-accent px-4 py-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-90"

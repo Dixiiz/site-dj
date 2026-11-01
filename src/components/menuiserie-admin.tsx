@@ -561,7 +561,7 @@ export function MenuiserieAdmin({
       {/* Formulaire de création de document */}
       {montreForm ? (
         <section className="space-y-4 rounded-xl border border-accent/40 bg-card p-5">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-medium">
               Nouveau {typeForm === "facture" ? "facture" : "devis"}
             </h2>
@@ -819,7 +819,7 @@ export function MenuiserieAdmin({
       {/* Liste des devis / factures */}
       {onglet !== "clients" ? (
         <section className="rounded-xl border border-border bg-card">
-          <div className="flex items-center justify-between gap-2 border-b border-border p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-5">
             <h2 className="font-medium">
               {ongletLabel} ({nbOnglet})
             </h2>
@@ -877,7 +877,7 @@ export function MenuiserieAdmin({
                     {/* Détail des lignes */}
                     <ul className="space-y-1 rounded-lg border border-border bg-background/60 p-3 text-xs text-muted-foreground">
                       {doc.lignes.map((l, i) => (
-                        <li key={i} className="flex justify-between gap-3">
+                        <li key={i} className="flex flex-wrap justify-between gap-3">
                           <span className="min-w-0 truncate">
                             {l.quantite.toString().replace(".", ",")} × {l.designation}
                           </span>

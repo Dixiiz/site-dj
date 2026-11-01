@@ -147,7 +147,7 @@ export function TimelinePanel({
           </svg>
         </button>
         <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-4">
           <div>
             <h2 className="text-sm font-medium">Timeline de la soirée</h2>
             <p className="mt-0.5 text-xs text-muted-foreground">

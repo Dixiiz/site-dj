@@ -205,7 +205,7 @@ export function AdminQuoteCreateForm() {
       </div>
       <input type="hidden" name="extra_fee" value={(extraFeeCents / 100).toFixed(2).replace(".", ",")} />
       <input type="hidden" name="extra_fee_label" value={extraFeeLabel} />
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={calcTravel}

@@ -198,7 +198,7 @@ export default async function AdminFacturesPage() {
         ) : (
           <ul className="divide-y divide-border rounded-xl border border-border">
             {invoices.map((invoice) => (
-              <li key={invoice.name} className="flex items-center justify-between gap-4 px-4 py-3">
+              <li key={invoice.name} className="flex flex-wrap items-center justify-between gap-4 px-4 py-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">
                     {invoice.number} ·{" "}
@@ -218,7 +218,7 @@ export default async function AdminFacturesPage() {
                   {/* Envoi de la facture par e-mail (lien signé 7 jours). */}
                   <SendInvoiceForm fileName={invoice.name} />
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   {invoice.url ? (
                     <a
                       href={invoice.url}

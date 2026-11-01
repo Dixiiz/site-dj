@@ -415,13 +415,13 @@ export default async function DevisPage({
                     <div className="mt-0.5 truncate text-xs">
                       <span className="text-accent">{eventKind(quote.formula_name ?? "")}</span>
                       {options.length > 0 ? (
-                        <span className="text-muted-foreground">
+                        <span className="max-w-full text-muted-foreground">
                           {" · "}
                           {options.map((o) => optionShort(o.name, o.qty)).join(" · ")}
                         </span>
                       ) : null}
                       {supplements.length > 0 ? (
-                        <span className="text-muted-foreground">
+                        <span className="max-w-full text-muted-foreground">
                           {options.length > 0 ? " + " : " · "}
                           {supplements.map((o) => o.name).join(" + ")}
                         </span>
@@ -531,7 +531,7 @@ export default async function DevisPage({
                     </p>
                     <ul className="mt-2 space-y-1">
                       {((quote.pending_options ?? []) as SelectedOption[]).map((option) => (
-                        <li key={option.id} className="flex justify-between gap-4">
+                        <li key={option.id} className="flex flex-wrap justify-between gap-4">
                           <span>
                             {option.name}
                             {option.qty && option.qty > 1 ? ` × ${option.qty}` : ""}

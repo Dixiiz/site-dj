@@ -684,7 +684,7 @@ export default async function AdminDashboard({
         detailsUrssaf={detailsUrssaf}
         echeanciersPanel={
           <div className="animate-in fade-in slide-in-from-bottom-2 space-y-3 rounded-xl border border-border bg-card p-5 duration-300">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="flex items-center gap-2 font-medium">
                 <CreditCard className="size-4 text-accent" aria-hidden />
                 Échéances en cours — à recevoir ce mois-ci
@@ -753,7 +753,7 @@ export default async function AdminDashboard({
         }
         soldeRecusPanel={
           <div className="animate-in fade-in slide-in-from-bottom-2 space-y-3 rounded-xl border border-border bg-card p-5 duration-300">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="flex items-center gap-2 font-medium">
                 <Receipt className="size-4 text-accent" aria-hidden />
                 Paiements reçus à confirmer
@@ -923,7 +923,7 @@ export default async function AdminDashboard({
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Prochaines dates */}
         <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-medium">Prochaines dates</h2>
             <Link href="/admin/planning" className="text-xs text-accent hover:underline">
               Planning →
@@ -936,7 +936,7 @@ export default async function AdminDashboard({
           ) : (
             <ul className="mt-3 divide-y divide-border">
               {prochaines.map((quote) => (
-                <li key={quote.id} className="flex items-center justify-between gap-3 py-2.5">
+                <li key={quote.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
                   <div className="min-w-0">
                     <Link
                       href={`/admin/devis?focus=${quote.id}`}
@@ -970,7 +970,7 @@ export default async function AdminDashboard({
 
         {/* Devis à traiter */}
         <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 font-medium">
               <Mail className="size-4 text-accent" aria-hidden />
               Devis à traiter ({devisAttente ?? 0})
@@ -986,7 +986,7 @@ export default async function AdminDashboard({
           ) : (
             <ul className="mt-3 divide-y divide-border">
               {(devisRecents ?? []).map((quote) => (
-                <li key={quote.id} className="flex items-center justify-between gap-3 py-2.5">
+                <li key={quote.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
                   <div className="min-w-0">
                     <Link
                       href={`/admin/devis?focus=${quote.id}`}

@@ -11,7 +11,7 @@ export const metadata = { title: "Nouveau devis sur mesure" };
 export default function NouveauDevisAdminPage() {
   return (
     <main className="mx-auto w-full max-w-3xl space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Nouveau devis sur mesure</h1>
         <Link
           href="/admin/devis"

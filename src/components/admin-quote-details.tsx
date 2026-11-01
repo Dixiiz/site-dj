@@ -117,7 +117,7 @@ export function AdminQuoteDetails({
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Échéancier de paiement
           </h3>
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
             <span>
               {payees}/{totalSchedule} échéance(s) réglée(s)
             </span>
@@ -152,7 +152,7 @@ export function AdminQuoteDetails({
                     {new Date(`${s.due_date}T12:00:00`).toLocaleDateString("fr-FR")}
                   </span>
                 </span>
-                <span className="flex items-center gap-2">
+                <span className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">
                     {(s.amount_cents / 100).toFixed(2).replace(".", ",")} €
                   </span>
@@ -289,14 +289,14 @@ export function AdminQuoteDetails({
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Prix détaillé
         </h3>
-        <div className="flex justify-between">
+        <div className="flex flex-wrap justify-between gap-2">
           <span>Pack</span>
           <span>{formatEuros(quote.formula_price_cents ?? 0)}</span>
         </div>
         {options.map((option) => (
           <div
             key={`p-${option.id ?? option.name}`}
-            className="flex justify-between text-muted-foreground"
+            className="flex flex-wrap justify-between gap-2 text-muted-foreground"
           >
             <span>{option.name}</span>
             <span>{formatEuros(option.price_cents ?? 0)}</span>
@@ -305,14 +305,14 @@ export function AdminQuoteDetails({
         {supplements.map((s) => (
           <div
             key={`ps-${s.id ?? s.name}`}
-            className="flex justify-between text-muted-foreground"
+            className="flex flex-wrap justify-between gap-2 text-muted-foreground"
           >
             <span>{s.name}</span>
             <span>{formatEuros(s.price_cents ?? 0)}</span>
           </div>
         ))}
         {extras > 0 ? (
-          <div className="flex justify-between text-muted-foreground">
+          <div className="flex flex-wrap justify-between gap-2 text-muted-foreground">
             <span>
               Suppléments
               {quote.extra_fee_label ? ` — ${quote.extra_fee_label}` : " (heures supp, déplacement…)"}
@@ -320,7 +320,7 @@ export function AdminQuoteDetails({
             <span>{formatEuros(extras)}</span>
           </div>
         ) : null}
-        <div className="flex justify-between border-t border-border pt-2 font-semibold">
+        <div className="flex flex-wrap justify-between gap-2 border-t border-border pt-2 font-semibold">
           <span>Total</span>
           <span className="text-accent">{formatEuros(quote.total_cents ?? 0)}</span>
         </div>
@@ -334,7 +334,7 @@ export function AdminQuoteDetails({
             timeStyle: "short",
           })}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {upsell ? (
             <form
               action={async (formData) => {

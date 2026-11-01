@@ -634,7 +634,7 @@ export function PricingSection({
               <CardTitle className="text-base">{option.name}</CardTitle>
               <CardDescription className="text-sm">{option.detail}</CardDescription>
             </CardHeader>
-            <CardContent className="relative flex items-center justify-between gap-3">
+            <CardContent className="relative flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xl font-semibold">
                   {formatEuros(option.price)}
