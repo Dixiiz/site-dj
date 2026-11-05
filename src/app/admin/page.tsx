@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEuros } from "@/lib/money";
+import { calculerEncaissementsUrssaf, type EcheanceLike } from "@/lib/urssaf-logic";
 import Link from "next/link";
 import {
   BookOpen,
@@ -111,7 +112,6 @@ export default async function AdminDashboard({
   // Reçues mais pas encore confirmées URSSAF (toutes périodes).
   const echeancesAConfirmer = echeancesEnCours.filter((e) => e.status === "payee" && !e.valideUrssaf);
   // Confirmées URSSAF (attribuées au mois de la date limite de l'échéance).
-  const echeancesValidees = echeancesEnCours.filter((e) => e.status === "payee" && e.valideUrssaf);
   // Devis avec échéancier : leur argent est suivi échéance par échéance
   // (ils sont exclus du calcul de solde par devis pour éviter les doubles comptes).
   const echeancierQuoteIds = new Set(echeancesEnCours.map((e) => e.quoteId));
@@ -146,6 +146,21 @@ export default async function AdminDashboard({
   const allConfirmed = confirmed ?? [];
   const upcoming = allConfirmed.filter((q) => (q.event_date ?? "") >= todayIso);
 
+  // ---- Menuiserie (services » DJ) : documents facturation ----
+  type MenuiserieDocRow = {
+    id: string;
+    numero: string;
+    client_nom: string;
+    type: string;
+    total_cents: number;
+    statut: string;
+    date_edition: string;
+    urssaf_declare: boolean | null;
+    urssaf_mois: string | null;
+    facture_lien: string | null;
+  };
+  const menuDocs = (menuiserieRes.data ?? []) as MenuiserieDocRow[];
+
   // ---- Chiffres clés ----
   const soldeDe = (q: { total_cents: unknown; notes?: unknown; acompte_required?: unknown }) => {
     const notes = String(q.notes ?? "");
@@ -177,14 +192,6 @@ export default async function AdminDashboard({
   // Compté AUTOMATIQUEMENT dans le CA URSSAF du mois de réception.
   const soldeEnLigneDe = (q: { notes?: unknown }) =>
     /\[\[solde-en-ligne:(\d{4}-\d{2}-\d{2})\]\]/.exec(String(q.notes ?? ""))?.[1] ?? null;
-  const soldeEnLigneNetDe = (q: {
-    notes?: unknown;
-    total_cents: unknown;
-    acompte_required?: unknown;
-  }) => {
-    const net = /\[\[solde-en-ligne-net:(\d+)\]\]/.exec(String(q.notes ?? ""));
-    return net ? Number(net[1]) : soldeDe(q);
-  };
   // Le client a choisi de payer le solde sur place le jour J.
   const soldeSurPlaceDe = (q: { notes?: unknown }) =>
     /\[\[solde-sur-place:([a-z]+)\]\]/.exec(String(q.notes ?? ""))?.[1] ?? null;
@@ -224,8 +231,42 @@ export default async function AdminDashboard({
   };
   const acompteRecu = (q: { acompte_paid_at?: unknown; notes?: unknown }) =>
     Boolean(q.acompte_paid_at) || /\[\[acompte:\d+\]\]/.test(String(q.notes ?? ""));
-  const acompteValide = (q: { notes?: unknown }) =>
+    const acompteValide = (q: { notes?: unknown }) =>
     String(q.notes ?? "").includes("[[acompte-valide:");
+
+  // ============================================================
+  // Calcul unifié des encaissements URSSAF (source unique de vérité)
+  // Mêmes règles que /admin/urssaf et l'API : chaque paiement est
+  // compté à sa date réelle d'encaissement, net de frais Stripe,
+  // avec application des rattachements manuels éventuels.
+  // ============================================================
+  const encaissements = calculerEncaissementsUrssaf({
+    quotes: allConfirmed,
+    echeances: (echeanciersRes.data ?? []) as EcheanceLike[],
+    menuiserieDocs: menuDocs,
+  });
+  const encaissementsMois = encaissements.filter((r) => r.moisUrssaf === monthPrefix);
+
+  // Compteurs et montants dérivés (remplaçant les calculs manuels éparpillés) :
+  const caMoisDj = encaissementsMois
+    .filter((r) => r.activite === "dj")
+    .reduce((sum, r) => sum + r.montantCents, 0);
+  const caMoisMenu = encaissementsMois
+    .filter((r) => r.activite === "menuiserie")
+    .reduce((sum, r) => sum + r.montantCents, 0);
+  // CA URSSAF du mois (DJ uniquement ; la Menuiserie est ajoutée séparément
+  // dans caMoisAffiche selon le périmètre choisi).
+  const caMois = caMoisDj;
+  const menuCaMois = caMoisMenu;
+  // Sous-totaux DJ par type de paiement (indications de la carte).
+  const nbSoireesValideesMois = encaissementsMois.filter((r) => r.id.startsWith("dj-solde-valide-")).length;
+  const nbAcomptesMois = encaissementsMois.filter(
+    (r) => r.activite === "dj" && r.typePaiement === "acompte",
+  ).length;
+  const nbEcheancesMois = encaissementsMois.filter(
+    (r) => r.activite === "dj" && r.typePaiement === "echeance",
+  ).length;
+  const nbSoldesEnLigneMois = encaissementsMois.filter((r) => r.id.startsWith("dj-solde-enligne-")).length;
 
   // Acomptes reçus (hors échéancier) non encore validés pour l'URSSAF :
   // à confirmer pour les compter dans le CA du mois de leur réception.
@@ -238,28 +279,11 @@ export default async function AdminDashboard({
   const acomptesValides = allConfirmed.filter(
     (q) => acompteRecu(q) && acompteValide(q) && !echeancierQuoteIds.has(q.id)
   );
-  const urssafAcomptes = acomptesValides
-    .filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix))
-    .reduce((sum, q) => sum + acompteNetDe(q), 0);
-  // Soldes réglés EN LIGNE (carte Stripe ou virement confirmé) : comptés
-  // AUTOMATIQUEMENT dans l'URSSAF du mois de réception — aucune validation
-  // manuelle nécessaire.
-  const urssafSoldesEnLigne = allConfirmed
-    .filter((q) => {
-      const d = soldeEnLigneDe(q);
-      return d && d.startsWith(monthPrefix) && !echeancierQuoteIds.has(q.id);
-    })
-    .reduce((sum, q) => sum + soldeEnLigneNetDe(q), 0);
   // Soldes envoyés par virement et déclarés par le client : à confirmer à
   // réception (bouton « Reçu — compter dans l'URSSAF » du panneau Paiements).
   const soldesDeclaresAConfirmer = allConfirmed.filter(
     (q) => soldeDeclareDe(q) && !soldeEnLigneDe(q) && !echeancierQuoteIds.has(q.id)
   );
-  // CA URSSAF du mois inclut aussi les échéances d'échéancier confirmées
-  // (attribuées au mois de leur date limite) — en NET de frais Stripe.
-  const urssafEcheances = echeancesValidees
-    .filter((e) => e.dueDate.startsWith(monthPrefix))
-    .reduce((sum, e) => sum + netEcheance(e.quoteId, e.numero, e.amountCents), 0);
 
   // CA de l'année : tous les événements confirmés qui se déroulent cette année.
   const caAnnee = allConfirmed
@@ -273,12 +297,7 @@ export default async function AdminDashboard({
   const ceMoisJouees = allConfirmed.filter(
     (q) => (q.event_date ?? "").startsWith(monthPrefix) && (q.event_date ?? "") <= todayIso
   );
-  const encaisse = ceMoisJouees.filter((q) => soldeValide(q) && !soldeEnLigneDe(q));
-  const caMoisQuotes = encaisse.reduce((sum, q) => sum + soldeDe(q), 0);
   const attenteValidation = ceMoisJouees.filter((q) => !soldeValide(q) && !soldeEnLigneDe(q));
-  // Le CA URSSAF du mois inclut aussi les échéances d'échéancier confirmées
-  // (attribuées au mois de leur date limite).
-  const caMois = caMoisQuotes + urssafEcheances + urssafAcomptes + urssafSoldesEnLigne;
 
   // CA à venir : confirmé, pas encore joué.
   const caAVenir = upcoming.reduce((sum, q) => sum + montant(q), 0);
@@ -307,35 +326,14 @@ export default async function AdminDashboard({
     month: "long",
     year: "numeric",
   });
-  /* SUITE-RENDU */
 
-  // ---- CA Menuiserie (même entreprise ; rubrique URSSAF distincte :
-  // « vente de biens et marchandises » vs « prestation de services » DJ) ----
-  type MenuiserieDocRow = {
-    id: string;
-    numero: string;
-    client_nom: string;
-    type: string;
-    total_cents: number;
-    statut: string;
-    date_edition: string;
-    urssaf_declare: boolean | null;
-    urssaf_mois: string | null;
-    facture_lien: string | null;
-  };
-  const menuDocs = (menuiserieRes.data ?? []) as MenuiserieDocRow[];
+  // ---- CA Menuiserie : agrégats dérivés des documents (menuDocs défini plus haut) ----
   const menuFactures = menuDocs.filter((f) => f.type === "facture");
   // Encaissé = facture marquée « paye » (même règle que le module Menuiserie).
   const menuPayees = menuFactures.filter((f) => f.statut === "paye");
   // À déclarer : payées mais pas encore basculées « déclaré URSSAF ».
   const menuADeclarer = menuPayees.filter((f) => !f.urssaf_declare);
   const menuADeclarerCents = menuADeclarer.reduce((s, f) => s + f.total_cents, 0);
-  // Encaissé d'un mois = factures payées éditées ce mois.
-  const menuCentsDuMois = (prefix: string) =>
-    menuPayees
-      .filter((f) => (f.date_edition ?? "").startsWith(prefix))
-      .reduce((s, f) => s + f.total_cents, 0);
-  const menuCaMois = menuCentsDuMois(monthPrefix);
   // CA facturé de l'année : factures émises (hors brouillons).
   const menuFactureAnnee = menuFactures
     .filter(
@@ -364,30 +362,29 @@ export default async function AdminDashboard({
   });
 
   // ---- Statistiques : CA URSSAF par mois + entonnoir de conversion ----
-  const totalPct = (part: number, total: number) =>
-    total > 0 ? Math.round((part / total) * 100) : null;
-
-  // ---- Statistiques : CA URSSAF par mois + entonnoir de conversion ----
   const MONTH_LABELS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
   const monthly = Array.from({ length: 12 }, (_, m) => {
     const prefix = `${year}-${String(m + 1).padStart(2, "0")}`;
-    const soldes = allConfirmed
-      .filter((q) => (q.event_date ?? "").startsWith(prefix) && soldeValide(q) && !echeancierQuoteIds.has(q.id))
-      .reduce((sum, q) => sum + soldeDe(q), 0);
-    const echeances = echeancesValidees
-      .filter((e) => e.dueDate.startsWith(prefix))
-      .reduce((sum, e) => sum + netEcheance(e.quoteId, e.numero, e.amountCents), 0);
-    // Acomptes reçus ce mois et validés URSSAF (base nette de frais Stripe).
-    const acomptes = acomptesValides
-      .filter((q) => String(q.acompte_paid_at ?? "").startsWith(prefix))
-      .reduce((sum, q) => sum + acompteNetDe(q), 0);
+    // Encaissements réellement reçus ce mois (date d'encaissement + overrides),
+    // mêmes règles que le dashboard CA URSSAF — graphique synchronisé.
+    const recusMois = encaissements.filter((r) => r.moisUrssaf === prefix);
     return {
       label: MONTH_LABELS[m],
-      dj: avecDj ? soldes + echeances + acomptes : 0,
-      menu: avecMenu ? menuCentsDuMois(prefix) : 0,
+      dj: avecDj
+        ? recusMois
+            .filter((r) => r.activite === "dj")
+            .reduce((sum, r) => sum + r.montantCents, 0)
+        : 0,
+      menu: avecMenu
+        ? recusMois
+            .filter((r) => r.activite === "menuiserie")
+            .reduce((sum, r) => sum + r.montantCents, 0)
+        : 0,
     };
   });
   const allQuotes = allQuotesRes.data ?? [];
+  const totalPct = (part: number, total: number) =>
+    total > 0 ? Math.round((part / total) * 100) : null;
   const countStatus = (...statuses: string[]) =>
     allQuotes.filter((q) => statuses.includes(q.status ?? "")).length;
   const funnel = [
@@ -422,82 +419,35 @@ export default async function AdminDashboard({
     status: q.status ?? "",
   });
 
-  // ---- Anciennes périodes URSSAF : détail mois par mois ----
-  // Un mois fait partie des « périodes » dès qu'il contient au moins un
-  // encaissement validé, réglé en ligne, un acompte validé ou une échéance
-  // d'échéancier confirmée — exactement les mêmes ingrédients que la carte
-  // du mois courant, appliqués à un autre préfixe AAAA-MM.
-  const entreesDuMois = (prefix: string) => {
-    const encaisseMois = allConfirmed.filter(
-      (q) =>
-        (q.event_date ?? "").startsWith(prefix) &&
-        (q.event_date ?? "") <= todayIso &&
-        soldeValide(q) &&
-        !soldeEnLigneDe(q) &&
-        !echeancierQuoteIds.has(q.id)
-    );
-    const lignes: Array<
-      ReturnType<typeof mapDetailRow> & {
-        afficheCents?: number;
-        type?: "solde" | "acompte" | "echeance";
-        soldeEnLigneLe?: string | null;
-      }
-    > = [
-      // Soldes validés après soirée — montant = solde réel (pas le total).
-      ...encaisseMois.map((q) => ({
-        ...mapDetailRow(q),
-        afficheCents: soldeDe(q),
-        type: "solde" as const,
-      })),
-      // Soldes réglés EN LIGNE ce mois (carte ou virement confirmé) :
-      // comptés automatiquement, base nette de frais Stripe.
-      ...allConfirmed
-        .filter((q) => {
-          const d = soldeEnLigneDe(q);
-          return d && d.startsWith(prefix) && !echeancierQuoteIds.has(q.id);
-        })
-        .map((q) => ({
-          ...mapDetailRow(q),
-          afficheCents: soldeEnLigneNetDe(q),
-          type: "solde" as const,
-          soldeEnLigneLe: soldeEnLigneDe(q),
-        })),
-      // Acomptes reçus ce mois et validés URSSAF (base nette).
-      ...acomptesValides
-        .filter((q) => String(q.acompte_paid_at ?? "").startsWith(prefix))
-        .map((q) => ({
-          ...mapDetailRow(q),
-          afficheCents: acompteNetDe(q),
-          type: "acompte" as const,
-          formulaName: "Acompte — net après frais Stripe",
-          eventDate: String(q.acompte_paid_at ?? "").slice(0, 10),
-          eventLocation: "",
-        })),
-      // Échéances d'échéancier confirmées ce mois (base nette).
-      ...echeancesValidees
-        .filter((e) => e.dueDate.startsWith(prefix))
-        .map((e) => ({
-          ...mapDetailRow({
-            id: e.quoteId,
-            customer_name: e.client,
-            formula_name: "",
-            event_date: e.dueDate,
-            event_location: null,
-            total_cents: 0,
-            notes: "",
-            status: "confirme",
-            created_at: "",
-            acompte_paid_at: null,
-            acompte_required: null,
-          }),
-          afficheCents: netEcheance(e.quoteId, e.numero, e.amountCents),
-          type: "echeance" as const,
-          formulaName: `Échéancier ${e.numero}/${e.totalEcheances} — net après frais Stripe`,
-          eventLocation: "",
-        })),
-    ];
-    return lignes;
+  // Conversion d'un encaissement (reçu du calcul unifié) en ligne de
+  // panneau détail — mêmes règles que le dashboard CA URSSAF.
+  const rowDepuisRecu = (r: (typeof encaissements)[number]) => {
+    const estSoldeEnLigne = r.id.startsWith("dj-solde-enligne-");
+    return {
+      id: r.id,
+      customerName: r.client,
+      formulaName: r.libelle,
+      eventLocation: "",
+      eventDate: r.datePrestation ?? r.dateEncaissement,
+      totalCents: r.montantCents,
+      notes: "",
+      status: "confirme",
+      afficheCents: r.montantCents,
+      type:
+        r.typePaiement === "facture"
+          ? undefined
+          : (r.typePaiement as "acompte" | "solde" | "echeance"),
+      soldeEnLigneLe: estSoldeEnLigne ? r.dateEncaissement : null,
+    };
   };
+
+  // ---- Anciennes périodes URSSAF : détail mois par mois ----
+  // Synchronisé avec le dashboard CA URSSAF : mêmes encaissements
+  // réels (nets de frais Stripe), rattachements manuels inclus.
+  const entreesDuMois = (prefix: string) =>
+    encaissements
+      .filter((r) => r.moisUrssaf === prefix && (avecMenu || r.activite === "dj"))
+      .map(rowDepuisRecu);
 
   // Détails URSSAF des 12 derniers mois écoulés (hors mois courant, déjà
   // accessible via la carte), uniquement ceux qui contiennent des entrées.
@@ -534,68 +484,14 @@ export default async function AdminDashboard({
     },
     urssaf: {
       titre: `CA ${monthPrefix} (URSSAF) — encaissements validés (nets de frais Stripe)`,
-      rows: [
-        // Soldes validés après soirée — montant = solde réel (pas le total).
-        ...encaisse.map((q) => ({
-          ...mapDetailRow(q),
-          afficheCents: soldeDe(q),
-          type: "solde" as const,
-        })),
-        // Soldes réglés EN LIGNE ce mois (carte ou virement confirmé) :
-        // comptés automatiquement, base nette de frais Stripe.
-        ...allConfirmed
-          .filter((q) => {
-            const d = soldeEnLigneDe(q);
-            return d && d.startsWith(monthPrefix) && !echeancierQuoteIds.has(q.id);
-          })
-          .map((q) => ({
-            ...mapDetailRow(q),
-            afficheCents: soldeEnLigneNetDe(q),
-            type: "solde" as const,
-            soldeEnLigneLe: soldeEnLigneDe(q),
-          })),
-        // Acomptes reçus ce mois et validés URSSAF (base nette).
-        ...acomptesValides
-          .filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix))
-          .map((q) => ({
-            id: q.id,
-            customerName: q.customer_name,
-            formulaName: "Acompte — net après frais Stripe",
-            eventLocation: "",
-            eventDate: String(q.acompte_paid_at ?? "").slice(0, 10),
-            totalCents: acompteNetDe(q),
-            notes: String(q.notes ?? ""),
-            status: q.status ?? "",
-            afficheCents: acompteNetDe(q),
-            type: "acompte" as const,
-          })),
-        // Échéances d'échéancier confirmées ce mois (base nette).
-        ...echeancesValidees
-          .filter((e) => e.dueDate.startsWith(monthPrefix))
-          .map((e) => ({
-            id: e.id,
-            customerName: e.client,
-            formulaName: `Échéancier ${e.numero}/${e.totalEcheances} — net après frais Stripe`,
-            eventLocation: "",
-            eventDate: e.dueDate,
-            totalCents: netEcheance(e.quoteId, e.numero, e.amountCents),
-            notes: "",
-            status: "confirme",
-            afficheCents: netEcheance(e.quoteId, e.numero, e.amountCents),
-            type: "echeance" as const,
-          })),
-        // Factures Menuiserie payées ce mois (rubrique « vente de biens »).
-        ...(avecMenu
-          ? menuPayees
-              .filter((f) => (f.date_edition ?? "").startsWith(monthPrefix))
-              .map((f) => menuRow(f, `Menuiserie (vente de biens) — facture ${f.numero}`))
-          : []),
-      ],
+      rows: encaissementsMois
+        .filter((r) => avecMenu || r.activite === "dj")
+        .map(rowDepuisRecu),
       solde: true,
     },
     solde: {
       titre: "Soldes à valider — soirées terminées, solde non confirmé",
-      rows: aValiderToutes.map((q) => ({
+      rows: soldesAEncaisser.map((q) => ({
         ...mapDetailRow(q),
         afficheCents: soldeDe(q),
         soldeEnLigneLe: soldeEnLigneDe(q),
@@ -657,13 +553,17 @@ export default async function AdminDashboard({
             vue: "urssaf",
             label: "CA encaissé ce mois — à déclarer (URSSAF)",
             value: eur(caMoisAffiche),
-            hint: `${avecMenu && menuADeclarerCents > 0 ? `Menuiserie à déclarer : ${eur(menuADeclarerCents)} (vente de biens) · ` : ""}${avecMenu && menuCaMois > 0 ? `dont Menuiserie ${eur(menuCaMois)} ce mois · ` : ""}${encaisse.length} soirée(s) validée(s) · ${
-              urssafAcomptes > 0
-                ? `${acomptesValides.filter((q) => String(q.acompte_paid_at ?? "").startsWith(monthPrefix)).length} acompte(s) validé(s) · `
+            hint: `${avecMenu && menuADeclarerCents > 0 ? `Menuiserie à déclarer : ${eur(menuADeclarerCents)} (vente de biens) · ` : ""}${avecMenu && menuCaMois > 0 ? `dont Menuiserie ${eur(menuCaMois)} ce mois · ` : ""}${nbSoireesValideesMois} soirée(s) validée(s) · ${
+              nbSoldesEnLigneMois > 0
+                ? `${nbSoldesEnLigneMois} solde(s) réglé(s) en ligne · `
                 : ""
             }${
-              urssafEcheances > 0
-                ? `${echeancesValidees.filter((e) => e.dueDate.startsWith(monthPrefix)).length} échéance(s) d'échéancier · `
+              nbAcomptesMois > 0
+                ? `${nbAcomptesMois} acompte(s) validé(s) · `
+                : ""
+            }${
+              nbEcheancesMois > 0
+                ? `${nbEcheancesMois} échéance(s) d'échéancier · `
                 : ""
             }${
               attenteValidation.length > 0
