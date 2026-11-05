@@ -237,7 +237,8 @@ export async function buildFacturePdf(
     (opts.hideAcompte
       ? "Facture payable par virement (libellé : nom de l'organisateur, numéro de contrat), chèque ou espèces. "
       : "Facture payable par virement (libellé : nom de l'organisateur, numéro de contrat), chèque ou espèces. " +
-        "L'acompte de réservation reste acquis en cas d'annulation par le client, sauf force majeure. ") +
+        "En cas d'annulation ordinaire par le client, l'acompte de réservation de 20 % reste acquis à Propul'Sound. " +
+        "Si l'annulation est due à un cas de force majeure dûment démontré par le client, les conséquences financières seront déterminées conformément aux dispositions légales applicables. ") +
     "Merci de votre confiance !";
   for (const l of wrap(conditionsTxt, 9, r, CW - 20)) {
     t(l, M + 10, y, 9, r, C.texte);

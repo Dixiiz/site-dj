@@ -91,10 +91,10 @@ const ARTICLES_2: { titre: string; paragraphes: string[] }[] = [
   {
     titre: "Article 7 - Annulation du contrat & Changement de date - Cas de force majeure",
     paragraphes: [
- "Aucune annulation ne pourra intervenir du fait de Propul'Sound, excepté les cas de force majeure dûment justifiés.",
- "En cas de force majeure, Propul'Sound s'engage à prendre contact avec un autre DJ partenaire pour réaliser la prestation. Cependant, il peut être difficile de trouver, à qualité égale et dans un délai parfois court, un DJ professionnel de remplacement au même tarif et au même niveau de qualité. En cas d'impossibilité de trouver une alternative, et sous réserve de démontrer le cas de force majeure qui empêche l'exécution de sa prestation, aucune indemnisation ne pourra être réclamée à Propul'Sound.",
- "Tout changement de date de la prestation fait office d'annulation. Si le DJ est disponible pour la nouvelle date fixée, il proposera un nouveau contrat. Le prestataire ne pourra pas être tenu pour responsable s'il se trouve dans l'impossibilité d'assurer la prestation à la date finalement fixée. Si l'annulation est due à un cas de force majeure dûment démontré par le Client, l'acompte et les éventuelles pénalités prévues seront restitués au Client.",
- "Ne sont considérés comme « cas de force majeure » que les événements extérieurs, indépendants de la volonté de Propul'Sound et du Client, imprévisibles et insurmontables rendant impossible l'exécution des obligations. La partie qui invoque un cas de force majeure devra en rapporter la preuve.",
+ "Aucune annulation ne pourra intervenir du fait de Propul'Sound, excepté en cas de force majeure ou d'impossibilité médicale dûment justifiée empêchant le prestataire d'assurer personnellement la prestation.",
+ "En cas d'impossibilité d'assurer la prestation, notamment pour des raisons de santé, Propul'Sound s'engage à prendre contact avec un DJ partenaire professionnel afin de rechercher une solution de remplacement, dans la mesure des disponibilités. Cependant, il peut être difficile de trouver, à qualité équivalente et dans un délai parfois court, un DJ professionnel de remplacement au même tarif et au même niveau de qualité. Toute solution de remplacement sera soumise à l'accord préalable du Client. En cas d'impossibilité de trouver une alternative acceptable, le contrat pourra être résolu et les sommes versées par le Client seront restituées conformément aux dispositions légales applicables.",
+ "Tout changement de date de la prestation à l'initiative du Client fait office d'annulation. Si le DJ est disponible pour la nouvelle date fixée, il proposera un nouveau contrat. Le prestataire ne pourra pas être tenu pour responsable s'il se trouve dans l'impossibilité d'assurer la prestation à la date finalement fixée. En cas d'annulation ordinaire par le Client, l'acompte de réservation de 20 % reste acquis à Propul'Sound, conformément aux conditions d'annulation prévues au contrat. Si l'annulation est due à un cas de force majeure dûment démontré par le Client, les conséquences financières seront déterminées conformément aux dispositions légales applicables.",
+ "Ne sont considérés comme cas de force majeure que les événements répondant aux critères définis par l'article 1218 du Code civil. La partie qui invoque un cas de force majeure devra en rapporter la preuve.",
     ],
   },
   {
@@ -194,8 +194,8 @@ function articlesSansAcompte(
             "aucun acompte n'ayant été demandé, aucun remboursement ne sera dû"
           )
           .replace(
-            "l'acompte et les éventuelles pénalités prévus seront restitués au Client",
-            "aucune pénalité ne restera due par le Client"
+            "En cas d'annulation ordinaire par le Client, l'acompte de réservation de 20 % reste acquis à Propul'Sound, conformément aux conditions d'annulation prévues au contrat.",
+            "Aucun acompte n'ayant été demandé, aucune pénalité d'annulation ne restera due par le Client."
           )
       ),
     };
