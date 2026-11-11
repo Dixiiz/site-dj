@@ -159,6 +159,24 @@ export async function POST(request: Request) {
       if (fileError) {
         console.error("Liaison facture libre au devis impossible", fileError);
       }
+
+      // Marqueur de facturation sur le devis lié (montant = total des lignes) :
+      // il alimente la confirmation de paiement et le CA URSSAF.
+      const { data: curNotes } = await supabase
+        .from("quotes")
+        .select("notes")
+        .eq("id", linkedQuoteId)
+        .single();
+      const notesBase = String(curNotes?.notes ?? "");
+      if (total_cents > 0 && !notesBase.includes(`[[facture:${invoiceNumber}:`)) {
+        await supabase
+          .from("quotes")
+          .update({
+            notes: `${notesBase}${notesBase ? "\n" : ""}[[facture:${invoiceNumber}:${total_cents}]]`,
+          })
+          .eq("id", linkedQuoteId);
+      }
+
       revalidatePath("/admin/devis");
       revalidatePath(`/mon-espace/devis/${linkedQuoteId}`);
     } else {
@@ -177,7 +195,8 @@ export async function POST(request: Request) {
         formula_price_cents: total_cents,
         total_cents,
         status: "confirme",
-        notes: `[[facture-libre]] Facture ${invoiceNumber} générée depuis l'admin.`,
+        notes: `[[facture-libre]] Facture ${invoiceNumber} générée depuis l'admin.
+[[facture:${invoiceNumber}:${total_cents}]]`,
       });
       if (quoteError) {
         console.error("Création soirée facture libre impossible", quoteError);

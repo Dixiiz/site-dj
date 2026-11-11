@@ -14,6 +14,8 @@ import { ScrollToFocus } from "@/components/scroll-to-focus";
 import { Badge } from "@/components/ui/badge";
 import { isFxOption } from "@/lib/fx-catalog";
 import { formatEuros } from "@/lib/money";
+import { facturesDe, facturePayeDe, factureDeclareeDe } from "@/lib/urssaf-logic";
+import type { FacturePaiementInfo } from "@/components/facture-paiement-buttons";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendScheduledEmails } from "@/lib/email-jobs";
 import type { SelectedOption } from "@/lib/types";
@@ -55,6 +57,21 @@ function eventKind(formulaName: string): string {
   if (n.includes("set dj") || n.includes("clé en main") || n.includes("club") || n.includes("afterwork") || n.includes("association"))
     return "Bar / Club";
   return "Anniversaire / Privé";
+}
+
+// État de paiement des factures du devis, lu depuis les marqueurs des notes :
+// [[facture:numéro:montant]] (génération), [[facture-declaree:…]] (client),
+// [[facture-paye:…]] (validation admin → CA URSSAF).
+function facturesPaiement(notes: string): Record<string, FacturePaiementInfo> {
+  const map: Record<string, FacturePaiementInfo> = {};
+  for (const f of facturesDe(notes)) {
+    map[f.numero] = {
+      payeLe: facturePayeDe(notes, f.numero),
+      declareeLe: factureDeclareeDe(notes, f.numero),
+      montantCents: f.montantCents,
+    };
+  }
+  return map;
 }
 
 export default async function DevisPage({
@@ -676,6 +693,7 @@ export default async function DevisPage({
                   customerName={quote.customer_name}
                   customerEmail={quote.customer_email}
                   customerPhone={quote.customer_phone}
+                  factures={facturesPaiement(String(quote.notes ?? ""))}
                   adjustments={
                     Array.isArray(quote.invoice_adjustments)
                       ? (quote.invoice_adjustments as { label: string; amount_cents: number }[])

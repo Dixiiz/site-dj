@@ -5,6 +5,7 @@ import { AdminQuotePlaylist, eventMoments } from "@/components/admin-quote-playl
 import { AdminRdvRequests } from "@/components/rdv-call";
 import { AdminQuoteDocuments } from "@/components/admin-quote-documents";
 import { AdminQuoteConversation } from "@/components/admin-quote-conversation";
+import type { FacturePaiementInfo } from "@/components/facture-paiement-buttons";
 
 export type TrackRow = {
   id: string; moment: string; title: string; artist: string | null; kind: string; preview_url: string | null; artwork_url: string | null;
@@ -24,6 +25,7 @@ export function AdminQuoteLazyFolder({
   customerEmail,
   customerPhone,
   adjustments,
+  factures,
   initialMessages,
   initialTracks,
   initialFiles,
@@ -35,6 +37,8 @@ export function AdminQuoteLazyFolder({
   customerEmail: string | null;
   customerPhone: string | null;
   adjustments: { label: string; amount_cents: number }[];
+  /** État de paiement des factures du devis (marqueurs des notes). */
+  factures: Record<string, FacturePaiementInfo>;
   initialMessages: { id: string; sender: string; body: string; created_at: string }[];
   initialTracks: TrackRow[];
   initialFiles: FileRowLite[];
@@ -98,6 +102,7 @@ export function AdminQuoteLazyFolder({
             customerEmail={customerEmail}
             customerPhone={customerPhone}
             formulaName={formulaName}
+            factures={factures}
           />
           <AdminRdvRequests quoteId={quoteId} requests={rdvs} />
         </div>

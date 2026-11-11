@@ -31,6 +31,8 @@ import {
 } from "@/app/client-actions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatEuros } from "@/lib/money";
+import { facturePayeDe, factureDeclareeDe } from "@/lib/urssaf-logic";
+import { DeclareFacturePaidButton } from "@/components/facture-paiement-buttons";
 import type { SelectedOption } from "@/lib/types";
 import type { PendingQuoteDetails } from "@/app/client-actions";
 
@@ -412,7 +414,14 @@ export default async function ClientQuotePage({
           <ul className="mt-3 space-y-2">
             {files
               .filter((f) => f.from_admin && f.doc_kind !== "a_signer")
-              .map((file) => (
+              .map((file) => {
+                const notes = String(quote.notes ?? "");
+                const numero = /^Facture /i.test(file.name)
+                  ? file.name.match(/F-\d{4}-\d{3}/)?.[0]
+                  : undefined;
+                const payeLe = numero ? facturePayeDe(notes, numero) : null;
+                const declareeLe = numero ? factureDeclareeDe(notes, numero) : null;
+                return (
                 <li
                   key={file.id}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
@@ -427,8 +436,22 @@ export default async function ClientQuotePage({
                           : ""}
                       </p>
                     ) : null}
+                    {numero && payeLe ? (
+                      <p className="text-xs font-medium text-green-400">
+                        ✓ Payée le {new Date(`${payeLe}T12:00:00`).toLocaleDateString("fr-FR")}
+                      </p>
+                    ) : numero && declareeLe ? (
+                      <p className="text-xs text-orange-400">
+                        Paiement déclaré le{" "}
+                        {new Date(`${declareeLe}T12:00:00`).toLocaleDateString("fr-FR")} — en
+                        attente de validation
+                      </p>
+                    ) : null}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    {numero && !payeLe && !declareeLe ? (
+                      <DeclareFacturePaidButton quoteId={id} numero={numero} />
+                    ) : null}
                     <a
                       href={`/api/files/${file.id}`}
                       download
@@ -438,7 +461,8 @@ export default async function ClientQuotePage({
                     </a>
                   </div>
                 </li>
-              ))}
+                );
+              })}
           </ul>
         </section>
       ) : null}

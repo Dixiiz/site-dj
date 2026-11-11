@@ -141,6 +141,31 @@ export function netEcheance(notes: string, numero: number, brut: number): number
   return m ? Number(m[1]) : brut;
 }
 
+// ---- Factures DJ (acomptes/soldes facturés, factures libres…) ----
+// Marqueurs posés à la génération du PDF : [[facture:F-2026-012:53200]]
+// (numéro + montant en centimes). Le paiement est confirmé en deux temps,
+// comme l'acompte : déclaration du client [[facture-declaree:F-…:date]] puis
+// validation admin [[facture-paye:F-…:date]] → compté dans le CA URSSAF.
+export type FactureInfo = { numero: string; montantCents: number };
+
+export function facturesDe(notes: string): FactureInfo[] {
+  const out: FactureInfo[] = [];
+  const re = /\[\[facture:(F-\d{4}-\d{3}):(\d+)\]\]/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(notes))) {
+    out.push({ numero: m[1], montantCents: Number(m[2]) });
+  }
+  return out;
+}
+
+export function facturePayeDe(notes: string, numero: string): string | null {
+  return new RegExp(`\\[\\[facture-paye:${numero}:(\\d{4}-\\d{2}-\\d{2})\\]\\]`).exec(notes)?.[1] ?? null;
+}
+
+export function factureDeclareeDe(notes: string, numero: string): string | null {
+  return new RegExp(`\\[\\[facture-declaree:${numero}:(\\d{4}-\\d{2}-\\d{2})\\]\\]`).exec(notes)?.[1] ?? null;
+}
+
 // ============================================================
 // Calcul de TOUS les encaissements URSSAF (fonction principale)
 // ============================================================
@@ -187,6 +212,37 @@ export function calculerEncaissementsUrssaf(input: {
 
   // ---------- DJ : devis sans échéancier (acompte + soldes) ----------
   for (const q of input.quotes) {
+    const notesToutes = notesParQuote.get(q.id) ?? "";
+
+    // --- Factures DJ payées (validées par l'admin, comme l'acompte) ---
+    // Chaque facture générée (acompte/solde facturé, facture libre liée ou
+    // non) inscrit [[facture:numéro:montant]] ; dès la validation du
+    // paiement [[facture-paye:numéro:date]], elle compte dans le CA URSSAF
+    // du mois de cette date — même mécanique que les factures menuiserie.
+    for (const f of facturesDe(notesToutes)) {
+      const payeLe = facturePayeDe(notesToutes, f.numero);
+      if (!payeLe || f.montantCents <= 0) continue;
+      const moisAutoF = moisDe(payeLe);
+      const overrideF = urssafOverride(notesToutes, `dj-facture-${f.numero}`);
+      receipts.push({
+        id: `dj-facture-${f.numero}`,
+        sourceId: f.numero,
+        activite: "dj",
+        client: q.customer_name ?? "—",
+        libelle: `Facture ${f.numero}`,
+        typePaiement: "facture",
+        datePrestation: q.event_date ?? null,
+        dateEncaissement: payeLe,
+        montantCents: f.montantCents,
+        moisUrssafAuto: moisAutoF,
+        moisUrssaf: overrideF ?? moisAutoF,
+        rattachementManuel: overrideF !== null && overrideF !== moisAutoF,
+        declareUrssaf: true,
+        quoteId: q.id,
+        formulaName: q.formula_name ?? null,
+      });
+    }
+
     if (echeancierQuoteIds.has(q.id)) continue;
     const notes = notesParQuote.get(q.id) ?? "";
     const formula = q.formula_name ?? "Prestation";

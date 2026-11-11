@@ -3,6 +3,8 @@ import { isAdmin } from "@/lib/admin-auth";
 import { SendInvoiceForm } from "@/components/send-invoice-form";
 import { DeleteInvoiceButton } from "@/components/delete-invoice-button";
 import { FreeInvoiceLinker, type LinkableQuote } from "@/components/free-invoice-linker";
+import { ValidateFactureButton, type FacturePaiementInfo } from "@/components/facture-paiement-buttons";
+import { facturesDe, facturePayeDe, factureDeclareeDe } from "@/lib/urssaf-logic";
 import { formatEuros } from "@/lib/money";
 import Link from "next/link";
 
@@ -67,6 +69,32 @@ export default async function AdminFacturesPage() {
         .filter(Boolean)
         .join(" — "),
     }));
+
+  // État de paiement des factures DJ, lu depuis les notes (marqueurs posés à
+  // la génération, déclaration du client, validation admin). Pour les
+  // factures libres créées avant le marqueur, la note « Facture F-… générée »
+  // + le montant de la soirée associée servent de repli.
+  const facturesInfo = new Map<string, FacturePaiementInfo & { quoteId: string }>();
+  for (const q of quotesForLink ?? []) {
+    const notes = String(q.notes ?? "");
+    for (const f of facturesDe(notes)) {
+      facturesInfo.set(f.numero, {
+        quoteId: q.id,
+        payeLe: facturePayeDe(notes, f.numero),
+        declareeLe: factureDeclareeDe(notes, f.numero),
+        montantCents: f.montantCents,
+      });
+    }
+    const legacy = /Facture (F-\d{4}-\d{3}) générée/.exec(notes)?.[1];
+    if (legacy && !facturesInfo.has(legacy)) {
+      facturesInfo.set(legacy, {
+        quoteId: q.id,
+        payeLe: null,
+        declareeLe: null,
+        montantCents: q.total_cents ?? null,
+      });
+    }
+  }
 
   return (
     <main className="mx-auto max-w-4xl space-y-8 px-4 py-8">
@@ -287,6 +315,17 @@ export default async function AdminFacturesPage() {
                   </p>
                   {/* Envoi de la facture par e-mail (lien signé 7 jours). */}
                   <SendInvoiceForm fileName={invoice.name} />
+                  {/* Paiement : déclaration du client + validation admin qui
+                      compte la facture dans le CA URSSAF. */}
+                  {invoice.number !== "—" && facturesInfo.has(invoice.number) ? (
+                    <div className="mt-1.5">
+                      <ValidateFactureButton
+                        quoteId={facturesInfo.get(invoice.number)!.quoteId}
+                        numero={invoice.number}
+                        info={facturesInfo.get(invoice.number)!}
+                      />
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   {invoice.url ? (

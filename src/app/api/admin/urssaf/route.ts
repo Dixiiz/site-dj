@@ -130,6 +130,17 @@ export async function PATCH(request: Request) {
     const { data } = await supabase.from("payment_schedule").select("quote_id").eq("id", echId).maybeSingle();
     quoteId = data?.quote_id ?? null;
     if (!quoteId) return NextResponse.json({ error: "Échéance introuvable" }, { status: 404 });
+  } else if (id.startsWith("dj-facture-")) {
+    // Facture DJ : retrouver le devis portant le marqueur [[facture:numéro:…]].
+    const numero = id.slice("dj-facture-".length);
+    const { data } = await supabase
+      .from("quotes")
+      .select("id")
+      .like("notes", `%[[facture:${numero}:%`)
+      .limit(1)
+      .maybeSingle();
+    quoteId = data?.id ?? null;
+    if (!quoteId) return NextResponse.json({ error: "Facture introuvable" }, { status: 404 });
   } else if (id.startsWith("dj-acompte-") || id.startsWith("dj-solde-enligne-") || id.startsWith("dj-solde-valide-")) {
     quoteId = id
       .slice("dj-".length)

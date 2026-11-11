@@ -13,6 +13,7 @@ import { signerLienPremiereConnexion } from "@/lib/lien-premiere-connexion";
 import { ADMIN_PACK_LIST } from "@/lib/packs";
 import { formatEuros } from "@/lib/money";
 import { acompteCents } from "@/lib/installments";
+import { factureDeclareeDe, facturePayeDe } from "@/lib/urssaf-logic";
 import { findUpsell } from "@/lib/upsell";
 
 // ---------- Recherche du compte client (cache) ----------
@@ -2258,6 +2259,22 @@ async function genererFactureCore(formData: FormData) {
       doc_kind: "info",
     });
 
+    // Marqueur de facturation : numéro + montant exact facturé (centimes).
+    // Il permet la confirmation de paiement (déclaration client puis
+    // validation admin) et le comptage automatique dans le CA URSSAF.
+    const factureMontantCents = isPartial
+      ? partialCents
+      : (quote.total_cents ?? 0) + adjustments.reduce((s, a) => s + (a.amount_cents || 0), 0);
+    const notesBase = String(quote.notes ?? "");
+    if (factureMontantCents > 0 && !notesBase.includes(`[[facture:${invoiceNumber}:`)) {
+      await supabase
+        .from("quotes")
+        .update({
+          notes: `${notesBase}${notesBase ? "\n" : ""}[[facture:${invoiceNumber}:${factureMontantCents}]]`,
+        })
+        .eq("id", quoteId);
+    }
+
     revalidatePath("/admin/devis");
     revalidatePath(`/mon-espace/devis/${quoteId}`);
 
@@ -2501,6 +2518,67 @@ export async function declareAcompteSent(formData: FormData) {
 
   revalidatePath(`/mon-espace/devis/${quoteId}`);
   revalidatePath("/admin/devis");
+  return { ok: true as const, message: "Merci ! Le prestataire a été prévenu ✓" };
+}
+
+// Le client déclare avoir payé une facture (acompte facturé, solde, facture
+// libre…) — même mécanique que la déclaration d'acompte : notification admin
+// (e-mail + push), puis validation manuelle de l'admin qui compte le
+// paiement dans le CA URSSAF.
+export async function declareFacturePayee(formData: FormData) {
+  const { createAuthClient } = await import("@/lib/supabase/server");
+  const auth = await createAuthClient();
+  const {
+    data: { user },
+  } = await auth.auth.getUser();
+  if (!user?.email) return { ok: false as const, error: "Non autorisé." };
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const numero = String(formData.get("numero") ?? "").trim();
+  if (!quoteId || !/^F-\d{4}-\d{3}$/.test(numero)) {
+    return { ok: false as const, error: "Facture introuvable." };
+  }
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("customer_email, customer_name, notes")
+    .eq("id", quoteId)
+    .single();
+  if (!quote || quote.customer_email?.toLowerCase() !== user.email.toLowerCase()) {
+    return { ok: false as const, error: "Non autorisé." };
+  }
+
+  const notes = String(quote.notes ?? "");
+  if (facturePayeDe(notes, numero)) {
+    return { ok: true as const, message: "Paiement déjà validé ✓" };
+  }
+  if (factureDeclareeDe(notes, numero)) {
+    return { ok: true as const, message: "Déjà déclaré ✓" };
+  }
+
+  const today = new Date().toLocaleDateString("fr-CA");
+  const notesUpdate = `${notes}${notes ? "\n" : ""}[[facture-declaree:${numero}:${today}]]`;
+  const { error } = await supabase.from("quotes").update({ notes: notesUpdate }).eq("id", quoteId);
+  if (error) return { ok: false as const, error: "Échec de la déclaration." };
+
+  // Notification admin : le client dit avoir payé la facture.
+  const { notifyAdmin } = await import("@/lib/admin-notify");
+  void notifyAdmin({
+    title: "Facture déclarée payée par le client",
+    body: `${quote.customer_name ?? quote.customer_email ?? user.email} déclare avoir payé la facture ${numero} — à vérifier puis valider.`,
+    url: `/admin/devis?focus=${quoteId}`,
+    email: {
+      subject: `Facture ${numero} déclarée payée — à vérifier`,
+      html: `<p><strong>${quote.customer_name ?? quote.customer_email ?? user.email}</strong> déclare avoir <strong>payé la facture ${numero}</strong>.</p><p>Vérifie la réception sur ton compte bancaire, puis valide le paiement depuis les documents du devis (ou la page Factures) pour le compter dans le CA URSSAF.</p>`,
+    },
+  });
+
+  console.log(`[facture] Le client ${user.email} a déclaré avoir payé la facture ${numero} (devis ${quoteId})`);
+
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  revalidatePath("/admin/devis");
+  revalidatePath("/admin/factures");
   return { ok: true as const, message: "Merci ! Le prestataire a été prévenu ✓" };
 }
 

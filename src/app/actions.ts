@@ -11,6 +11,7 @@ import { estimateTravelFromAddress } from "@/lib/travel";
 import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
 import { ADMIN_FX_OPTIONS } from "@/lib/fx-catalog";
 import { formatEuros } from "@/lib/money";
+import { facturePayeDe, facturesDe } from "@/lib/urssaf-logic";
 import { SITE_URL } from "@/lib/site-url";
 import { EMAIL_FROM } from "@/lib/emails";
 
@@ -1632,6 +1633,73 @@ export async function validerAcompteUrssaf(formData: FormData) {
     message: annuler
       ? `Acompte retiré du CA URSSAF pour « ${quote.customer_name} » ✓`
       : `Acompte compté dans le CA URSSAF pour « ${quote.customer_name} » ✓`,
+  };
+}
+
+// Valide (ou annule) le paiement d'une facture DJ — même mécanique que
+// l'acompte : marqueur [[facture-paye:F-…:date]] dans les notes. Dès la
+// validation, la facture compte dans le CA URSSAF du mois de cette date.
+// La facture générée porte son montant ([[facture:numéro:montant]]) ; pour
+// les anciennes factures sans marqueur, l'admin renseigne le montant (€)
+// au moment de la validation (champ « montant »).
+export async function validerFactureUrssaf(formData: FormData) {
+  if (!(await isAdmin())) return { ok: false as const, error: "Non autorisé." };
+  const quoteId = String(formData.get("quote_id") ?? "").trim();
+  const numero = String(formData.get("numero") ?? "").trim();
+  const annuler = String(formData.get("annuler") ?? "") === "1";
+  if (!quoteId || !/^F-\d{4}-\d{3}$/.test(numero)) {
+    return { ok: false as const, error: "Facture introuvable." };
+  }
+
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("id, notes, customer_name")
+    .eq("id", quoteId)
+    .maybeSingle();
+  if (!quote) return { ok: false as const, error: "Soirée introuvable." };
+
+  let notes = String(quote.notes ?? "");
+  if (annuler) {
+    notes = notes.replace(
+      new RegExp(`\\n?\\[\\[facture-paye:${numero}:\\d{4}-\\d{2}-\\d{2}\\]\\]`, "g"),
+      ""
+    );
+  } else if (facturePayeDe(notes, numero)) {
+    return { ok: true as const, message: "Paiement déjà validé." };
+  } else {
+    // Montant : marqueur posé à la génération, sinon saisie manuelle.
+    let montant = facturesDe(notes).find((f) => f.numero === numero)?.montantCents ?? 0;
+    if (montant <= 0) {
+      const brut = String(formData.get("montant") ?? "")
+        .replace(",", ".")
+        .replace(/\s/g, "");
+      const euros = parseFloat(brut);
+      if (!Number.isFinite(euros) || euros <= 0) {
+        return { ok: false as const, error: "Renseigne le montant facturé (€)." };
+      }
+      montant = Math.round(euros * 100);
+      notes = `${notes}${notes ? "\n" : ""}[[facture:${numero}:${montant}]]`;
+    }
+    const today = new Date().toLocaleDateString("fr-CA");
+    notes = `${notes}${notes ? "\n" : ""}[[facture-paye:${numero}:${today}]]`;
+  }
+
+  const { error } = await supabase.from("quotes").update({ notes }).eq("id", quoteId);
+  if (error) {
+    console.error("Validation facture impossible", error);
+    return { ok: false as const, error: "Opération impossible." };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/devis");
+  revalidatePath("/admin/factures");
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  return {
+    ok: true as const,
+    message: annuler
+      ? `Paiement de la facture ${numero} retiré du CA URSSAF ✓`
+      : `Facture ${numero} payée — comptée dans le CA URSSAF ✓`,
   };
 }
 

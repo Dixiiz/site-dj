@@ -15,6 +15,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InvoiceAdjustments } from "@/components/admin-invoice-adjustments";
 import { SubmitButton } from "@/components/submit-button";
+import { ValidateFactureButton, type FacturePaiementInfo } from "@/components/facture-paiement-buttons";
 
 type FileRow = {
   id: string;
@@ -43,6 +44,7 @@ export function AdminQuoteDocuments({
   customerEmail,
   customerPhone,
   formulaName,
+  factures,
 }: {
   quoteId: string;
   files: FileRow[];
@@ -51,6 +53,8 @@ export function AdminQuoteDocuments({
   customerEmail?: string | null;
   customerPhone?: string | null;
   formulaName?: string | null;
+  /** État de paiement par numéro de facture (marqueurs des notes du devis). */
+  factures: Record<string, FacturePaiementInfo>;
 }) {
   const allFiles = files ?? [];
 
@@ -106,6 +110,18 @@ export function AdminQuoteDocuments({
           </SubmitButton>
         </form>
       ) : null}
+      {/* Facture : état de paiement + validation (compte le paiement dans le
+          CA URSSAF à la date du jour, comme la validation d'un acompte). */}
+      {file.doc_kind !== "a_signer" && /^Facture /i.test(file.name) ? (() => {
+        const numero = file.name.match(/F-\d{4}-\d{3}/)?.[0];
+        return numero ? (
+          <ValidateFactureButton
+            quoteId={quoteId}
+            numero={numero}
+            info={factures[numero] ?? { payeLe: null, declareeLe: null, montantCents: null }}
+          />
+        ) : null;
+      })() : null}
       <form action={deleteAdminDocument}>
         <input type="hidden" name="quote_id" value={quoteId} />
         <input type="hidden" name="file_id" value={file.id} />
