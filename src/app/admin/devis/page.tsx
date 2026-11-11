@@ -188,19 +188,22 @@ export default async function DevisPage({
   }
 
   // Un devis quitte la liste de travail quand :
-  //  • la facture a été ENVOYÉE au client (marqueur [[facture-envoyée:…]] dans
-  //    les notes — posé au moment de l'envoi), ou
   //  • la soirée date de plus de 5 jours (délai laissé pour générer et envoyer
-  //    la facture). Sinon, le devis reste visible après la soirée : il n'est
-  //    plus masqué dès le lendemain.
+  //    la facture), ou
+  //  • la soirée EST PASSÉE et la facture a été ENVOYÉE au client (marqueur
+  //    [[facture-envoyée:…]] posé à l'envoi) : dossier traité immédiatement,
+  //    sans attendre la fin du délai de 5 jours. Une facture envoyée pour un
+  //    événement À VENIR (acompte facturé, paiement en 50/50…) n'archive PAS
+  //    le devis : il reste d'actualité dans la liste de travail.
   const factureEnvoyee = (quote: { notes?: string | null }) =>
     String(quote.notes ?? "").includes("[[facture-envoyée");
   const archiveCutoff = new Date();
   archiveCutoff.setDate(archiveCutoff.getDate() - 5);
   const archiveCutoffIso = archiveCutoff.toLocaleDateString("fr-CA");
+  const todayIso = new Date().toLocaleDateString("fr-CA");
   const isPast = (quote: { event_date: string | null; notes?: string | null }) =>
-    factureEnvoyee(quote) ||
-    Boolean(quote.event_date && quote.event_date < archiveCutoffIso);
+    Boolean(quote.event_date && quote.event_date < archiveCutoffIso) ||
+    (factureEnvoyee(quote) && Boolean(quote.event_date && quote.event_date <= todayIso));
 
   // Par défaut, les devis traités (facture envoyée ou soirée de + de 5 jours)
   // sont cachés (visibles via « archives » ou « tous ») — liste de travail propre.

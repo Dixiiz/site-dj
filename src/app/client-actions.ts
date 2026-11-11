@@ -2359,9 +2359,11 @@ async function envoyerDocumentCore(formData: FormData) {
     }
   }
 
-  // Facture ENVOYÉE au client → marqueur dans les notes du devis : la liste
-  // admin considère le dossier comme traité (archives) immédiatement, au
-  // lieu d'attendre la fin du délai de 5 jours après la soirée.
+  // Facture ENVOYÉE au client → marqueur dans les notes du devis : une fois
+  // la soirée passée, la liste admin considère le dossier comme traité
+  // (archives) immédiatement, au lieu d'attendre la fin du délai de 5 jours.
+  // Pour une soirée à venir (facture envoyée en avance), le devis reste
+  // d'actualité dans la liste de travail.
   if (/^Facture /i.test(file.name)) {
     const { data: cur } = await supabase
       .from("quotes")
