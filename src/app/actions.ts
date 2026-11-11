@@ -1141,6 +1141,16 @@ export async function deleteFreeInvoice(formData: FormData) {
     return { ok: false as const, error: "Suppression impossible." };
   }
 
+  // Facture libre LIÉE à un devis : retire aussi la référence dans les
+  // documents du devis (la ligne pointe vers ce même fichier storage).
+  const { error: linkError } = await supabase
+    .from("quote_files")
+    .delete()
+    .eq("storage_path", `admin/factures-libres/${fileName}`);
+  if (linkError) {
+    console.error("Suppression référence facture liée impossible", linkError);
+  }
+
   // Supprime aussi la soirée liée (créée automatiquement à la génération).
   if (invoiceNumber) {
     const { data: linked } = await supabase
@@ -1154,6 +1164,7 @@ export async function deleteFreeInvoice(formData: FormData) {
   }
 
   revalidatePath("/admin/factures");
+  revalidatePath("/admin/devis");
   revalidatePath("/admin");
   return { ok: true as const };
 }

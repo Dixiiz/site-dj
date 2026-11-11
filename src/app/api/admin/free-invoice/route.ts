@@ -47,6 +47,23 @@ export async function POST(request: Request) {
   const total_cents = lines.reduce((sum, line) => sum + line.line_total_cents, 0);
 
   const supabase = createAdminClient();
+
+  // Liaison facultative à un devis existant : la facture apparaît alors aussi
+  // dans les documents du devis (et aucune soirée dupliquée n'est créée).
+  const linkedQuoteId = str("linked_quote_id");
+  let linkedTotalCents = 0;
+  if (linkedQuoteId) {
+    const { data: linkedQuote } = await supabase
+      .from("quotes")
+      .select("id, total_cents")
+      .eq("id", linkedQuoteId)
+      .single();
+    if (!linkedQuote) {
+      return new NextResponse("Devis lié introuvable.", { status: 400 });
+    }
+    linkedTotalCents = linkedQuote.total_cents ?? 0;
+  }
+
   const year = new Date().getFullYear();
 
   // Numérotation partagée avec les factures de devis (F-2026-001, F-2026-002…).
@@ -92,6 +109,15 @@ export async function POST(request: Request) {
       invoiceNumber,
       hideAcompte: true,
       plainLines: true,
+      // Facture partielle liée à un devis : si le total facturé est inférieur
+      // au total du devis, rappel du % facturé et du solde restant sur le PDF.
+      partial:
+        linkedTotalCents > 0 && total_cents > 0 && total_cents < linkedTotalCents
+          ? {
+              percent: Math.round((total_cents / linkedTotalCents) * 100),
+              totalCents: linkedTotalCents,
+            }
+          : undefined,
     });
 
     // Archivage dans le storage (historique + numérotation persistante).
@@ -102,31 +128,72 @@ export async function POST(request: Request) {
       .upload(storagePath, bytes, { contentType: "application/pdf", upsert: false });
     if (uploadError) {
       console.error("Upload facture libre impossible", uploadError);
+      if (linkedQuoteId) {
+        // Une facture liée DOIT exister dans le storage : la ligne quote_files
+        // du devis pointe vers ce chemin.
+        return new NextResponse("Échec de l'archivage de la facture.", { status: 500 });
+      }
     }
 
-    // La facture devient aussi une soirée confirmée : elle alimente le CA,
-    // le planning et les stats du tableau de bord.
-    const { error: quoteError } = await supabase.from("quotes").insert({
-      customer_name,
-      customer_email: str("customer_email") || "non.renseigne@facture.local",
-      customer_phone: str("customer_phone") || null,
-      event_type: str("event_type") || null,
-      event_date: str("event_date") || new Date().toISOString().slice(0, 10),
-      event_location: str("event_location") || null,
-      start_time: str("start_time") || null,
-      end_time: str("end_time") || null,
-      formula_name: str("event_type") || "Facture libre",
-      formula_price_cents: total_cents,
-      total_cents,
-      status: "confirme",
-      notes: `[[facture-libre]] Facture ${invoiceNumber} générée depuis l'admin.`,
-    });
-    if (quoteError) {
-      console.error("Création soirée facture libre impossible", quoteError);
+    if (linkedQuoteId) {
+      // Facture libre LIÉE à un devis : référencée dans quote_files, elle
+      // apparaît à la fois ici et dans les documents du devis (admin + espace
+      // client). Pas de soirée dupliquée : le devis lié alimente déjà le CA,
+      // le planning et les stats du tableau de bord.
+      let ownerUserId: string | null = null;
+      for (const table of ["quote_files", "quote_messages", "playlist_tracks"] as const) {
+        const { data } = await supabase
+          .from(table)
+          .select("user_id")
+          .eq("quote_id", linkedQuoteId)
+          .not("user_id", "is", null)
+          .limit(1)
+          .maybeSingle();
+        if (data?.user_id) {
+          ownerUserId = String(data.user_id);
+          break;
+        }
+      }
+      const { error: fileError } = await supabase.from("quote_files").insert({
+        quote_id: linkedQuoteId,
+        user_id: ownerUserId,
+        name: `Facture ${invoiceNumber}.pdf`,
+        storage_path: storagePath,
+        mime_type: "application/pdf",
+        size_bytes: bytes.length,
+        from_admin: true,
+        doc_kind: "info",
+      });
+      if (fileError) {
+        console.error("Liaison facture libre au devis impossible", fileError);
+      }
+      revalidatePath("/admin/devis");
+      revalidatePath(`/mon-espace/devis/${linkedQuoteId}`);
+    } else {
+      // La facture devient aussi une soirée confirmée : elle alimente le CA,
+      // le planning et les stats du tableau de bord.
+      const { error: quoteError } = await supabase.from("quotes").insert({
+        customer_name,
+        customer_email: str("customer_email") || "non.renseigne@facture.local",
+        customer_phone: str("customer_phone") || null,
+        event_type: str("event_type") || null,
+        event_date: str("event_date") || new Date().toISOString().slice(0, 10),
+        event_location: str("event_location") || null,
+        start_time: str("start_time") || null,
+        end_time: str("end_time") || null,
+        formula_name: str("event_type") || "Facture libre",
+        formula_price_cents: total_cents,
+        total_cents,
+        status: "confirme",
+        notes: `[[facture-libre]] Facture ${invoiceNumber} générée depuis l'admin.`,
+      });
+      if (quoteError) {
+        console.error("Création soirée facture libre impossible", quoteError);
+      }
+      revalidatePath("/admin");
     }
 
     revalidatePath("/admin/factures");
-    revalidatePath("/admin");
 
     // Le PDF est renvoyé directement en téléchargement.
     const fileName = `Facture ${invoiceNumber}.pdf`;

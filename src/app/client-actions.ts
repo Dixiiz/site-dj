@@ -2148,18 +2148,53 @@ async function genererFactureCore(formData: FormData) {
       .single();
     if (!quote) return { ok: false as const, error: "Devis introuvable." };
 
-    // Numéro de facture : séquence annuelle (F-2026-001, F-2026-002…)
+    // Numéro de facture : séquence annuelle (F-2026-001, F-2026-002…),
+    // partagée avec les factures libres : max entre les factures référencées
+    // en base et celles archivées dans le storage (aucun doublon de numéro).
     const year = new Date().getFullYear();
-    const { count: factureCount } = await supabase
-      .from("quote_files")
-      .select("id", { count: "exact", head: true })
-      .like("name", `Facture F-${year}-%.pdf`);
-    const invoiceNumber = `F-${year}-${String((factureCount ?? 0) + 1).padStart(3, "0")}`;
+    const [filesRes, storedFreeRes] = await Promise.all([
+      supabase
+        .from("quote_files")
+        .select("id", { count: "exact", head: true })
+        .like("name", `Facture F-${year}-%.pdf`),
+      supabase.storage.from("client-files").list("admin/factures-libres", { limit: 1000 }),
+    ]);
+    const storageCount = (storedFreeRes.data ?? [])
+      .filter((f) => f.name.startsWith(`F-${year}-`)).length;
+    const invoiceNumber = `F-${year}-${String(Math.max(storageCount, filesRes.count ?? 0) + 1).padStart(3, "0")}`;
 
-    const { buildFacturePdf } = await import("@/lib/facture-pdf");
+    // Facture partielle : % du total + nom du client au choix (ex. une facture
+    // de 50 % au nom du client, puis 50 % au nom de sa société).
+    const pctRaw = parseFloat(String(formData.get("facture_pct") ?? "").replace(",", "."));
+    const percent = Number.isFinite(pctRaw) ? Math.min(100, Math.max(1, Math.round(pctRaw))) : 100;
+    const isPartial = percent < 100;
+    const displayName =
+      String(formData.get("facture_client_name") ?? "").trim() || quote.customer_name;
+
     const adjustments = Array.isArray(quote.invoice_adjustments)
       ? (quote.invoice_adjustments as { label: string; amount_cents: number }[])
       : [];
+
+    // Données du PDF : facture partielle → une seule ligne (libellé
+    // personnalisable, montant = % du total) ; sinon le devis complet, avec
+    // le nom du client éventuellement surchargé.
+    const partialCents = Math.round((quote.total_cents ?? 0) * (percent / 100));
+    const partialLabel =
+      String(formData.get("facture_label") ?? "").trim() ||
+      `Acompte de ${percent} % — ${quote.formula_name ?? "prestation"}`;
+    const pdfQuote = isPartial
+      ? {
+          ...quote,
+          customer_name: displayName,
+          formula_price_cents: null,
+          selected_options: [{ name: partialLabel, qty: 1, price_cents: partialCents }],
+          travel_fee_cents: 0,
+          extra_fee_cents: 0,
+          total_cents: partialCents,
+        }
+      : { ...quote, customer_name: displayName };
+
+    const { buildFacturePdf } = await import("@/lib/facture-pdf");
 
     // PDF et recherche du compte client en parallèle (gain de latence).
     const [pdfResult, ownerUserId] = await Promise.all([
@@ -2167,11 +2202,15 @@ async function genererFactureCore(formData: FormData) {
         try {
           return {
             ok: true as const,
-            bytes: await buildFacturePdf(quote as never, {
+            bytes: await buildFacturePdf(pdfQuote as never, {
               invoiceNumber,
-              adjustments,
+              // Une facture partielle tient lieu de décompte : ni lignes
+              // personnalisées ni bloc acompte de réservation.
+              adjustments: isPartial ? [] : adjustments,
               // Pas d'acompte pour ce devis ? Le total est directement à régler.
-              hideAcompte: quote.acompte_required === false,
+              hideAcompte: quote.acompte_required === false || isPartial,
+              plainLines: isPartial,
+              partial: isPartial ? { percent, totalCents: quote.total_cents ?? 0 } : undefined,
             }),
           };
         } catch (e) {
@@ -2212,7 +2251,12 @@ async function genererFactureCore(formData: FormData) {
     // Pas d'e-mail automatique : l'admin décide d'envoyer la notification
     // au client via le bouton « ✉ Envoyer au client » à côté de la facture.
 
-    return { ok: true as const, message: `Facture ${invoiceNumber} générée ✓` };
+    return {
+      ok: true as const,
+      message: `Facture ${invoiceNumber} générée ✓${
+        isPartial ? ` — ${percent} % au nom de ${displayName}` : ""
+      }`,
+    };
   } catch (e) {
     console.error("Erreur inattendue génération facture", e);
     return {

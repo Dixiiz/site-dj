@@ -2,6 +2,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdmin } from "@/lib/admin-auth";
 import { SendInvoiceForm } from "@/components/send-invoice-form";
 import { DeleteInvoiceButton } from "@/components/delete-invoice-button";
+import { FreeInvoiceLinker, type LinkableQuote } from "@/components/free-invoice-linker";
+import { formatEuros } from "@/lib/money";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +38,32 @@ export default async function AdminFacturesPage() {
       })
   );
 
+  // Devis disponibles pour la liaison facultative : la facture apparaît alors
+  // aussi dans les documents du devis. Les « soirées » créées par facture
+  // libre sont exclues (pas de vrai devis derrière).
+  const { data: quotesForLink } = await supabase
+    .from("quotes")
+    .select("id, customer_name, event_date, total_cents, formula_name, notes")
+    .order("event_date", { ascending: false, nullsFirst: false })
+    .limit(300);
+  const quoteOptions: LinkableQuote[] = (quotesForLink ?? [])
+    .filter((q) => !(q.notes ?? "").includes("[[facture-libre]]"))
+    .map((q) => ({
+      id: q.id,
+      customerName: q.customer_name ?? "",
+      formulaName: q.formula_name ?? "",
+      totalCents: q.total_cents ?? 0,
+      label: [
+        q.customer_name || "Sans nom",
+        q.event_date
+          ? new Date(`${q.event_date}T12:00:00`).toLocaleDateString("fr-FR")
+          : null,
+        q.total_cents ? formatEuros(q.total_cents) : null,
+      ]
+        .filter(Boolean)
+        .join(" — "),
+    }));
+
   return (
     <main className="mx-auto max-w-4xl space-y-8 px-4 py-8">
       <p className="text-sm text-muted-foreground">
@@ -56,6 +84,8 @@ export default async function AdminFacturesPage() {
         method="post"
         className="space-y-6 rounded-xl border border-border p-6"
       >
+        {/* Liaison facultative à un devis + pré-remplissage du % du total. */}
+        <FreeInvoiceLinker quotes={quoteOptions} />
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <label htmlFor="customer_name" className="text-sm font-medium">
@@ -160,6 +190,7 @@ export default async function AdminFacturesPage() {
             <div key={index} className="grid grid-cols-[1fr_70px_110px] gap-2">
               <input
                 name="line_label"
+                id={index === 0 ? "line_label_0" : undefined}
                 placeholder={index === 0 ? "Ex. Prestation DJ — soirée d'entreprise" : ""}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
               />
@@ -173,6 +204,7 @@ export default async function AdminFacturesPage() {
               />
               <input
                 name="line_price"
+                id={index === 0 ? "line_price_0" : undefined}
                 inputMode="decimal"
                 placeholder="0,00"
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"

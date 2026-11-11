@@ -20,6 +20,7 @@ export type RdvRowLite = { id: string; proposed_at: string | null; availability:
 export function AdminQuoteLazyFolder({
   quoteId,
   formulaName,
+  customerName,
   adjustments,
   initialMessages,
   initialTracks,
@@ -28,6 +29,7 @@ export function AdminQuoteLazyFolder({
 }: {
   quoteId: string;
   formulaName: string;
+  customerName: string | null;
   adjustments: { label: string; amount_cents: number }[];
   initialMessages: { id: string; sender: string; body: string; created_at: string }[];
   initialTracks: TrackRow[];
@@ -88,6 +90,8 @@ export function AdminQuoteLazyFolder({
             quoteId={quoteId}
             files={files}
             adjustments={adjustments}
+            customerName={customerName}
+            formulaName={formulaName}
           />
           <AdminRdvRequests quoteId={quoteId} requests={rdvs} />
         </div>

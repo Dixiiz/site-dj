@@ -36,6 +36,9 @@ export async function buildFacturePdf(
     hideAcompte?: boolean;
     /** Lignes simples sans préfixe "Option :" (factures libres). */
     plainLines?: boolean;
+    /** Facture partielle : % facturé + montant total de la prestation
+        (rappel du total et du solde restant affichés sur le PDF). */
+    partial?: { percent: number; totalCents: number };
   }
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
@@ -204,6 +207,14 @@ export async function buildFacturePdf(
   page.drawRectangle({ x: bx, y: y - 9, width: 250, height: 30, color: C.anthracite });
   t("TOTAL TTC", bx + 12, y, 11.5, b, C.cyan);
   t(fmt(total), right(fmt(total), bx + 250 - 12, 11.5, b), y, 11.5, b, C.cyan);
+  // Facture partielle : rappel du montant total et du reste à régler, à
+  // gauche du bloc TOTAL (le bloc n'occupe que 250 px à droite de la page).
+  if (opts.partial && opts.partial.totalCents > 0) {
+    const grandTotal = opts.partial.totalCents / 100;
+    const solde = Math.max(0, grandTotal - total);
+    t(`Facture partielle : ${opts.partial.percent} % du total (${fmt(grandTotal)})`, M, y + 5, 8, r, C.gris);
+    t(`Reste à régler après cette facture : ${fmt(solde)}.`, M, y - 8, 8, b, C.bleu);
+  }
   y -= 34;
 
   if (!opts.hideAcompte) {

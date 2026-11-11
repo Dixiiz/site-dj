@@ -673,6 +673,7 @@ export default async function DevisPage({
                 <AdminQuoteLazyFolder
                   quoteId={quote.id}
                   formulaName={quote.formula_name}
+                  customerName={quote.customer_name}
                   adjustments={
                     Array.isArray(quote.invoice_adjustments)
                       ? (quote.invoice_adjustments as { label: string; amount_cents: number }[])

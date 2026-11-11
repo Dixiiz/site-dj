@@ -39,10 +39,14 @@ export function AdminQuoteDocuments({
   quoteId,
   files,
   adjustments,
+  customerName,
+  formulaName,
 }: {
   quoteId: string;
   files: FileRow[];
   adjustments: { label: string; amount_cents: number }[];
+  customerName?: string | null;
+  formulaName?: string | null;
 }) {
   const allFiles = files ?? [];
 
@@ -268,8 +272,44 @@ export function AdminQuoteDocuments({
               const r = await generateFactureDocument(fd);
               if (r?.ok) toast.success(r.message ?? "Facture PDF générée ✓");
               else toast.error(r?.error ?? "Génération impossible.");
-            }} className="mt-2">
+            }} className="mt-2 space-y-2">
           <input type="hidden" name="quote_id" value={quoteId} />
+          {/* Facture partielle : % du total + nom au choix (ex. une facture de
+              50 % au nom du client, puis 50 % au nom de sa société). */}
+          <div className="grid gap-2 sm:grid-cols-3">
+            <label className="text-xs text-muted-foreground">
+              Part du total (%)
+              <Input
+                type="number"
+                name="facture_pct"
+                min={1}
+                max={100}
+                placeholder="100"
+                className="mt-1 text-xs"
+              />
+            </label>
+            <label className="text-xs text-muted-foreground">
+              Nom sur la facture (facultatif)
+              <Input
+                name="facture_client_name"
+                placeholder={customerName ?? ""}
+                className="mt-1 text-xs"
+              />
+            </label>
+            <label className="text-xs text-muted-foreground">
+              Libellé de la ligne (facultatif)
+              <Input
+                name="facture_label"
+                placeholder={`Ex. Acompte de 50 % — ${formulaName || "prestation"}`}
+                className="mt-1 text-xs"
+              />
+            </label>
+          </div>
+          <p className="text-[11px] text-muted-foreground/70">
+            Vide = facture complète au nom du devis. Pour un paiement en deux
+            fois : générez une facture de 50 % au nom du client, puis une
+            seconde au nom de sa société (libellé « Solde de 50 %… »).
+          </p>
           <SubmitButton
             pendingLabel="Génération de la facture…"
             className="rounded-lg border border-green-500/50 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-400 transition-colors hover:border-green-400 hover:bg-green-400/25 hover:text-green-200"
