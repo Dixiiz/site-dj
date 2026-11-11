@@ -674,6 +674,8 @@ export default async function DevisPage({
                   quoteId={quote.id}
                   formulaName={quote.formula_name}
                   customerName={quote.customer_name}
+                  customerEmail={quote.customer_email}
+                  customerPhone={quote.customer_phone}
                   adjustments={
                     Array.isArray(quote.invoice_adjustments)
                       ? (quote.invoice_adjustments as { label: string; amount_cents: number }[])

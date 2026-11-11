@@ -5,7 +5,12 @@ import { PDFDocument, StandardFonts, rgb, PDFFont, PDFImage } from "pdf-lib";
 import type { DevisQuoteData } from "./devis-pdf";
 import { computeExtraHours, formatExtraHours } from "@/lib/booking-extra";
 
-export type FactureQuoteData = DevisQuoteData;
+export type FactureQuoteData = DevisQuoteData & {
+  /** Coordonnées client détaillées (niveau factures menuiserie). */
+  customer_address?: string | null;
+  customer_postal_code?: string | null;
+  customer_city?: string | null;
+};
 
 const C = {
   anthracite: rgb(0.18, 0.21, 0.24),
@@ -93,8 +98,23 @@ export async function buildFacturePdf(
   const y0 = y;
   t("À l'attention de", M + 10, y, 8, b, C.gris);
   t(quote.customer_name ?? "-", M + 10, y - 16, 10.5, b, C.texte);
+  // Adresse client (facultative) : même niveau de détail que les factures
+  // menuiserie. Sans adresse, rendu identique à l'ancien (contact à y - 32).
+  let clientY = y - 32;
+  if (quote.customer_address) {
+    t(quote.customer_address, M + 10, clientY, 9, r, C.texte);
+    clientY -= 13;
+  }
+  const cpVille = [quote.customer_postal_code, quote.customer_city].filter(Boolean).join(" ");
+  if (cpVille) {
+    t(cpVille, M + 10, clientY, 9, r, C.texte);
+    clientY -= 13;
+  }
   const contact = [quote.customer_email, quote.customer_phone].filter(Boolean).join("  · ");
-  t(contact || "-", M + 10, y - 32, 9, r, C.gris);
+  t(contact || "-", M + 10, clientY, 9, r, C.gris);
+  // Le bloc client gagne 13 px par ligne d'adresse : on élargit d'autant la
+  // fenêtre avant la section suivante pour éviter tout chevauchement.
+  const clientExtraLines = (quote.customer_address ? 1 : 0) + (cpVille ? 1 : 0);
   const info = (label: string, val: string) => {
     const vx = right(val, W - M, 9, r);
     t(label, right(label, vx - 8, 9, b), y, 9, b, C.bleu);
@@ -107,7 +127,7 @@ export async function buildFacturePdf(
     ? new Date(quote.event_date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : "-";
   info("Date de l'événement", dateEvt);
-  y = Math.min(y, y0 - 46) - 12;
+  y = Math.min(y, y0 - 46 - 13 * clientExtraLines) - 12;
 
   // ============ PRESTATION ============
   section("DÉTAILS DE LA PRESTATION");
@@ -207,14 +227,6 @@ export async function buildFacturePdf(
   page.drawRectangle({ x: bx, y: y - 9, width: 250, height: 30, color: C.anthracite });
   t("TOTAL TTC", bx + 12, y, 11.5, b, C.cyan);
   t(fmt(total), right(fmt(total), bx + 250 - 12, 11.5, b), y, 11.5, b, C.cyan);
-  // Facture partielle : rappel du montant total et du reste à régler, à
-  // gauche du bloc TOTAL (le bloc n'occupe que 250 px à droite de la page).
-  if (opts.partial && opts.partial.totalCents > 0) {
-    const grandTotal = opts.partial.totalCents / 100;
-    const solde = Math.max(0, grandTotal - total);
-    t(`Facture partielle : ${opts.partial.percent} % du total (${fmt(grandTotal)})`, M, y + 5, 8, r, C.gris);
-    t(`Reste à régler après cette facture : ${fmt(solde)}.`, M, y - 8, 8, b, C.bleu);
-  }
   y -= 34;
 
   if (!opts.hideAcompte) {

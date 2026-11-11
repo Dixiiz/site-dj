@@ -43,7 +43,9 @@ export default async function AdminFacturesPage() {
   // libre sont exclues (pas de vrai devis derrière).
   const { data: quotesForLink } = await supabase
     .from("quotes")
-    .select("id, customer_name, event_date, total_cents, formula_name, notes")
+    .select(
+      "id, customer_name, customer_email, customer_phone, event_date, total_cents, formula_name, notes"
+    )
     .order("event_date", { ascending: false, nullsFirst: false })
     .limit(300);
   const quoteOptions: LinkableQuote[] = (quotesForLink ?? [])
@@ -51,6 +53,8 @@ export default async function AdminFacturesPage() {
     .map((q) => ({
       id: q.id,
       customerName: q.customer_name ?? "",
+      customerEmail: q.customer_email ?? "",
+      customerPhone: q.customer_phone ?? "",
       formulaName: q.formula_name ?? "",
       totalCents: q.total_cents ?? 0,
       label: [
@@ -128,6 +132,40 @@ export default async function AdminFacturesPage() {
             <input
               id="customer_phone"
               name="customer_phone"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+            />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <label htmlFor="customer_address" className="text-sm font-medium">
+              Adresse du client
+            </label>
+            <input
+              id="customer_address"
+              name="customer_address"
+              placeholder="Ex. 12 rue des Lilas"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="customer_postal_code" className="text-sm font-medium">
+              Code postal
+            </label>
+            <input
+              id="customer_postal_code"
+              name="customer_postal_code"
+              inputMode="numeric"
+              placeholder="Ex. 41350"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="customer_city" className="text-sm font-medium">
+              Ville
+            </label>
+            <input
+              id="customer_city"
+              name="customer_city"
+              placeholder="Ex. Vineuil"
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
             />
           </div>

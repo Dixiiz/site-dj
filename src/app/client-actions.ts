@@ -2163,13 +2163,26 @@ async function genererFactureCore(formData: FormData) {
       .filter((f) => f.name.startsWith(`F-${year}-`)).length;
     const invoiceNumber = `F-${year}-${String(Math.max(storageCount, filesRes.count ?? 0) + 1).padStart(3, "0")}`;
 
-    // Facture partielle : % du total + nom du client au choix (ex. une facture
-    // de 50 % au nom du client, puis 50 % au nom de sa société).
+    // Facture partielle : % du total saisi par l'admin (le pourcentage
+    // n'apparaît JAMAIS sur le PDF, seul le montant facturé figure) + nom et
+    // coordonnées du client au choix (ex. une facture au nom du client, une
+    // autre au nom de sa société).
     const pctRaw = parseFloat(String(formData.get("facture_pct") ?? "").replace(",", "."));
     const percent = Number.isFinite(pctRaw) ? Math.min(100, Math.max(1, Math.round(pctRaw))) : 100;
     const isPartial = percent < 100;
     const displayName =
       String(formData.get("facture_client_name") ?? "").trim() || quote.customer_name;
+    // Coordonnées client détaillées sur la facture (niveau factures
+    // menuiserie) : adresse, CP, ville + e-mail/téléphone surchargeables.
+    const clientDetails = {
+      customer_address: String(formData.get("facture_client_adresse") ?? "").trim() || null,
+      customer_postal_code: String(formData.get("facture_client_cp") ?? "").trim() || null,
+      customer_city: String(formData.get("facture_client_ville") ?? "").trim() || null,
+      customer_email:
+        String(formData.get("facture_client_email") ?? "").trim() || quote.customer_email,
+      customer_phone:
+        String(formData.get("facture_client_phone") ?? "").trim() || quote.customer_phone,
+    };
 
     const adjustments = Array.isArray(quote.invoice_adjustments)
       ? (quote.invoice_adjustments as { label: string; amount_cents: number }[])
@@ -2177,22 +2190,23 @@ async function genererFactureCore(formData: FormData) {
 
     // Données du PDF : facture partielle → une seule ligne (libellé
     // personnalisable, montant = % du total) ; sinon le devis complet, avec
-    // le nom du client éventuellement surchargé.
+    // nom et coordonnées du client éventuellement surchargés.
     const partialCents = Math.round((quote.total_cents ?? 0) * (percent / 100));
     const partialLabel =
       String(formData.get("facture_label") ?? "").trim() ||
-      `Acompte de ${percent} % — ${quote.formula_name ?? "prestation"}`;
+      `Acompte — ${quote.formula_name ?? "prestation"}`;
     const pdfQuote = isPartial
       ? {
           ...quote,
           customer_name: displayName,
+          ...clientDetails,
           formula_price_cents: null,
           selected_options: [{ name: partialLabel, qty: 1, price_cents: partialCents }],
           travel_fee_cents: 0,
           extra_fee_cents: 0,
           total_cents: partialCents,
         }
-      : { ...quote, customer_name: displayName };
+      : { ...quote, customer_name: displayName, ...clientDetails };
 
     const { buildFacturePdf } = await import("@/lib/facture-pdf");
 
@@ -2210,7 +2224,6 @@ async function genererFactureCore(formData: FormData) {
               // Pas d'acompte pour ce devis ? Le total est directement à régler.
               hideAcompte: quote.acompte_required === false || isPartial,
               plainLines: isPartial,
-              partial: isPartial ? { percent, totalCents: quote.total_cents ?? 0 } : undefined,
             }),
           };
         } catch (e) {

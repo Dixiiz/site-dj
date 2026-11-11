@@ -40,12 +40,16 @@ export function AdminQuoteDocuments({
   files,
   adjustments,
   customerName,
+  customerEmail,
+  customerPhone,
   formulaName,
 }: {
   quoteId: string;
   files: FileRow[];
   adjustments: { label: string; amount_cents: number }[];
   customerName?: string | null;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
   formulaName?: string | null;
 }) {
   const allFiles = files ?? [];
@@ -274,8 +278,9 @@ export function AdminQuoteDocuments({
               else toast.error(r?.error ?? "Génération impossible.");
             }} className="mt-2 space-y-2">
           <input type="hidden" name="quote_id" value={quoteId} />
-          {/* Facture partielle : % du total + nom au choix (ex. une facture de
-              50 % au nom du client, puis 50 % au nom de sa société). */}
+          {/* Facture partielle : le % saisi ici n'apparaît JAMAIS sur le PDF.
+              Nom et coordonnées du client au choix (ex. une facture au nom du
+              client, l'autre au nom de sa société). */}
           <div className="grid gap-2 sm:grid-cols-3">
             <label className="text-xs text-muted-foreground">
               Part du total (%)
@@ -300,15 +305,69 @@ export function AdminQuoteDocuments({
               Libellé de la ligne (facultatif)
               <Input
                 name="facture_label"
-                placeholder={`Ex. Acompte de 50 % — ${formulaName || "prestation"}`}
+                placeholder={`Acompte — ${formulaName || "prestation"}`}
                 className="mt-1 text-xs"
               />
             </label>
           </div>
+          <details className="text-left">
+            <summary className="cursor-pointer text-xs text-muted-foreground hover:text-accent">
+              Coordonnées client sur la facture (adresse, e-mail, téléphone…)
+            </summary>
+            <div className="mt-2 space-y-2 rounded-lg border border-border p-3">
+              <label className="block text-xs text-muted-foreground">
+                Adresse
+                <Input
+                  name="facture_client_adresse"
+                  placeholder="12 rue des Lilas"
+                  className="mt-1 text-xs"
+                />
+              </label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="text-xs text-muted-foreground">
+                  Code postal
+                  <Input
+                    name="facture_client_cp"
+                    inputMode="numeric"
+                    placeholder="41350"
+                    className="mt-1 text-xs"
+                  />
+                </label>
+                <label className="text-xs text-muted-foreground">
+                  Ville
+                  <Input
+                    name="facture_client_ville"
+                    placeholder="Vineuil"
+                    className="mt-1 text-xs"
+                  />
+                </label>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="text-xs text-muted-foreground">
+                  E-mail (vide = celui du devis)
+                  <Input
+                    name="facture_client_email"
+                    type="email"
+                    placeholder={customerEmail ?? ""}
+                    className="mt-1 text-xs"
+                  />
+                </label>
+                <label className="text-xs text-muted-foreground">
+                  Téléphone (vide = celui du devis)
+                  <Input
+                    name="facture_client_phone"
+                    placeholder={customerPhone ?? ""}
+                    className="mt-1 text-xs"
+                  />
+                </label>
+              </div>
+            </div>
+          </details>
           <p className="text-[11px] text-muted-foreground/70">
-            Vide = facture complète au nom du devis. Pour un paiement en deux
-            fois : générez une facture de 50 % au nom du client, puis une
-            seconde au nom de sa société (libellé « Solde de 50 %… »).
+            Vide = facture complète aux coordonnées du devis. Le pourcentage
+            ne figure jamais sur le PDF. Pour un paiement en deux fois :
+            une facture au nom du client, puis une seconde au nom de sa société
+            (libellé « Solde »).
           </p>
           <SubmitButton
             pendingLabel="Génération de la facture…"

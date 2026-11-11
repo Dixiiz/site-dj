@@ -51,17 +51,15 @@ export async function POST(request: Request) {
   // Liaison facultative à un devis existant : la facture apparaît alors aussi
   // dans les documents du devis (et aucune soirée dupliquée n'est créée).
   const linkedQuoteId = str("linked_quote_id");
-  let linkedTotalCents = 0;
   if (linkedQuoteId) {
     const { data: linkedQuote } = await supabase
       .from("quotes")
-      .select("id, total_cents")
+      .select("id")
       .eq("id", linkedQuoteId)
       .single();
     if (!linkedQuote) {
       return new NextResponse("Devis lié introuvable.", { status: 400 });
     }
-    linkedTotalCents = linkedQuote.total_cents ?? 0;
   }
 
   const year = new Date().getFullYear();
@@ -84,6 +82,9 @@ export async function POST(request: Request) {
     customer_name,
     customer_email: str("customer_email") || null,
     customer_phone: str("customer_phone") || null,
+    customer_address: str("customer_address") || null,
+    customer_postal_code: str("customer_postal_code") || null,
+    customer_city: str("customer_city") || null,
     event_type: str("event_type") || null,
     event_date: str("event_date") || null,
     event_location: str("event_location") || null,
@@ -109,15 +110,6 @@ export async function POST(request: Request) {
       invoiceNumber,
       hideAcompte: true,
       plainLines: true,
-      // Facture partielle liée à un devis : si le total facturé est inférieur
-      // au total du devis, rappel du % facturé et du solde restant sur le PDF.
-      partial:
-        linkedTotalCents > 0 && total_cents > 0 && total_cents < linkedTotalCents
-          ? {
-              percent: Math.round((total_cents / linkedTotalCents) * 100),
-              totalCents: linkedTotalCents,
-            }
-          : undefined,
     });
 
     // Archivage dans le storage (historique + numérotation persistante).
