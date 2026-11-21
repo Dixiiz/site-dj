@@ -47,6 +47,9 @@ export function FreeInvoiceLinker({ quotes }: { quotes: LinkableQuote[] }) {
 
   return (
     <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/[0.04] p-4">
+      {/* Le devis choisi doit partir avec le formulaire : sans ce champ caché,
+          l'API créait une nouvelle soirée au lieu de lier la facture. */}
+      <input type="hidden" name="linked_quote_id" value={quoteId} />
       <p className="text-sm font-medium">Lier à un devis (facultatif)</p>
       <p className="mt-0.5 text-xs text-muted-foreground">
         La facture apparaîtra aussi dans les documents du devis concerné.
