@@ -18,6 +18,10 @@ const MARK_AVIS = "[[demande-avis:";
 const MARK_ACOMPTE = "[[relance-acompte:";
 const MARK_PLAYLIST_30 = "[[rappel-playlist-30:";
 
+// Statuts « vivants » : les seuls où une relance a du sens (les devis
+// confirmés / refusés / annulés n'attendent plus de décision du client).
+const ACTIVE_STATUSES = ["nouveau", "contacte", "attente_signature", "attente_acompte"];
+
 // Un devis importé (soirée d'avant le site) ne doit jamais recevoir
 // d'e-mail automatique : le client n'a pas de compte sur le site.
 function isImport(notes: string | null | undefined) {
@@ -493,5 +497,103 @@ export async function backupSignedDocuments(): Promise<{ copied: number }> {
     if (!error) copied++;
   }
   return { copied };
+}
+
+// ============================================================
+// 6. Relance manuelle « date non bloquée » (1 clic depuis l'admin)
+// ============================================================
+// Même famille que la relance J+10, mais déclenchée à la main depuis la
+// liste des devis : rappelle au client que la date qu'il vise n'est
+// réservée qu'à la signature (et à l'acompte). Si d'autres demandes
+// actives portent sur la même date, un argument d'urgence est ajouté.
+// Historique : marqueur [[relance-date:AAAA-MM-JJ]] en tête des notes
+// (le plus récent en premier), consultable depuis la fiche du devis.
+export async function sendRelanceDateLibre(quote: {
+  id: string;
+  customer_name: string | null;
+  customer_email: string | null;
+  event_date: string | null;
+  formula_name: string | null;
+  status: string | null;
+  notes: string | null;
+}): Promise<{ ok: true; autresDemandes: number } | { ok: false; error: string }> {
+  const supabase = createAdminClient();
+
+  if (!quote.customer_email) {
+    return { ok: false, error: "Aucune adresse e-mail sur ce devis." };
+  }
+  // Un devis importé n'a pas de compte client : pas d'e-mail automatique.
+  if (isImport(quote.notes)) {
+    return { ok: false, error: "Devis importé : le client n'a pas de compte sur le site." };
+  }
+  // Statuts « vivants » uniquement : inutile de relancer un devis confirmé,
+  // refusé ou annulé.
+  if (quote.status && !ACTIVE_STATUSES.includes(quote.status)) {
+    return { ok: false, error: `Devis « ${quote.status} » : relance inutile.` };
+  }
+  // Date passée : rien à relancer.
+  const todayIso = new Date().toLocaleDateString("fr-CA");
+  if (quote.event_date && quote.event_date < todayIso) {
+    return { ok: false, error: "La date de l'événement est passée." };
+  }
+
+  // Autres demandes actives sur la même date → argument d'urgence dans le mail.
+  let autresDemandes = 0;
+  if (quote.event_date) {
+    const { count } = await supabase
+      .from("quotes")
+      .select("id", { count: "exact", head: true })
+      .eq("event_date", quote.event_date)
+      .neq("id", quote.id)
+      .in("status", ACTIVE_STATUSES);
+    autresDemandes = count ?? 0;
+  }
+
+  const eventFr = quote.event_date
+    ? new Date(quote.event_date + "T12:00:00").toLocaleDateString("fr-FR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : null;
+
+  const ok = await sendEmail(
+    quote.customer_email,
+    "Votre devis Propul'Sound DJ — la date n'est pas encore bloquée",
+    {
+      title: "Votre date n'est pas encore bloquée",
+      intro: `Bonjour ${quote.customer_name ?? ""},<br/><br/>Petit point au sujet de votre devis${eventFr ? ` pour le <strong>${eventFr}</strong>` : ""} (${quote.formula_name ?? "prestation"}).<br/><br/>La date est encore disponible, mais elle <strong style="color:#C0392B;">n'est pas bloquée</strong> : elle ne le sera qu'à la <strong>signature du devis et du contrat</strong> (et au versement de l'acompte).`,
+      sections: [
+        {
+          title: "Concrètement",
+          lines: [
+            "Tant que les documents ne sont pas signés, la date <strong>peut partir à tout moment</strong> pour quelqu'un d'autre.",
+            ...(autresDemandes > 0
+              ? [
+                  "D'<strong>autres demandes sont en cours pour cette même date</strong> : je ne peux donc pas la garder de côté indéfiniment.",
+                ]
+              : []),
+            "Une hésitation, une question ? Répondez simplement à cet e-mail, on en parle ensemble.",
+          ],
+        },
+        stepsSection(quote.status ?? "contacte"),
+      ],
+      button: {
+        label: "Voir mon devis et bloquer la date",
+        href: `${SITE}/connexion?next=${encodeURIComponent(`/mon-espace/devis/${quote.id}`)}`,
+      },
+      footer: "Une question ? Répondez à cet e-mail, je vous réponds rapidement. — Maxime",
+    }
+  );
+  if (!ok) {
+    return { ok: false, error: "Échec de l'envoi (vérifie la configuration e-mail)." };
+  }
+
+  await supabase
+    .from("quotes")
+    .update({ notes: addMarker(quote.notes, "[[relance-date:") })
+    .eq("id", quote.id);
+  return { ok: true, autresDemandes };
 }
 

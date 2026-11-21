@@ -10,6 +10,7 @@ import { DevisFilterBar } from "@/components/devis-filter-bar";
 import { AdminQuoteLazyFolder } from "@/components/admin-quote-lazy-folder";
 import { AvisLibreForm } from "@/components/avis-libre-form";
 import { ScrollToFocus } from "@/components/scroll-to-focus";
+import { RelanceDateButton } from "@/components/relance-date-button";
 
 import { Badge } from "@/components/ui/badge";
 import { isFxOption } from "@/lib/fx-catalog";
@@ -37,6 +38,10 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   refuse: { label: "Refusé", className: "border-red-500/60 text-red-400" },
   annule: { label: "Annulé", className: "border-zinc-500/60 text-zinc-400" },
 };
+
+// Statuts « vivants » : seuls ceux-là reçoivent la pastille d'ancienneté
+// (15/20/30 j) et le bouton de relance « date non bloquée ».
+const ACTIVE_STATUSES = new Set(["nouveau", "contacte", "attente_signature", "attente_acompte"]);
 
 function optionShort(name: string, qty?: number): string {
   const n = name.toLowerCase();
@@ -258,6 +263,17 @@ export default async function DevisPage({
     return baseSorter(a, b);
   });
 
+  // Dates demandées par plusieurs clients en même temps (statuts actifs,
+  // date à venir) : pastille de conflit sur les devis concernés. Le calcul
+  // porte sur TOUS les devis (pas seulement la liste filtrée) pour ne rater
+  // aucun conflit.
+  const demandesParDate = new Map<string, number>();
+  for (const quote of quotes ?? []) {
+    if (!ACTIVE_STATUSES.has(quote.status) || !quote.event_date) continue;
+    if (quote.event_date < todayIso) continue;
+    demandesParDate.set(quote.event_date, (demandesParDate.get(quote.event_date) ?? 0) + 1);
+  }
+
   return (
     <div className="space-y-6">
       <AutoRefresh intervalMs={30000} />
@@ -404,6 +420,25 @@ export default async function DevisPage({
                 : (tracksByQuote.get(quote.id) ?? [])
                     .filter((t) => new Date(t.created_at).getTime() > seenAt)
                     .map((t) => t.id);
+            // Ancienneté / relance : devis « en attente » depuis 15, 20, 30
+            // jours ou plus (pastille colorée), conflit de date éventuel et
+            // dernière relance « date non bloquée » envoyée (notes).
+            const isActive = ACTIVE_STATUSES.has(quote.status);
+            // Âge en jours calendaires (création → aujourd'hui) : calcul pur
+            // (Date.parse de chaînes fixes), compatible avec le lint React.
+            const createdDay = String(quote.created_at ?? "").slice(0, 10);
+            const ageDays = createdDay
+              ? Math.round(
+                  (Date.parse(todayIso + "T12:00:00") - Date.parse(createdDay + "T12:00:00")) /
+                    86_400_000
+                )
+              : 0;
+            const dateFuture = Boolean(quote.event_date && quote.event_date >= todayIso);
+            const autresMemeDate =
+              quote.event_date && dateFuture ? (demandesParDate.get(quote.event_date) ?? 0) - 1 : 0;
+            const lastRelance =
+              /\[\[relance-date:(\d{4}-\d{2}-\d{2})\]\]/.exec(String(quote.notes ?? ""))?.[1] ??
+              null;
             const allLines = (quote.selected_options ?? []) as SelectedOption[];
             const options = allLines.filter((o) => isFxOption(o.name));
             const supplements = allLines.filter((o) => !isFxOption(o.name));
@@ -485,6 +520,32 @@ export default async function DevisPage({
                         {supplements.length} supplément{supplements.length > 1 ? "s" : ""}
                       </Badge>
                     ) : null}
+                    {/* Ancienneté : devis en attente depuis 15/20/30 jours ou plus */}
+                    {isActive && ageDays >= 15 ? (
+                      <Badge
+                        variant="outline"
+                        title={`Devis créé il y a ${ageDays} jours`}
+                        className={
+                          ageDays >= 30
+                            ? "border-red-500/60 text-red-400"
+                            : ageDays >= 20
+                              ? "border-orange-500/60 text-orange-400"
+                              : "border-yellow-500/60 text-yellow-400"
+                        }
+                      >
+                        ⏳ {ageDays} j
+                      </Badge>
+                    ) : null}
+                    {/* Conflit : d'autres demandes actives portent sur cette date */}
+                    {autresMemeDate > 0 ? (
+                      <Badge
+                        variant="outline"
+                        title="D'autres clients demandent cette même date"
+                        className="border-orange-500/60 text-orange-400"
+                      >
+                        ⚠ {autresMemeDate + 1} demandes sur cette date
+                      </Badge>
+                    ) : null}
                   </div>
                   {/* Total + statut : bloc séparé avec ml-auto, capable de passer
                       en dessous sur mobile (les longs libellés type « Acompte
@@ -507,6 +568,21 @@ export default async function DevisPage({
                       <Badge variant="outline" className="border-zinc-500/60 text-zinc-400">
                         {factureEnvoyee(quote) ? "Facture envoyée" : "Soirée passée"}
                       </Badge>
+                    ) : null}
+                    {/* Historique de relance « date non bloquée » */}
+                    {lastRelance ? (
+                      <Badge
+                        variant="outline"
+                        title="Dernier rappel « date non bloquée » envoyé au client"
+                        className="border-zinc-500/60 text-zinc-400"
+                      >
+                        Relancé le{" "}
+                        {new Date(lastRelance + "T12:00:00").toLocaleDateString("fr-FR")}
+                      </Badge>
+                    ) : null}
+                    {/* Relance 1 clic : e-mail « la date n'est pas bloquée » */}
+                    {isActive && dateFuture && quote.customer_email ? (
+                      <RelanceDateButton quoteId={quote.id} lastRelance={lastRelance} />
                     ) : null}
                   </div>
                   {/* Pastille nouveautés client (message, musique, modification) */}

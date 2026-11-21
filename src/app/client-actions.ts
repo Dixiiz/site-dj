@@ -1598,6 +1598,26 @@ export async function sendAvisLibreEmail(formData: FormData) {
   return { ok: true as const, message: `Demande d'avis envoyée à ${email} ✓` };
 }
 
+// Relance manuelle (1 clic depuis la liste des devis) : rappel au client
+// que sa date n'est pas bloquée. Retour structuré pour le bouton client.
+export async function relanceDateLibre(
+  quoteId: string
+): Promise<{ ok: true; autresDemandes: number } | { ok: false; error: string }> {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false, error: "Accès refusé." };
+  const supabase = createAdminClient();
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("id, customer_name, customer_email, event_date, formula_name, status, notes")
+    .eq("id", quoteId)
+    .maybeSingle();
+  if (!quote) return { ok: false, error: "Devis introuvable." };
+  const { sendRelanceDateLibre } = await import("@/lib/email-jobs");
+  const res = await sendRelanceDateLibre(quote);
+  if (res.ok) revalidatePath("/admin/devis");
+  return res;
+}
+
 // L'admin a pris connaissance des nouveautés du devis.
 export async function markQuoteSeen(formData: FormData) {
   const { isAdmin } = await import("@/lib/admin-auth");
