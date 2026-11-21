@@ -14,6 +14,7 @@ import { ADMIN_PACK_LIST } from "@/lib/packs";
 import { formatEuros } from "@/lib/money";
 import { acompteCents } from "@/lib/installments";
 import { factureDeclareeDe, facturePayeDe } from "@/lib/urssaf-logic";
+import { nextInvoiceNumber } from "@/lib/facture-numero";
 import { findUpsell } from "@/lib/upsell";
 
 // ---------- Recherche du compte client (cache) ----------
@@ -2248,19 +2249,9 @@ async function genererFactureCore(formData: FormData) {
     if (!quote) return { ok: false as const, error: "Devis introuvable." };
 
     // Numéro de facture : séquence annuelle (F-2026-001, F-2026-002…),
-    // partagée avec les factures libres : max entre les factures référencées
-    // en base et celles archivées dans le storage (aucun doublon de numéro).
+    // partagée avec les factures libres — sans collision (max utilisé + 1).
     const year = new Date().getFullYear();
-    const [filesRes, storedFreeRes] = await Promise.all([
-      supabase
-        .from("quote_files")
-        .select("id", { count: "exact", head: true })
-        .like("name", `Facture F-${year}-%.pdf`),
-      supabase.storage.from("client-files").list("admin/factures-libres", { limit: 1000 }),
-    ]);
-    const storageCount = (storedFreeRes.data ?? [])
-      .filter((f) => f.name.startsWith(`F-${year}-`)).length;
-    const invoiceNumber = `F-${year}-${String(Math.max(storageCount, filesRes.count ?? 0) + 1).padStart(3, "0")}`;
+    const invoiceNumber = await nextInvoiceNumber(supabase, year);
 
     // Facture partielle : % du total saisi par l'admin (le pourcentage
     // n'apparaît JAMAIS sur le PDF, seul le montant facturé figure) + nom et

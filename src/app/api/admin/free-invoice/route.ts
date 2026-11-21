@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { isAdmin } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { nextInvoiceNumber } from "@/lib/facture-numero";
 
 const STORAGE_FOLDER = "admin/factures-libres";
 
@@ -68,17 +69,9 @@ export async function POST(request: Request) {
 
   const year = new Date().getFullYear();
 
-  // Numérotation partagée avec les factures de devis (F-2026-001, F-2026-002…).
-  const { data: stored } = await supabase.storage
-    .from("client-files")
-    .list(STORAGE_FOLDER, { limit: 1000 });
-  const storageCount = (stored ?? []).filter((f) => f.name.startsWith(`F-${year}-`)).length;
-  const { count: quoteCount } = await supabase
-    .from("quote_files")
-    .select("id", { count: "exact", head: true })
-    .like("name", `Facture F-${year}-%.pdf`);
-  const sequence = Math.max(storageCount, quoteCount ?? 0) + 1;
-  const invoiceNumber = `F-${year}-${String(sequence).padStart(3, "0")}`;
+  // Numérotation partagée avec les factures de devis (F-2026-001, F-2026-002…)
+  // — sans collision : plus grand numéro réellement utilisé + 1.
+  const invoiceNumber = await nextInvoiceNumber(supabase, year);
 
   // Structure attendue par buildFacturePdf : toutes les lignes en
   // "options" pour préserver quantité (décimale) × taux de chaque ligne.
