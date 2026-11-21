@@ -24,6 +24,23 @@ export function CustomRequestForm() {
   return (
     <FadeIn>
       <form action={onSubmit} className="grid gap-6">
+        {/* Honeypot anti-bot : champ invisible (hors écran, inaccessible au
+            clavier). Un humain ne le remplit jamais — si le serveur le
+            reçoit rempli, la demande est un spam et est ignorée en imitant
+            un succès (le robot ne sait pas qu'il a été filtré). */}
+        <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
+          <label htmlFor="website">Site web</label>
+          <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+        </div>
+        {/* Anti-bot : horodatage du chargement (posé au montage via ref, sans
+            état — le serveur refuse les soumissions instantanées). */}
+        <input
+          type="hidden"
+          name="form_loaded_at"
+          ref={(el) => {
+            if (el && !el.value) el.value = String(Date.now());
+          }}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="customer_name">Nom complet</Label>

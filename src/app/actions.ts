@@ -658,6 +658,23 @@ export async function submitCustomRequest(formData: FormData) {
   const event_location = String(formData.get("event_location") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
 
+  // ---- Anti-bot (silencieux : le robot est redirigé vers la page de
+  // remerciement comme si tout s'était bien passé) ----
+  // 1. Honeypot : champ invisible hors écran que seuls les robots remplissent.
+  // 2. Délai : un humain met au moins quelques secondes à remplir le
+  //    formulaire ; une soumission instantanée est un robot.
+  const honeypot = String(formData.get("website") ?? "").trim();
+  const loadedAt = Number(formData.get("form_loaded_at") ?? 0);
+  // Délai < 3 s ET horloge cohérente (loadedAt dans le passé) : en dessous,
+  // c'est un robot. Si l'horloge du visiteur est décalée (loadedAt futur),
+  // on laisse passer — mieux vaut un spam de plus qu'un vrai client perdu.
+  const suspect =
+    honeypot.length > 0 ||
+    (loadedAt > 0 && Date.now() >= loadedAt && Date.now() - loadedAt < 3000);
+  if (suspect) {
+    redirect(`/merci?nom=${encodeURIComponent(customer_name)}`);
+  }
+
   if (!customer_name || !customer_email || !event_location) {
     return {
       ok: false as const,
