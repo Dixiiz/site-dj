@@ -32,6 +32,11 @@ export type DetailRow = {
   soldeDeclareLe?: string | null;
   /** Exclure la ligne du total affiché en bas du panneau (déjà compté ailleurs). */
   horsTotal?: boolean;
+  /** Encaissement DÉJÀ compté dans le CA URSSAF : jamais de bouton
+      « Valider le solde » ici (double comptage sinon). */
+  encaisse?: boolean;
+  /** Ligne non-DJ (facture Menuiserie…) : aucune action de devis. */
+  lectureSeule?: boolean;
 };
 
 const isManaged = (notes: string) =>
@@ -224,6 +229,7 @@ export function CaDetailPanel({
                   </div>
                   {solde &&
                   (row.type === undefined || row.type === "solde") &&
+                  !row.encaisse &&
                   row.soldeDeclareLe &&
                   !row.soldeEnLigneLe ? (
                     <ConfirmSoldeButton
@@ -233,6 +239,7 @@ export function CaDetailPanel({
                     />
                   ) : solde &&
                     (row.type === undefined || row.type === "solde") &&
+                    !row.encaisse &&
                     !soldeValide(row.notes) &&
                     !row.soldeEnLigneLe ? (
                     <ValidateSoldeButton
@@ -241,14 +248,14 @@ export function CaDetailPanel({
                       validated={false}
                     />
                   ) : null}
-                  {solde && (row.type === undefined || row.type === "solde") ? (
+                  {solde && (row.type === undefined || row.type === "solde") && !row.lectureSeule ? (
                     <ReviewReceivedButton
                       id={row.id}
                       customerName={row.customerName}
                       validated={row.notes.includes("[[avis-ok]]")}
                     />
                   ) : null}
-                  {managed ? (
+                  {row.lectureSeule ? null : managed ? (
                     <ManagedQuoteRow
                       id={row.id}
                       customerName={row.customerName}

@@ -17,6 +17,8 @@ import { DashboardDetail } from "@/components/dashboard-detail";
 import { ValidateEcheanceButton } from "@/components/validate-echeance-button";
 import { ValidateAcompteButton } from "@/components/validate-acompte-button";
 import { ConfirmSoldeButton } from "@/components/confirm-solde-button";
+import { ValidateSoldeButton } from "@/components/validate-solde-button";
+import { ReviewReceivedButton } from "@/components/review-received-button";
 import { BackfillStripeButton } from "@/components/backfill-stripe-button";
 import { SupprimerAcompteButton } from "@/components/supprimer-acompte-button";
 import { AdminStats } from "@/components/admin-stats";
@@ -359,6 +361,9 @@ export default async function AdminDashboard({
     totalCents: f.total_cents,
     notes: "",
     status: f.statut,
+    // Facture Menuiserie : aucun bouton de devis (validation, édition,
+    // suppression) sur ces lignes — tout se gère dans le module Menuiserie.
+    lectureSeule: true,
   });
 
   // ---- Statistiques : CA URSSAF par mois + entonnoir de conversion ----
@@ -423,6 +428,7 @@ export default async function AdminDashboard({
   // panneau détail — mêmes règles que le dashboard CA URSSAF.
   const rowDepuisRecu = (r: (typeof encaissements)[number]) => {
     const estSoldeEnLigne = r.id.startsWith("dj-solde-enligne-");
+    const menuiserie = r.activite === "menuiserie";
     return {
       id: r.id,
       customerName: r.client,
@@ -438,6 +444,12 @@ export default async function AdminDashboard({
           ? undefined
           : (r.typePaiement as "acompte" | "solde" | "echeance"),
       soldeEnLigneLe: estSoldeEnLigne ? r.dateEncaissement : null,
+      // Lignes du CA = encaissements DÉJÀ comptés : jamais de bouton
+      // « Valider le solde » ici (il appartient au panneau des soldes à
+      // valider — sinon double comptage).
+      encaisse: true,
+      // Factures Menuiserie : aucune action de devis sur ces lignes.
+      lectureSeule: menuiserie,
     };
   };
 
@@ -487,19 +499,6 @@ export default async function AdminDashboard({
       rows: encaissementsMois
         .filter((r) => avecMenu || r.activite === "dj")
         .map(rowDepuisRecu),
-      solde: true,
-    },
-    solde: {
-      titre: "Soldes à valider — soirées terminées, solde non confirmé",
-      rows: soldesAEncaisser.map((q) => ({
-        ...mapDetailRow(q),
-        afficheCents: soldeDe(q),
-        soldeEnLigneLe: soldeEnLigneDe(q),
-        soldeSurPlaceMode: soldeSurPlaceDe(q),
-        soldeDeclareLe: soldeDeclareDe(q),
-        // Déjà compté automatiquement (réglé en ligne) : hors total du panneau.
-        horsTotal: Boolean(soldeEnLigneDe(q)),
-      })),
       solde: true,
     },
     "ca-avenir": {
@@ -656,13 +655,71 @@ export default async function AdminDashboard({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="flex items-center gap-2 font-medium">
                 <Receipt className="size-4 text-accent" aria-hidden />
-                Paiements reçus à confirmer
+                Soldes & paiements à valider
               </h2>
               <div className="flex items-center gap-3">
                 <BackfillStripeButton />
                 <span className="text-xs text-muted-foreground">Cliquez à nouveau sur la carte pour fermer</span>
               </div>
             </div>
+
+            {/* Soldes à valider : soirées terminées dont le solde n'est pas
+                encore confirmé (espèces, chèque, virement reçu…). Une fois
+                validé, le montant compte dans le CA URSSAF du mois. */}
+            {soldesAEncaisser.length > 0 ? (
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Soldes à valider — soirées terminées
+                  </p>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Total : {eur(soldeAValiderToutes)}
+                  </span>
+                </div>
+                <ul className="mt-2 divide-y divide-border rounded-lg border border-border">
+                  {soldesAEncaisser.map((q) => (
+                    <li key={q.id} className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm">
+                      <div className="min-w-0">
+                        <Link
+                          href={`/admin/devis?focus=${q.id}`}
+                          className="font-medium transition-colors hover:text-accent hover:underline"
+                          title="Ouvrir ce devis dans la liste"
+                        >
+                          {q.customer_name}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">
+                          {q.formula_name ?? ""} · soirée le{" "}
+                          {q.event_date ? new Date(`${q.event_date}T12:00:00`).toLocaleDateString("fr-FR") : "?"}
+                          {soldeSurPlaceDe(q)
+                            ? ` · à encaisser sur place (${
+                                soldeSurPlaceDe(q) === "especes"
+                                  ? "espèces"
+                                  : soldeSurPlaceDe(q) === "cheque"
+                                    ? "chèque"
+                                    : "virement"
+                              })`
+                            : ""}
+                          {soldeDeclareDe(q) ? " · virement déclaré par le client" : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium">{eur(soldeDe(q))}</span>
+                        {soldeDeclareDe(q) ? (
+                          <ConfirmSoldeButton id={q.id} customerName={q.customer_name ?? ""} confirmed={false} />
+                        ) : (
+                          <ValidateSoldeButton id={q.id} customerName={q.customer_name ?? ""} validated={false} />
+                        )}
+                        <ReviewReceivedButton
+                          id={q.id}
+                          customerName={q.customer_name ?? ""}
+                          validated={String(q.notes ?? "").includes("[[avis-ok]]")}
+                        />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
 
             {/* Acomptes reçus (hors échéancier) : valider pour compter dans
                 le CA URSSAF du mois de leur réception. */}
@@ -783,7 +840,10 @@ export default async function AdminDashboard({
                 Échéanciers — paiements reçus
               </p>
             </div>
-            {echeancesAConfirmer.length === 0 && acomptesAValider.length === 0 ? (
+            {soldesAEncaisser.length === 0 &&
+            soldesDeclaresAConfirmer.length === 0 &&
+            echeancesAConfirmer.length === 0 &&
+            acomptesAValider.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Aucun paiement en attente de confirmation ✓
               </p>
