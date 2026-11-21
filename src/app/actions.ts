@@ -11,7 +11,7 @@ import { estimateTravelFromAddress } from "@/lib/travel";
 import { EXTRA_HOUR_RATE_CENTS } from "@/lib/booking-rules";
 import { ADMIN_FX_OPTIONS } from "@/lib/fx-catalog";
 import { formatEuros } from "@/lib/money";
-import { facturePayeDe, facturesDe } from "@/lib/urssaf-logic";
+import { factureDeclareeDe, facturePayeDe, facturesDe } from "@/lib/urssaf-logic";
 import { SITE_URL } from "@/lib/site-url";
 import { EMAIL_FROM } from "@/lib/emails";
 
@@ -1654,12 +1654,13 @@ export async function validerFactureUrssaf(formData: FormData) {
   const supabase = createAdminClient();
   const { data: quote } = await supabase
     .from("quotes")
-    .select("id, notes, customer_name")
+    .select("id, notes, customer_name, status")
     .eq("id", quoteId)
     .maybeSingle();
   if (!quote) return { ok: false as const, error: "Soirée introuvable." };
 
   let notes = String(quote.notes ?? "");
+  let newStatus: string | null = null;
   if (annuler) {
     notes = notes.replace(
       new RegExp(`\\n?\\[\\[facture-paye:${numero}:\\d{4}-\\d{2}-\\d{2}\\]\\]`, "g"),
@@ -1683,9 +1684,35 @@ export async function validerFactureUrssaf(formData: FormData) {
     }
     const today = new Date().toLocaleDateString("fr-CA");
     notes = `${notes}${notes ? "\n" : ""}[[facture-paye:${numero}:${today}]]`;
+
+    // Paiement reçu sur un devis pas encore confirmé (ex. acompte facturé
+    // sur un devis « attente d'acompte ») : le devis passe « confirmé » et
+    // l'acompte réellement reçu est mémorisé ([[acompte:montant]] +
+    // [[acompte-valide]]) — le CA compte l'acompte au montant de la
+    // facture, et la facture elle-même est dédoublonnée par
+    // calculerEncaissementsUrssaf (même montant = même encaissement).
+    if (quote.status === "attente_acompte" && montant > 0 && !/\[\[acompte:\d+\]\]/.test(notes)) {
+      notes = `${notes}\n[[acompte:${montant}]]`;
+      newStatus = "confirme";
+    }
   }
 
-  const { error } = await supabase.from("quotes").update({ notes }).eq("id", quoteId);
+  const { error } = await supabase
+    .from("quotes")
+    .update(
+      newStatus
+        ? {
+            notes,
+            status: newStatus,
+            // Date d'encaissement : la déclaration du client si présente,
+            // sinon aujourd'hui — le CA URSSAF est attribué à ce mois.
+            acompte_paid_at: new Date(
+              `${factureDeclareeDe(notes, numero) ?? new Date().toLocaleDateString("fr-CA")}T12:00:00`,
+            ).toISOString(),
+          }
+        : { notes },
+    )
+    .eq("id", quoteId);
   if (error) {
     console.error("Validation facture impossible", error);
     return { ok: false as const, error: "Opération impossible." };

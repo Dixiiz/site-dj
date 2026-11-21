@@ -222,6 +222,16 @@ export function calculerEncaissementsUrssaf(input: {
     for (const f of facturesDe(notesToutes)) {
       const payeLe = facturePayeDe(notesToutes, f.numero);
       if (!payeLe || f.montantCents <= 0) continue;
+      // Dédoublonnage : une facture dont le montant correspond à l'acompte
+      // déjà encaissé (acompte_paid_at) ou au solde déjà validé
+      // ([[solde-valide]]) est le MÊME encaissement, déjà compté par son
+      // propre reçu — ne jamais compter deux fois le même argent.
+      if (q.acompte_paid_at && f.montantCents === acompteNetDe(q)) continue;
+      if (
+        /\[\[solde-valide:\d{4}-\d{2}-\d{2}\]\]/.test(notesToutes) &&
+        f.montantCents === soldeDe(q)
+      )
+        continue;
       const moisAutoF = moisDe(payeLe);
       const overrideF = urssafOverride(notesToutes, `dj-facture-${f.numero}`);
       receipts.push({

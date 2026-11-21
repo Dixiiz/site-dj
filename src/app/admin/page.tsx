@@ -56,7 +56,7 @@ export default async function AdminDashboard({
 
   // Tous les devis confirmés, triés par date d'événement.
   // (Requêtes en parallèle pour un chargement rapide du tableau de bord.)
-  const [confirmedRes, devisAttenteRes, devisRecentsRes, facturesRes, echeanciersRes, allQuotesRes, menuiserieRes] = await Promise.all([
+  const [confirmedRes, devisAttenteRes, devisRecentsRes, facturesRes, echeanciersRes, allQuotesRes, menuiserieRes, facturePayeesRes] = await Promise.all([
     supabase
       .from("quotes")
       .select("id, customer_name, formula_name, total_cents, event_date, event_location, status, created_at, notes, acompte_paid_at, acompte_required")
@@ -84,6 +84,13 @@ export default async function AdminDashboard({
       .from("menuiserie_docs")
       .select("id, numero, client_nom, type, total_cents, statut, date_edition, urssaf_declare, urssaf_mois, facture_lien")
       .order("date_edition", { ascending: false }),
+    // Devis (tous statuts) avec une facture validée « payée » : leur facture
+    // compte dans le CA URSSAF même si le devis n'est pas « confirmé »
+    // (ex. acompte facturé sur un devis encore « attente d'acompte »).
+    supabase
+      .from("quotes")
+      .select("id, customer_name, formula_name, total_cents, event_date, event_location, status, created_at, notes, acompte_paid_at, acompte_required")
+      .like("notes", "%[[facture-paye:%"),
   ]);
   const confirmed = confirmedRes.data;
   const devisAttente = devisAttenteRes.count ?? 0;
@@ -146,6 +153,15 @@ export default async function AdminDashboard({
   };
 
   const allConfirmed = confirmed ?? [];
+  // Pour le CA URSSAF : on ajoute les devis non confirmés dont une facture
+  // a été validée « payée » (l'argent est encaissé quel que soit le statut).
+  const confirmedIds = new Set(allConfirmed.map((q) => q.id));
+  const quotesPourCa = [
+    ...allConfirmed,
+    ...((facturePayeesRes.data ?? []) as (typeof allConfirmed)[number][]).filter(
+      (q) => !confirmedIds.has(q.id)
+    ),
+  ];
   const upcoming = allConfirmed.filter((q) => (q.event_date ?? "") >= todayIso);
 
   // ---- Menuiserie (services » DJ) : documents facturation ----
@@ -243,7 +259,7 @@ export default async function AdminDashboard({
   // avec application des rattachements manuels éventuels.
   // ============================================================
   const encaissements = calculerEncaissementsUrssaf({
-    quotes: allConfirmed,
+    quotes: quotesPourCa,
     echeances: (echeanciersRes.data ?? []) as EcheanceLike[],
     menuiserieDocs: menuDocs,
   });
