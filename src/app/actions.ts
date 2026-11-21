@@ -719,6 +719,20 @@ export async function markCustomRequestTreated(formData: FormData) {
   revalidatePath("/admin/devis");
 }
 
+// Supprime une demande sur-mesure (spam, doublon, demande test…).
+export async function deleteCustomRequest(formData: FormData) {
+  if (!(await isAdmin())) return;
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return;
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("custom_requests").delete().eq("id", id);
+  if (error) {
+    console.error("[custom] Suppression impossible:", error);
+    return;
+  }
+  revalidatePath("/admin/devis");
+}
+
 export async function loginAdmin(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   if (!process.env.ADMIN_PASSWORD) {
@@ -1062,7 +1076,9 @@ export async function deleteQuote(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const supabase = createAdminClient();
-  await supabase.from("quote_options").delete().eq("quote_id", id);
+  // Les tables liées (messages, fichiers, playlist, échéancier, RDV…) sont
+  // supprimées en cascade par la base ; quote_options (ancienne table) a
+  // disparu au profit du JSONB selected_options sur la ligne du devis.
   await supabase.from("quotes").delete().eq("id", id);
   revalidatePath("/admin/devis");
   revalidatePath("/admin/planning");

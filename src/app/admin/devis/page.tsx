@@ -1,4 +1,4 @@
-import { deleteQuote, markCustomRequestTreated } from "@/app/actions";
+import { deleteQuote, markCustomRequestTreated, deleteCustomRequest } from "@/app/actions";
 import { markQuoteSeen, resolveQuoteOptions, resolveQuoteDetails, notifyDevisReady } from "@/app/client-actions";
 import { QuickStatusForm } from "@/components/quick-status-form";
 import { confirmAcompteReceived } from "@/app/client-actions";
@@ -374,17 +374,30 @@ export default async function DevisPage({
                       <em>{req.notes}</em>
                     </p>
                   ) : null}
-                  {isNouveau ? (
-                    <form action={markCustomRequestTreated} className="pt-2">
+                  {/* Actions : traiter (si nouveau) + supprimer (spam, test…) */}
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {isNouveau ? (
+                      <form action={markCustomRequestTreated}>
+                        <input type="hidden" name="id" value={req.id} />
+                        <SubmitButton
+                          pendingLabel="Enregistrement…"
+                          className="rounded-lg border border-green-500/50 px-3 py-1.5 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/10"
+                        >
+                          ✓ Marquer comme traité
+                        </SubmitButton>
+                      </form>
+                    ) : null}
+                    <form action={deleteCustomRequest}>
                       <input type="hidden" name="id" value={req.id} />
                       <SubmitButton
-                        pendingLabel="Enregistrement…"
-                        className="rounded-lg border border-green-500/50 px-3 py-1.5 text-xs font-medium text-green-400 transition-colors hover:bg-green-500/10"
+                        pendingLabel="Suppression…"
+                        confirm={`Supprimer définitivement la demande de ${req.customer_name} ?`}
+                        className="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs text-red-400 transition-colors hover:bg-red-500/10"
                       >
-                        ✓ Marquer comme traité
+                        Supprimer
                       </SubmitButton>
                     </form>
-                  ) : null}
+                  </div>
                 </div>
               </details>
             );
