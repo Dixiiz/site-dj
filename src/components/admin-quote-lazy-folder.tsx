@@ -5,6 +5,7 @@ import { AdminQuotePlaylist, eventMoments } from "@/components/admin-quote-playl
 import { AdminRdvRequests } from "@/components/rdv-call";
 import { AdminQuoteDocuments } from "@/components/admin-quote-documents";
 import { AdminQuoteConversation } from "@/components/admin-quote-conversation";
+import { AdminCallReports, type CallReportRow } from "@/components/admin-call-reports";
 import { markQuoteSeen } from "@/app/client-actions";
 import type { FacturePaiementInfo } from "@/components/facture-paiement-buttons";
 
@@ -31,6 +32,7 @@ export function AdminQuoteLazyFolder({
   initialTracks,
   initialFiles,
   initialRdvs,
+  initialReports,
   hasUnread,
   newMessageIds,
   newTrackIds,
@@ -47,6 +49,8 @@ export function AdminQuoteLazyFolder({
   initialTracks: TrackRow[];
   initialFiles: FileRowLite[];
   initialRdvs: RdvRowLite[];
+  /** Comptes rendus d'appel téléphonique (tous, même non publiés). */
+  initialReports: CallReportRow[];
   /** Pastille « nouveautés » active : l'ouverture met la nouveauté en évidence. */
   hasUnread: boolean;
   /** Messages / musiques créés depuis la dernière consultation admin. */
@@ -155,6 +159,9 @@ export function AdminQuoteLazyFolder({
             factures={factures}
           />
           <AdminRdvRequests quoteId={quoteId} requests={rdvs} />
+          {/* Comptes rendus d'appel : récit + décisions + prochaines étapes,
+              publiables dans l'espace client et repris sur la fiche soirée. */}
+          <AdminCallReports quoteId={quoteId} reports={initialReports} />
         </div>
       ) : null}
     </div>

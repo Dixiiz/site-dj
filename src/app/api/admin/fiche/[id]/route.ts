@@ -13,19 +13,26 @@ export async function GET(
   const { id } = await params;
   const supabase = createAdminClient();
 
-  const [{ data: quote }, { data: tracks }, { data: messages }] = await Promise.all([
-    supabase.from("quotes").select("*").eq("id", id).single(),
-    supabase
-      .from("playlist_tracks")
-      .select("moment, title, artist, kind")
-      .eq("quote_id", id)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("quote_messages")
-      .select("sender, body, created_at")
-      .eq("quote_id", id)
-      .order("created_at", { ascending: true }),
-  ]);
+  const [{ data: quote }, { data: tracks }, { data: messages }, { data: reports }] =
+    await Promise.all([
+      supabase.from("quotes").select("*").eq("id", id).single(),
+      supabase
+        .from("playlist_tracks")
+        .select("moment, title, artist, kind")
+        .eq("quote_id", id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("quote_messages")
+        .select("sender, body, created_at")
+        .eq("quote_id", id)
+        .order("created_at", { ascending: true }),
+      // Comptes rendus d'appel (tous, y compris non publiés : fiche interne).
+      supabase
+        .from("call_reports")
+        .select("called_at, contact, summary, key_points, next_steps")
+        .eq("quote_id", id)
+        .order("called_at", { ascending: true }),
+    ]);
 
   if (!quote) return new NextResponse("Devis introuvable", { status: 404 });
 
@@ -50,6 +57,13 @@ export async function GET(
     }[],
     tracks: (tracks ?? []) as { moment: string; title: string; artist: string | null; kind: string }[],
     messages: (messages ?? []) as { sender: string; body: string; created_at: string }[],
+    callReports: (reports ?? []) as {
+      called_at: string;
+      contact: string | null;
+      summary: string;
+      key_points: string[] | null;
+      next_steps: string[] | null;
+    }[],
   });
 
   const datePart = quote.event_date

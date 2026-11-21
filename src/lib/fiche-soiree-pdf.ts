@@ -18,6 +18,15 @@ export type FicheMessage = {
   created_at: string;
 };
 
+// Compte rendu d'appel téléphonique (mis au propre par l'admin).
+export type FicheCallReport = {
+  called_at: string;
+  contact?: string | null;
+  summary: string;
+  key_points?: string[] | null;
+  next_steps?: string[] | null;
+};
+
 export type FicheOption = {
   name: string;
   qty?: number | null;
@@ -43,6 +52,7 @@ export type FicheSoireeData = {
   options?: FicheOption[] | null;
   tracks?: FicheTrack[] | null;
   messages?: FicheMessage[] | null;
+  callReports?: FicheCallReport[] | null;
 };
 
 const C = {
@@ -253,6 +263,32 @@ export async function buildFicheSoireePdf(data: FicheSoireeData): Promise<Uint8A
   if (noteMessage) {
     section("Message du client (devis)");
     bullet(noteMessage);
+  }
+
+  // ================= COMPTES RENDUS D'APPEL =================
+  const callReports = (data.callReports ?? []).filter((cr) => cr.summary.trim());
+  if (callReports.length > 0) {
+    section("Comptes rendus d'appel");
+    for (const cr of callReports) {
+      if (y < M + 80) newPage();
+      const when = new Date(cr.called_at).toLocaleString("fr-FR", {
+        weekday: "long", day: "numeric", month: "long", year: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      });
+      bullet(`Appel du ${when}${cr.contact ? ` - avec ${cr.contact}` : ""}`, { bold: true });
+      bullet(cr.summary);
+      const points = (cr.key_points ?? []).filter((p) => p.trim());
+      if (points.length > 0) {
+        bullet("A retenir :", { bold: true, indent: M + 22 });
+        for (const p of points) bullet(`- ${p}`, { indent: M + 28 });
+      }
+      const steps = (cr.next_steps ?? []).filter((p) => p.trim());
+      if (steps.length > 0) {
+        bullet("A faire :", { bold: true, indent: M + 22 });
+        for (const p of steps) bullet(`- ${p}`, { indent: M + 28 });
+      }
+      y -= 6;
+    }
   }
 
   // ================= CONVERSATION =================

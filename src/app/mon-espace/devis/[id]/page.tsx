@@ -11,6 +11,7 @@ import DevisTabs from "@/components/devis-tabs";
 import OpenPaiementCard from "@/components/hash-tab-opener";
 import { HashHighlight } from "@/components/hash-highlight";
 import { RdvCallSection } from "@/components/rdv-call";
+import { ClientCallReports } from "@/components/client-call-reports";
 import { TimelinePanel, type TimelineRow } from "@/components/timeline-panel";
 import { TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { eventMoments } from "@/components/admin-quote-playlist";
@@ -153,6 +154,28 @@ export default async function ClientQuotePage({
     rdvRequests = (rdv ?? []) as RdvRow[];
   } catch {
     rdvRequests = [];
+  }
+  // Comptes rendus d'appel publiés par Maxime (résumés de vos échanges).
+  // (Table créée via migration SQL ; repli silencieux sinon.)
+  type CallReportRow = {
+    id: string;
+    called_at: string;
+    contact: string | null;
+    summary: string;
+    key_points: string[] | null;
+    next_steps: string[] | null;
+  };
+  let callReports: CallReportRow[] = [];
+  try {
+    const { data: reports } = await supabase
+      .from("call_reports")
+      .select("id, called_at, contact, summary, key_points, next_steps")
+      .eq("quote_id", id)
+      .eq("visible_to_client", true)
+      .order("called_at", { ascending: false });
+    callReports = (reports ?? []) as CallReportRow[];
+  } catch {
+    callReports = [];
   }
   // Libellé des heures supplémentaires : nombre d'heures recalculé depuis les
   // horaires du devis si la colonne dédiée est absente (anciens devis).
@@ -397,6 +420,8 @@ export default async function ClientQuotePage({
       {confirmed ? (
         <RdvCallSection quoteId={id} requests={rdvRequests} />
       ) : null}
+      {/* Comptes rendus d'appel publiés : résumé au propre de vos échanges */}
+      {callReports.length > 0 ? <ClientCallReports reports={callReports} /> : null}
       {/* Paiements : acompte, carte ou virement, échéancier — tout est
           centralisé dans le panneau dédié de l'onglet Paiement. */}
       {confirmed || quote.status === "attente_acompte" ? (

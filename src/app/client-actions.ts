@@ -1599,6 +1599,76 @@ export async function sendAvisLibreEmail(formData: FormData) {
 }
 
 // Relance manuelle (1 clic depuis la liste des devis) : rappel au client
+// ============================================================
+// Comptes rendus d'appel téléphonique
+// ============================================================
+
+// Nouveau compte rendu d'appel (admin) : récit + points clés + prochaines
+// étapes, mis au propre automatiquement (structure standard). Si le compte
+// rendu est publié, le client le voit dans son espace (+ pastille).
+export async function createCallReport(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return { ok: false as const, error: "Accès refusé." };
+
+  const quoteId = String(formData.get("quote_id") ?? "");
+  const summary = String(formData.get("summary") ?? "").trim();
+  if (!quoteId || !summary) {
+    return { ok: false as const, error: "Le récit de l'appel est obligatoire." };
+  }
+
+  // Listes saisies « une ligne = une puce ».
+  const lines = (key: string) =>
+    String(formData.get(key) ?? "")
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+  const calledRaw = String(formData.get("called_at") ?? "").trim();
+  const calledAt = calledRaw && !Number.isNaN(new Date(calledRaw).getTime())
+    ? new Date(calledRaw).toISOString()
+    : new Date().toISOString();
+  const contact = String(formData.get("contact") ?? "").trim() || null;
+  const visible = formData.get("visible_to_client") != null;
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.from("call_reports").insert({
+    quote_id: quoteId,
+    called_at: calledAt,
+    contact,
+    summary,
+    key_points: lines("key_points"),
+    next_steps: lines("next_steps"),
+    visible_to_client: visible,
+  });
+  if (error) {
+    console.error("Création compte rendu d'appel impossible", error);
+    return { ok: false as const, error: "Enregistrement impossible (table call_reports créée ?)." };
+  }
+
+  // Compte rendu publié : pastille « nouveautés » côté client.
+  if (visible) {
+    await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
+  }
+
+  revalidatePath("/admin/devis");
+  revalidatePath(`/mon-espace/devis/${quoteId}`);
+  return { ok: true as const };
+}
+
+// Suppression d'un compte rendu d'appel (admin).
+export async function deleteCallReport(formData: FormData) {
+  const { isAdmin } = await import("@/lib/admin-auth");
+  if (!(await isAdmin())) return;
+  const reportId = String(formData.get("report_id") ?? "");
+  const quoteId = String(formData.get("quote_id") ?? "");
+  if (!reportId) return;
+  const supabase = createAdminClient();
+  await supabase.from("call_reports").delete().eq("id", reportId);
+  revalidatePath("/admin/devis");
+  if (quoteId) revalidatePath(`/mon-espace/devis/${quoteId}`);
+}
+
+// Relance manuelle (1 clic depuis la liste des devis) : rappel au client
 // que sa date n'est pas bloquée. Retour structuré pour le bouton client.
 export async function relanceDateLibre(
   quoteId: string

@@ -11,6 +11,7 @@ import { AdminQuoteLazyFolder } from "@/components/admin-quote-lazy-folder";
 import { AvisLibreForm } from "@/components/avis-libre-form";
 import { ScrollToFocus } from "@/components/scroll-to-focus";
 import { RelanceDateButton } from "@/components/relance-date-button";
+import type { CallReportRow } from "@/components/admin-call-reports";
 
 import { Badge } from "@/components/ui/badge";
 import { isFxOption } from "@/lib/fx-catalog";
@@ -94,7 +95,7 @@ export default async function DevisPage({
 
   // Les 3 requêtes partent en parallèle (au lieu d'être enchaînées) : le
   // temps de chargement de la page devient celui de la plus lente des trois.
-  const [quotesRes, schedulesRes, messagesRes, tracksRes, filesRes, rdvsRes, customReqRes] = await Promise.all([
+  const [quotesRes, schedulesRes, messagesRes, tracksRes, filesRes, rdvsRes, customReqRes, callReportsRes] = await Promise.all([
     supabase
       .from("quotes")
       .select("*")
@@ -125,6 +126,12 @@ export default async function DevisPage({
       .select("id, customer_name, customer_email, customer_phone, event_date, event_location, notes, status, created_at")
       .order("created_at", { ascending: false })
       .limit(100),
+    // Comptes rendus d'appel (table créée via migration SQL ; repli
+    // silencieux — data vide — si elle n'existe pas encore).
+    supabase
+      .from("call_reports")
+      .select("id, quote_id, called_at, contact, summary, key_points, next_steps, visible_to_client")
+      .order("called_at", { ascending: false }),
   ]);
   const quotes = quotesRes.data;
 
@@ -190,6 +197,14 @@ export default async function DevisPage({
     const list = initialMessagesByQuote.get(message.quote_id) ?? [];
     list.push(message);
     initialMessagesByQuote.set(message.quote_id, list);
+  }
+
+  // Comptes rendus d'appel groupés par devis (passés en props aux dossiers).
+  const callReportsByQuote = new Map<string, CallReportRow[]>();
+  for (const report of (callReportsRes.data ?? []) as (CallReportRow & { quote_id: string })[]) {
+    const list = callReportsByQuote.get(report.quote_id) ?? [];
+    list.push(report);
+    callReportsByQuote.set(report.quote_id, list);
   }
 
   // Un devis quitte la liste de travail quand :
@@ -793,6 +808,7 @@ export default async function DevisPage({
                   hasUnread={Boolean(quote.has_unread_updates)}
                   newMessageIds={newMessageIds}
                   newTrackIds={newTrackIds}
+                  initialReports={callReportsByQuote.get(quote.id) ?? []}
                   formulaName={quote.formula_name}
                   customerName={quote.customer_name}
                   customerEmail={quote.customer_email}
