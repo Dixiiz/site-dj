@@ -44,6 +44,10 @@ export async function buildFacturePdf(
     /** Facture partielle : % facturé + montant total de la prestation
         (rappel du total et du solde restant affichés sur le PDF). */
     partial?: { percent: number; totalCents: number };
+    /** Afficher les infos événement (type de prestation, date, lieu,
+        horaires). false = facture « minimale » : uniquement les infos client
+        (nom, adresse, contact) + les lignes de facturation. */
+    showEventInfo?: boolean;
   }
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
@@ -65,6 +69,9 @@ export async function buildFacturePdf(
   const tw = (txt: string, size: number, font: PDFFont) => font.widthOfTextAtSize(txt, size);
   const right = (txt: string, xRight: number, size: number, font: PDFFont) =>
     xRight - tw(txt, size, font);
+
+  // Infos événement affichables : false = facture minimale (client + lignes).
+  const showEvent = opts.showEventInfo !== false;
 
   // ============ EN-TÊTE ============
   const headH = 130;
@@ -123,40 +130,49 @@ export async function buildFacturePdf(
   };
   info("N° de facture", opts.invoiceNumber);
   info("Date d'émission", new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }));
-  const dateEvt = quote.event_date
-    ? new Date(quote.event_date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
-    : "-";
-  info("Date de l'événement", dateEvt);
-  y = Math.min(y, y0 - 46 - 13 * clientExtraLines) - 12;
+  // Facture minimale : la date d'événement est masquée avec la prestation.
+  if (showEvent) {
+    const dateEvt = quote.event_date
+      ? new Date(quote.event_date + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+      : "-";
+    info("Date de l'événement", dateEvt);
+  }
+  // 3 lignes d'infos à droite avec l'événement, 2 sinon : la fenêtre avant la
+  // section suivante est ajustée d'autant.
+  y = Math.min(y, y0 - (showEvent ? 46 : 31) - 13 * clientExtraLines) - 12;
 
   // ============ PRESTATION ============
-  section("DÉTAILS DE LA PRESTATION");
+  // Section masquée sur une facture « minimale » (showEventInfo: false) :
+  // uniquement les infos client et les lignes de facturation.
   const p = (label: string, val: string) => {
     t(label, M + 10, y, 9.5, b, C.anthracite);
     t(val, M + 165, y, 9.5, r, C.texte);
     y -= 17;
   };
-  const n = (quote.formula_name ?? "").toLowerCase();
-  const eventKind = n.includes("mariage") || n.includes("essential") || n.includes("deluxe") || n.includes("ultime")
-    ? "Mariage"
-    : n.includes("set dj") || n.includes("clé en main") || n.includes("club") || n.includes("afterwork") || n.includes("association")
-      ? "Bar / Club"
-      : "Anniversaire / Privé";
-  p("Type de prestation", quote.event_type || eventKind);
-  const dateLong = quote.event_date
-    ? new Date(quote.event_date + "T12:00:00").toLocaleDateString("fr-FR", {
-        weekday: "long", day: "numeric", month: "long", year: "numeric",
-      })
-    : null;
-  const heure = (hhmm: string | null | undefined) =>
-    hhmm ? hhmm.replace(":", "h") : null;
-  const dateHeure = dateLong
-    ? `${dateLong.charAt(0).toUpperCase() + dateLong.slice(1)}` +
-      (heure(quote.start_time) ? `, de ${heure(quote.start_time)} à ${heure(quote.end_time) ?? "?"}` : "")
-    : "-";
-  p("Date et heure", dateHeure);
-  p("Lieu", quote.event_location ?? "-");
-  y -= 8;
+  if (showEvent) {
+    section("DÉTAILS DE LA PRESTATION");
+    const n = (quote.formula_name ?? "").toLowerCase();
+    const eventKind = n.includes("mariage") || n.includes("essential") || n.includes("deluxe") || n.includes("ultime")
+      ? "Mariage"
+      : n.includes("set dj") || n.includes("clé en main") || n.includes("club") || n.includes("afterwork") || n.includes("association")
+        ? "Bar / Club"
+        : "Anniversaire / Privé";
+    p("Type de prestation", quote.event_type || eventKind);
+    const dateLong = quote.event_date
+      ? new Date(quote.event_date + "T12:00:00").toLocaleDateString("fr-FR", {
+          weekday: "long", day: "numeric", month: "long", year: "numeric",
+        })
+      : null;
+    const heure = (hhmm: string | null | undefined) =>
+      hhmm ? hhmm.replace(":", "h") : null;
+    const dateHeure = dateLong
+      ? `${dateLong.charAt(0).toUpperCase() + dateLong.slice(1)}` +
+        (heure(quote.start_time) ? `, de ${heure(quote.start_time)} à ${heure(quote.end_time) ?? "?"}` : "")
+      : "-";
+    p("Date et heure", dateHeure);
+    p("Lieu", quote.event_location ?? "-");
+    y -= 8;
+  }
 
   // ============ TABLEAU ============
   const cDesc = M + 10, cQte = M + 265, cTaux = M + CW - 185, cMont = M + CW - 10;

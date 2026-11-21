@@ -1,10 +1,11 @@
 "use client";
 
-import { useSyncExternalStore, useState } from "react";
+import { useSyncExternalStore, useState, useEffect, useRef, useTransition } from "react";
 import { AdminQuotePlaylist, eventMoments } from "@/components/admin-quote-playlist";
 import { AdminRdvRequests } from "@/components/rdv-call";
 import { AdminQuoteDocuments } from "@/components/admin-quote-documents";
 import { AdminQuoteConversation } from "@/components/admin-quote-conversation";
+import { markQuoteSeen } from "@/app/client-actions";
 import type { FacturePaiementInfo } from "@/components/facture-paiement-buttons";
 
 export type TrackRow = {
@@ -30,6 +31,9 @@ export function AdminQuoteLazyFolder({
   initialTracks,
   initialFiles,
   initialRdvs,
+  hasUnread,
+  newMessageIds,
+  newTrackIds,
 }: {
   quoteId: string;
   formulaName: string;
@@ -43,6 +47,11 @@ export function AdminQuoteLazyFolder({
   initialTracks: TrackRow[];
   initialFiles: FileRowLite[];
   initialRdvs: RdvRowLite[];
+  /** Pastille « nouveautés » active : l'ouverture met la nouveauté en évidence. */
+  hasUnread: boolean;
+  /** Messages / musiques créés depuis la dernière consultation admin. */
+  newMessageIds: string[];
+  newTrackIds: string[];
 }) {
   const [rootEl, setRootEl] = useState<HTMLDivElement | null>(null);
 
@@ -82,16 +91,57 @@ export function AdminQuoteLazyFolder({
     setRdvs(initialRdvs);
   }
 
+  // Surbrillance + lecture automatique : à l'ouverture d'un devis non lu, on
+  // scrolle vers la première nouveauté (message ou musique), l'animation CSS
+  // « quote-new-flash » la met en évidence ~4 s, puis le devis est marqué vu
+  // (la pastille disparaît). Refermé avant la fin : rien n'est marqué lu.
+  const markTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!open || !hasUnread) {
+      // Devis refermé avant le délai : on annule le marquage automatique.
+      if (markTimerRef.current) clearTimeout(markTimerRef.current);
+      markTimerRef.current = null;
+      return;
+    }
+    // Laisse l'animation d'ouverture du <details> démarrer avant de scroller.
+    const scrollTimer = setTimeout(() => {
+      rootEl?.querySelector(".quote-new-flash")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 450);
+    // Marquage « vu » après quelques secondes : le temps de voir le halo.
+    markTimerRef.current = setTimeout(() => {
+      markTimerRef.current = null;
+      const fd = new FormData();
+      fd.set("quote_id", quoteId);
+      startTransition(async () => {
+        await markQuoteSeen(fd);
+      });
+    }, 5200);
+    return () => clearTimeout(scrollTimer);
+    // Note : newMessageIds/newTrackIds volontairement exclus des dépendances —
+    // un re-rendu serveur (AutoRefresh…) ne doit ni re-scroller ni relancer
+    // le délai de lecture.
+  }, [open, hasUnread, quoteId, rootEl]);
+
   return (
     <div ref={setRootEl} className="contents">
       {open ? (
         <div className="space-y-6 border-t border-border px-4 pb-5 pt-4 animate-in fade-in slide-in-from-top-1 duration-300">
-          <AdminQuoteConversation quoteId={quoteId} initialMessages={initialMessages} />
+          <AdminQuoteConversation
+            quoteId={quoteId}
+            initialMessages={initialMessages}
+            newIds={hasUnread ? newMessageIds : []}
+          />
           <AdminQuotePlaylist
             quoteId={quoteId}
             moments={eventMoments(formulaName)}
             initialTracks={tracks}
             initialFiles={files}
+            newTrackIds={hasUnread ? newTrackIds : []}
           />
           <AdminQuoteFilesLite files={files} />
           <AdminQuoteDocuments

@@ -313,6 +313,32 @@ html {
   animation: conseil-row 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Nouveautés d'un devis (message/musique du client) : halo accent qui
+   s'estompe en ~4 s après l'ouverture du devis. La classe est posée à la
+   génération du contenu ; l'animation démarre au montage (ouverture de
+   l'accordéon) et disparaît d'elle-même (pas de fill-mode). */
+@keyframes quote-new-flash {
+  0% {
+    box-shadow:
+      0 0 0 3px var(--color-accent),
+      0 0 28px 4px color-mix(in oklab, var(--color-accent) 55%, transparent);
+    background-color: color-mix(in oklab, var(--color-accent) 22%, transparent);
+  }
+  60% {
+    box-shadow:
+      0 0 0 2px var(--color-accent),
+      0 0 16px 0 color-mix(in oklab, var(--color-accent) 30%, transparent);
+    background-color: color-mix(in oklab, var(--color-accent) 10%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    background-color: transparent;
+  }
+}
+.quote-new-flash {
+  animation: quote-new-flash 4s ease-out;
+}
+
 /* Défilement fluide partout (admin + client) */
 html {
   scroll-behavior: smooth;

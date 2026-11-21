@@ -22,9 +22,12 @@ function timeLabel(iso: string) {
 export function AdminQuoteConversation({
   quoteId,
   initialMessages,
+  newIds = [],
 }: {
   quoteId: string;
   initialMessages: Message[];
+  /** Ids des messages client non lus : halo « quote-new-flash » quelques secondes. */
+  newIds?: string[];
 }) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [, startTransition] = useTransition();
@@ -74,12 +77,13 @@ export function AdminQuoteConversation({
         ) : null}
         {messages.map((message) => {
           const fromClient = message.sender === "client";
+          const isNew = newIds.includes(message.id);
           return (
             <li key={message.id} className={`flex ${fromClient ? "justify-start" : "justify-end"}`}>
               <div
                 className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${
                   fromClient ? "border border-border bg-background" : "bg-accent/15"
-                }`}
+                } ${isNew ? "quote-new-flash" : ""}`}
               >
                 <p className="whitespace-pre-wrap">{message.body}</p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground" suppressHydrationWarning>

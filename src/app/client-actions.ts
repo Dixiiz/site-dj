@@ -1605,7 +1605,15 @@ export async function markQuoteSeen(formData: FormData) {
   const quoteId = String(formData.get("quote_id") ?? "");
   if (!quoteId) return;
   const supabase = createAdminClient();
-  await supabase.from("quotes").update({ has_unread_updates: false }).eq("id", quoteId);
+  // La pastille s'éteint ET on date la lecture : les messages/musiques créés
+  // avant ce moment ne seront plus mis en surbrillance à l'ouverture.
+  await supabase
+    .from("quotes")
+    .update({
+      has_unread_updates: false,
+      admin_last_seen_at: new Date().toISOString(),
+    })
+    .eq("id", quoteId);
   revalidatePath("/admin/devis");
 }
 

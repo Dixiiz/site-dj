@@ -105,7 +105,7 @@ export default async function DevisPage({
       .order("created_at", { ascending: true }),
     supabase
       .from("playlist_tracks")
-      .select("id, quote_id, moment, title, artist, kind, preview_url, artwork_url")
+      .select("id, quote_id, moment, title, artist, kind, preview_url, artwork_url, created_at")
       .order("created_at", { ascending: true }),
     supabase
       .from("quote_files")
@@ -156,7 +156,7 @@ export default async function DevisPage({
 
   // Musiques / fichiers / RDV groupés par devis : passés en props aux dossiers,
   // ouvrir un devis n'effectue AUCUNE requête (contenu déjà dans la page).
-  type TrackRow = { id: string; moment: string; title: string; artist: string | null; kind: string; preview_url: string | null; artwork_url: string | null };
+  type TrackRow = { id: string; moment: string; title: string; artist: string | null; kind: string; preview_url: string | null; artwork_url: string | null; created_at: string };
   type FileRowLite = { id: string; name: string; mime_type: string | null; size_bytes: number | null; moment: string | null; doc_kind: string; from_admin: boolean; signed_name: string | null };
   type RdvRowLite = { id: string; proposed_at: string | null; availability: string | null; status: string; origin: string | null };
   const tracksByQuote = new Map<string, TrackRow[]>();
@@ -382,6 +382,28 @@ export default async function DevisPage({
       ) : (
         <div className="space-y-3">
           {filtered.map((quote) => {
+            // Nouveautés non lues par l'admin : messages client et musiques
+            // créés depuis la dernière consultation (admin_last_seen_at),
+            // uniquement quand la pastille « nouveautés » est active.
+            const seenAt = quote.has_unread_updates
+              ? (quote.admin_last_seen_at ? new Date(quote.admin_last_seen_at).getTime() : 0)
+              : null;
+            const newMessageIds =
+              seenAt === null
+                ? []
+                : ((initialMessagesByQuote.get(quote.id) ?? []) as {
+                    id: string;
+                    sender: string;
+                    created_at: string;
+                  }[])
+                    .filter((m) => m.sender === "client" && new Date(m.created_at).getTime() > seenAt)
+                    .map((m) => m.id);
+            const newTrackIds =
+              seenAt === null
+                ? []
+                : (tracksByQuote.get(quote.id) ?? [])
+                    .filter((t) => new Date(t.created_at).getTime() > seenAt)
+                    .map((t) => t.id);
             const allLines = (quote.selected_options ?? []) as SelectedOption[];
             const options = allLines.filter((o) => isFxOption(o.name));
             const supplements = allLines.filter((o) => !isFxOption(o.name));
@@ -692,6 +714,9 @@ export default async function DevisPage({
                     groupées) — ouvrir un devis n'effectue aucune requête. */}
                 <AdminQuoteLazyFolder
                   quoteId={quote.id}
+                  hasUnread={Boolean(quote.has_unread_updates)}
+                  newMessageIds={newMessageIds}
+                  newTrackIds={newTrackIds}
                   formulaName={quote.formula_name}
                   customerName={quote.customer_name}
                   customerEmail={quote.customer_email}

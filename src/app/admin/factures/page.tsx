@@ -118,6 +118,22 @@ export default async function AdminFacturesPage() {
       >
         {/* Liaison facultative à un devis + pré-remplissage du % du total. */}
         <FreeInvoiceLinker quotes={quoteOptions} />
+        {/* Affichage facultatif des infos événement : décoché = facture
+            minimale (infos client + lignes de facturation uniquement). */}
+        <label className="flex w-fit cursor-pointer items-center gap-2.5 rounded-lg border border-border px-3 py-2 text-sm">
+          <input
+            type="checkbox"
+            name="show_event_info"
+            defaultChecked
+            className="size-4 accent-[#21619A]"
+          />
+          <span>
+            Afficher les infos de l&apos;événement
+            <span className="ml-1 text-xs text-muted-foreground">
+              — décoche pour une facture simple (client + lignes seulement)
+            </span>
+          </span>
+        </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <label htmlFor="customer_name" className="text-sm font-medium">

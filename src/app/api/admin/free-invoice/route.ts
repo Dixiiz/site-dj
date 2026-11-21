@@ -48,6 +48,10 @@ export async function POST(request: Request) {
 
   const supabase = createAdminClient();
 
+  // Case « afficher les infos de l'événement » : décochée = facture minimale
+  // (infos client + lignes de facturation, sans type/date/lieu de prestation).
+  const showEventInfo = formData.get("show_event_info") != null;
+
   // Liaison facultative à un devis existant : la facture apparaît alors aussi
   // dans les documents du devis (et aucune soirée dupliquée n'est créée).
   const linkedQuoteId = str("linked_quote_id");
@@ -110,6 +114,7 @@ export async function POST(request: Request) {
       invoiceNumber,
       hideAcompte: true,
       plainLines: true,
+      showEventInfo,
     });
 
     // Archivage dans le storage (historique + numérotation persistante).

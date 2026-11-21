@@ -31,11 +31,13 @@ function fileIcon(mime: string | null) {
   return "";
 }
 
-function trackRow(track: Track) {
+function trackRow(track: Track, isNew = false) {
   return (
     <li
       key={track.id}
-      className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm sm:gap-3"
+      className={`flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm sm:gap-3 ${
+        isNew ? "quote-new-flash" : ""
+      }`}
     >
       {track.artwork_url ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -104,14 +106,19 @@ export function AdminQuotePlaylist({
   moments,
   initialTracks,
   initialFiles,
+  newTrackIds = [],
 }: {
   quoteId: string;
   moments: string[];
   initialTracks: Track[];
   initialFiles: FileRow[];
+  /** Ids des musiques non lues : halo « quote-new-flash » quelques secondes. */
+  newTrackIds?: string[];
 }) {
   const all = initialTracks ?? [];
   const allFiles = initialFiles ?? [];
+  // Musiques créées depuis la dernière consultation admin → halo à l'ouverture.
+  const flashTracks = new Set(newTrackIds);
   const dance = all.filter((t) => t.moment === DANCE && t.kind === "souhait");
   const wishes = all.filter((t) => t.kind === "souhait");
   const danceBlacklist = all.filter(
@@ -133,7 +140,7 @@ export function AdminQuotePlaylist({
           À passer ({dance.length})
         </p>
         {dance.length > 0 ? (
-          <ul className="mt-2 space-y-2">{dance.map(trackRow)}</ul>
+          <ul className="mt-2 space-y-2">{dance.map((t) => trackRow(t, flashTracks.has(t.id)))}</ul>
         ) : (
           <p className="mt-2 text-xs text-muted-foreground">Aucun titre.</p>
         )}
@@ -142,7 +149,7 @@ export function AdminQuotePlaylist({
           À ne PAS passer ({danceBlacklist.length})
         </p>
         {danceBlacklist.length > 0 ? (
-          <ul className="mt-2 space-y-2">{danceBlacklist.map(trackRow)}</ul>
+          <ul className="mt-2 space-y-2">{danceBlacklist.map((t) => trackRow(t, flashTracks.has(t.id)))}</ul>
         ) : (
           <p className="mt-2 text-xs text-red-400/70">Aucune musique blacklistée.</p>
         )}
@@ -174,7 +181,9 @@ export function AdminQuotePlaylist({
                 </span>
               </div>
               {momentTracks.length > 0 ? (
-                <ul className="mt-3 space-y-2">{momentTracks.map(trackRow)}</ul>
+                <ul className="mt-3 space-y-2">
+                  {momentTracks.map((t) => trackRow(t, flashTracks.has(t.id)))}
+                </ul>
               ) : null}
               {momentFiles.length > 0 ? (
                 <ul className="mt-3 space-y-1.5">
@@ -198,7 +207,7 @@ export function AdminQuotePlaylist({
           return (
             <div key={moment} className="rounded-xl border border-border p-4">
               <h3 className="font-medium text-accent">{moment} </h3>
-              <ul className="mt-3 space-y-2">{momentTracks.map(trackRow)}</ul>
+              <ul className="mt-3 space-y-2">{momentTracks.map((t) => trackRow(t, flashTracks.has(t.id)))}</ul>
               {momentFiles.length > 0 ? (
                 <ul className="mt-3 space-y-1.5">
                   {momentFiles.map((f) => fileRow(quoteId, f))}
