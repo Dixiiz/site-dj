@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { isAdmin } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { nextInvoiceSequence, nextMenuiserieDevisNumber } from "@/lib/facture-numero";
 import type { MenuiserieLine } from "@/lib/menuiserie-pdf";
 
 // CRUD des documents (devis/factures) du domaine menuiserie
@@ -66,14 +67,15 @@ export async function POST(request: Request) {
   }
 
   const supabase = createAdminClient();
-  // Numérotation indépendante : DEV-2026-001 / FAC-2026-001…
-  const prefix = type === "facture" ? "FAC" : "DEV";
+  // Numérotation (plus grand numéro utilisé + 1, jamais recyclé après
+  // suppression) : devis DEV-2026-001 sur une série propre ; factures
+  // FAC-2026-001 dans la MÊME séquence que les factures DJ (F-2026-…) —
+  // plus aucun doublon « 001 » entre les deux activités.
   const year = new Date().getFullYear();
-  const { count } = await supabase
-    .from("menuiserie_docs")
-    .select("id", { count: "exact", head: true })
-    .like("numero", `${prefix}-${year}-%`);
-  const numero = `${prefix}-${year}-${String((count ?? 0) + 1).padStart(3, "0")}`;
+  const numero =
+    type === "facture"
+      ? `FAC-${year}-${String(await nextInvoiceSequence(supabase, year)).padStart(3, "0")}`
+      : await nextMenuiserieDevisNumber(supabase, year);
 
   const { data, error } = await supabase
     .from("menuiserie_docs")

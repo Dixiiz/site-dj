@@ -44,7 +44,9 @@ export default async function MenuiseriePage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Crée un devis ou une facture et génère le PDF (charte Propul&apos;Sound — Atelier
           Soulaine). À toi de l&apos;imprimer ou de l&apos;envoyer au client : il imprime et signe.
-          Numérotation indépendante : DEV-2026-001 / FAC-2026-001.
+          Numérotation : devis DEV-2026-001 (série propre) ; factures FAC-2026-001 dans la
+          même séquence que les factures DJ (F-2026-…), sans doublon et sans réattribution
+          après suppression.
         </p>
       </div>
       <MenuiserieAdmin
