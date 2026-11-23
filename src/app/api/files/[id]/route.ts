@@ -6,7 +6,7 @@ import { createAuthClient } from "@/lib/supabase/server";
 // ou à l'admin. Le fichier est servi directement (pas de redirection vers
 // une URL signée, qui pouvait échouer et renvoyer vers la page d'accueil).
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -57,11 +57,16 @@ export async function GET(
     file.name.replace(/[^\w.\- ]+/g, "_").trim() || "document.pdf";
   const utf8Name = encodeURIComponent(file.name);
 
+  // ?inline=1 : affichage dans le navigateur (bouton « Visualiser » de
+  // l'admin, PDF ouvert dans un nouvel onglet) au lieu du téléchargement
+  // forcé. Mêmes contrôles d'accès dans les deux cas.
+  const inline = new URL(request.url).searchParams.get("inline") === "1";
+
   return new NextResponse(blob, {
     headers: {
- "Content-Type": file.mime_type || "application/octet-stream",
- "Content-Disposition": `attachment; filename="${asciiName}"; filename*=UTF-8''${utf8Name}`,
- "Cache-Control": "no-store",
+      "Content-Type": file.mime_type || "application/octet-stream",
+      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${asciiName}"; filename*=UTF-8''${utf8Name}`,
+      "Cache-Control": "no-store",
     },
   });
 }

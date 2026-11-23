@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PenLine } from "lucide-react";
 import { saveInvoiceAdjustments } from "@/app/client-actions";
+import { garderVue } from "@/components/keep-view";
 
 type Adj = { label: string; amount_cents: number };
 
@@ -35,9 +36,13 @@ export function InvoiceAdjustments({
   const save = async () => {
     setBusy(true);
     setMsg(null);
-    const res = await saveInvoiceAdjustments(
-      rows.map((r) => ({ label: r.label, amount: String(r.amount_cents / 100) })),
-      quoteId
+    const res = await garderVue(
+      quoteId,
+      () =>
+        saveInvoiceAdjustments(
+          rows.map((r) => ({ label: r.label, amount: String(r.amount_cents / 100) })),
+          quoteId
+        )
     );
     setMsg(res.ok ? (res.message ?? "Enregistré ✓") : (res.error ?? "Erreur"));
     setBusy(false);

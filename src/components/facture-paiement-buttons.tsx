@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { declareFacturePayee } from "@/app/client-actions";
 import { validerFactureUrssaf } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
+import { garderVue } from "@/components/keep-view";
 import { formatEuros } from "@/lib/money";
 
 // État de paiement d'une facture DJ (lu depuis les marqueurs des notes) :
@@ -52,7 +53,7 @@ export function ValidateFactureButton({
       ) : null}
       <form
         action={async (fd: FormData) => {
-          const r = await validerFactureUrssaf(fd);
+          const r = await garderVue(quoteId, () => validerFactureUrssaf(fd));
           if (r?.ok) toast.success(r.message ?? "Paiement validé ✓");
           else toast.error(r?.error ?? "Validation impossible.");
         }}
@@ -97,7 +98,7 @@ export function DeclareFacturePaidButton({
   return (
     <form
       action={async (fd: FormData) => {
-        const r = await declareFacturePayee(fd);
+        const r = await garderVue(quoteId, () => declareFacturePayee(fd));
         if (r?.ok) toast.success(r.message ?? "Déclaration envoyée ✓");
         else toast.error(r?.error ?? "Déclaration impossible.");
       }}

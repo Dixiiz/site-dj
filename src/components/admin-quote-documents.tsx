@@ -1,6 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
+import { Eye } from "lucide-react";
 import {
   deleteAdminDocument,
   generateContratDocument,
@@ -16,6 +17,9 @@ import { Input } from "@/components/ui/input";
 import { InvoiceAdjustments } from "@/components/admin-invoice-adjustments";
 import { SubmitButton } from "@/components/submit-button";
 import { ValidateFactureButton, type FacturePaiementInfo } from "@/components/facture-paiement-buttons";
+// Conserve la position de lecture et l'ouverture de l'accordéon autour des
+// actions de cette section : voir src/components/keep-view.ts.
+import { garderVue } from "@/components/keep-view";
 
 type FileRow = {
   id: string;
@@ -83,6 +87,18 @@ export function AdminQuoteDocuments({
           </span>
         )
       ) : null}
+      {/* Visualiser : ouvre le PDF dans un nouvel onglet (comme en menuiserie).
+          ?inline=1 → le navigateur l'affiche au lieu de forcer le téléchargement. */}
+      <a
+        href={`/api/files/${file.id}?inline=1`}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Visualiser dans un nouvel onglet"
+        aria-label={`Visualiser ${file.name}`}
+        className="inline-flex items-center rounded-lg border border-accent/40 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/15"
+      >
+        <Eye size={14} aria-hidden />
+      </a>
       <a
         href={`/api/files/${file.id}`}
         download
@@ -95,7 +111,7 @@ export function AdminQuoteDocuments({
           Documents simples (facture…) : envoi individuel par document. */}
       {file.doc_kind !== "a_signer" ? (
         <form action={async (fd: FormData) => {
-          const r = await sendDocumentToClient(fd);
+          const r = await garderVue(quoteId, () => sendDocumentToClient(fd));
           if (r?.ok) toast.success(r.message ?? "Document envoyé ✓");
           else toast.error(r?.error ?? "Échec de l'envoi.");
         }}>
@@ -122,7 +138,9 @@ export function AdminQuoteDocuments({
           />
         ) : null;
       })() : null}
-      <form action={deleteAdminDocument}>
+      <form action={async (fd: FormData) => {
+          await garderVue(quoteId, () => deleteAdminDocument(fd));
+        }}>
         <input type="hidden" name="quote_id" value={quoteId} />
         <input type="hidden" name="file_id" value={file.id} />
         <SubmitButton
@@ -144,7 +162,7 @@ export function AdminQuoteDocuments({
           <h3 className="font-medium text-orange-400">Documents à signer</h3>
           <div className="flex flex-wrap items-start gap-2">
           <form action={async (fd: FormData) => {
-              const r = await generateDevisDocument(fd);
+              const r = await garderVue(quoteId, () => generateDevisDocument(fd));
               if (r?.ok) toast.success(r.message ?? "Devis PDF généré ✓");
               else toast.error(r?.error ?? "Génération impossible.");
             }}>
@@ -219,7 +237,7 @@ export function AdminQuoteDocuments({
             <SubmitButton
               pendingLabel="Génération du devis + contrat…"
               formAction={async (fd: FormData) => {
-                const r = await generateDevisEtContratDocument(fd);
+                const r = await garderVue(quoteId, () => generateDevisEtContratDocument(fd));
                 if (r?.ok) toast.success(r.message ?? "Devis + contrat générés ✓");
                 else toast.error(r?.error ?? "Génération impossible.");
               }}
@@ -229,7 +247,7 @@ export function AdminQuoteDocuments({
             </SubmitButton>
           </form>
           <form action={async (fd: FormData) => {
-              const r = await generateContratDocument(fd);
+              const r = await garderVue(quoteId, () => generateContratDocument(fd));
               if (r?.ok) toast.success(r.message ?? "Contrat PDF généré ✓");
               else toast.error(r?.error ?? "Génération impossible.");
             }}>
@@ -289,7 +307,7 @@ export function AdminQuoteDocuments({
       <div className="rounded-xl border border-border p-4">
         <h3 className="font-medium text-muted-foreground">Documents simples</h3>
         <form action={async (fd: FormData) => {
-              const r = await generateFactureDocument(fd);
+              const r = await garderVue(quoteId, () => generateFactureDocument(fd));
               if (r?.ok) toast.success(r.message ?? "Facture PDF générée ✓");
               else toast.error(r?.error ?? "Génération impossible.");
             }} className="mt-2 space-y-2">
@@ -398,7 +416,7 @@ export function AdminQuoteDocuments({
         ) : (
           <p className="mt-3 text-xs text-muted-foreground">Aucun document simple.</p>
         )}
-        <form action={async (fd: FormData) => { await uploadAdminDocument(fd); }} className="mt-3 flex flex-wrap items-center gap-2">
+        <form action={async (fd: FormData) => { await garderVue(quoteId, () => uploadAdminDocument(fd)); }} className="mt-3 flex flex-wrap items-center gap-2">
           <input type="hidden" name="quote_id" value={quoteId} />
           <input type="hidden" name="doc_kind" value="info" />
           <Input
