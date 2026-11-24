@@ -113,24 +113,40 @@ export async function notifyAdminPush(payload: AdminPushPayload): Promise<PushRe
       url: payload.url ?? "/admin",
     });
 
-    const failures: number[] = [];
+    const failures: string[] = [];
     await Promise.all(
       subs.map(async (sub) => {
-        try {
-          await webpush.sendNotification(
-            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            body
-          );
-          base.delivered += 1;
-        } catch (err) {
-          base.failed += 1;
-          const status = (err as { statusCode?: number }).statusCode;
-          // Abonnement expiré ou révoqué : on le retire de la base.
-          if (status === 404 || status === 410) {
-            await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
-          } else {
-            failures.push(status ?? -1);
-            console.error("[push] Echec envoi:", status ?? err);
+        const cible = { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } };
+        // Une erreur SANS code HTTP (« codes -1 » dans l'alerte e-mail) = coupure
+        // réseau en plein POST — typiquement la lambda figée pendant l'envoi.
+        // On retente une fois après une courte pause (le temps est garanti car
+        // l'envoi tourne dans after()) et on borne chaque requête à 10 s.
+        for (let tentative = 0; ; tentative += 1) {
+          try {
+            await webpush.sendNotification(cible, body, { timeout: 10_000 });
+            base.delivered += 1;
+            return;
+          } catch (err) {
+            const status = (err as { statusCode?: number }).statusCode;
+            const message = err instanceof Error ? err.message : String(err);
+            const reessayable = status === undefined || (status >= 500 && status < 600);
+            if (reessayable && tentative === 0) {
+              await new Promise((resolve) => setTimeout(resolve, 400));
+              continue;
+            }
+            base.failed += 1;
+            // Abonnement expiré ou révoqué : on le retire de la base.
+            if (status === 404 || status === 410) {
+              await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+            } else {
+              failures.push(
+                status === undefined
+                  ? `réseau — ${message.slice(0, 120)}`
+                  : `${status} — ${message.slice(0, 120)}`
+              );
+              console.error("[push] Échec envoi:", status ?? "(sans code HTTP)", message);
+            }
+            return;
           }
         }
       })
@@ -139,7 +155,7 @@ export async function notifyAdminPush(payload: AdminPushPayload): Promise<PushRe
     if (base.delivered === 0 && base.failed > 0) {
       await alertPushOutage(
         "échec d'envoi",
-        `${base.failed} envoi(s) de push ont échoué (codes ${failures.join(", ")}) sur ${base.subs} appareil(s) abonné(s).`
+        `${base.failed} envoi(s) de push ont échoué sur ${base.subs} appareil(s) abonné(s) : ${failures.join(" · ")}.`
       );
     }
     return base;
