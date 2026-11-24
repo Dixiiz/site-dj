@@ -36,13 +36,17 @@ async function sendQuoteNotification(
     .replace(/<[^>]*>/g, "")
     .replace(/\s+/g, " ")
     .slice(0, 120);
-  void notifyAdminPush({
-    title: emailData.title || subject,
-    body: extrait,
-    url: emailData.button?.href?.startsWith(SITE_URL)
-      ? emailData.button.href.replace(SITE_URL, "")
-      : "/admin",
-  });
+  // after() : la notif part après la réponse (sinon Vercel peut figer la
+  // lambda avant l'envoi → notification perdue de façon aléatoire).
+  after(() =>
+    notifyAdminPush({
+      title: emailData.title || subject,
+      body: extrait,
+      url: emailData.button?.href?.startsWith(SITE_URL)
+        ? emailData.button.href.replace(SITE_URL, "")
+        : "/admin",
+    })
+  );
 
   if (!NOTIF_EMAIL || !RESEND_API_KEY) return;
   try {

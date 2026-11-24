@@ -102,7 +102,7 @@ export async function notifyAdminPush(payload: AdminPushPayload): Promise<PushRe
     if (!subs || subs.length === 0) {
       await alertPushOutage(
         "aucun appareil abonné",
-        "aucun appareil n'est abonné aux notifications (table push_subscriptions vide) — réactive les notifications depuis l'admin (bouton )."
+        "aucun appareil n'est abonné aux notifications (table push_subscriptions vide) — réactive-les depuis l'admin : bouton « Activer les notifications push » du tableau de bord."
       );
       return base;
     }

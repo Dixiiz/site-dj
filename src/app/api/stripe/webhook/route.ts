@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -126,7 +126,10 @@ export async function POST(request: Request) {
                   .update({ acompte_paid_at: new Date().toISOString(), status: "confirme" })
                   .eq("id", quoteId);
                 console.log(`[stripe-webhook] Acompte (échéance 1) confirmé pour ${quoteId}`);
-                void notifyAdminAcompte(supabase, quoteId);
+                // after() : notif après la réponse 200 à Stripe — garantie par
+                // waitUntil (un « void » brut peut être figé par Vercel avant
+                // la fin des envois → notification perdue de façon aléatoire).
+                after(() => notifyAdminAcompte(supabase, quoteId));
               }
             }
           }
@@ -148,7 +151,8 @@ export async function POST(request: Request) {
           notes = `[[solde-en-ligne-net:${net}]]\n[[solde-en-ligne:${today}]]\n${notes}`;
           await supabase.from("quotes").update({ notes }).eq("id", quoteId);
           console.log(`[stripe-webhook] Solde enregistré pour le devis ${quoteId}`);
-          void notifyAdminAcompte(supabase, quoteId, true);
+          // after() : notif après la réponse 200 à Stripe (garantie waitUntil).
+          after(() => notifyAdminAcompte(supabase, quoteId, true));
         }
         return NextResponse.json({ received: true });
       }
@@ -184,7 +188,8 @@ export async function POST(request: Request) {
           })
           .eq("id", quoteId);
         console.log(`[stripe-webhook] Acompte enregistré pour le devis ${quoteId}`);
-        void notifyAdminAcompte(supabase, quoteId);
+        // after() : notif après la réponse 200 à Stripe (garantie waitUntil).
+        after(() => notifyAdminAcompte(supabase, quoteId));
       }
     }
   }

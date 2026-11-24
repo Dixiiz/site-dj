@@ -625,11 +625,16 @@ export async function sendQuoteMessage(formData: FormData) {
   // Pastille nouveautés côté admin + notification push.
   await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
   const { notifyAdminPush } = await import("@/lib/push");
-  void notifyAdminPush({
-    title: "Nouveau message client",
-    body: `${quote.customer_name ?? user.email} : ${body.slice(0, 100)}`,
-    url: `/admin/devis?focus=${quoteId}`,
-  });
+  // after() : la notif part APRÈS la réponse au client. En « void » brut, la
+  // lambda Vercel peut être figée avant le POST vers le serveur de push →
+  // notification perdue de façon aléatoire. after() la garantit (waitUntil).
+  after(() =>
+    notifyAdminPush({
+      title: "Nouveau message client",
+      body: `${quote.customer_name ?? user.email} : ${body.slice(0, 100)}`,
+      url: `/admin/devis?focus=${quoteId}`,
+    })
+  );
 
   // Notification e-mail à l'admin (best effort).
   try {
@@ -1171,11 +1176,15 @@ export async function updateQuoteDetails(formData: FormData) {
   // Notification admin : push + e-mail (best effort).
   try {
     const { notifyAdminPush } = await import("@/lib/push");
-    void notifyAdminPush({
-      title: "Demande de modification de devis",
-      body: `${quote.customer_name} a demandé une modification (lieu, horaires ou pack).`,
-      url: "/admin/devis",
-    });
+    // after() : notif après la réponse (sinon Vercel peut figer la lambda
+    // avant l'envoi → notification perdue de façon aléatoire).
+    after(() =>
+      notifyAdminPush({
+        title: "Demande de modification de devis",
+        body: `${quote.customer_name} a demandé une modification (lieu, horaires ou pack).`,
+        url: "/admin/devis",
+      })
+    );
     const { Resend } = await import("resend");
     const apiKey = process.env.RESEND_API_KEY;
     const to = process.env.NOTIF_EMAIL;
@@ -1952,7 +1961,9 @@ export async function signClientDocument(formData: FormData) {
     const docName = (fileInfo?.name ?? "un document").replace(/\.pdf$/, "");
     const clientName = qInfo?.customer_name ?? "Le client";
     const { notifyAdmin } = await import("@/lib/admin-notify");
-    void notifyAdmin({
+    // after() : notif après la réponse (sinon Vercel peut figer la lambda
+    // avant l'envoi → notification perdue de façon aléatoire).
+    after(() => notifyAdmin({
       title: allSigned ? "Tous les documents sont signés !" : "Signature reçue",
       body: `${clientName} a signé ${docName}${allSigned ? (acompteRequis ? " — dossier complet signé, acompte à venir." : " — dossier complet signé, devis confirmé (sans acompte).") : ""}`,
       url: `/admin/devis?focus=${quoteId}`,
@@ -1970,7 +1981,7 @@ export async function signClientDocument(formData: FormData) {
             : "<p>Il reste des documents à signer dans ce dossier.</p>"
         }<p><a href="${SITE_URL}/admin/devis?focus=${quoteId}">Ouvrir le devis dans l'admin</a></p>`,
       },
-    });
+    }));
   } catch {
     // best effort
   }
@@ -2599,11 +2610,15 @@ export async function declareAcompteSent(formData: FormData) {
 
   // Notification push admin (même info que l'e-mail).
   const { notifyAdminPush } = await import("@/lib/push");
-  void notifyAdminPush({
-    title: "Acompte déclaré par le client",
-    body: `${quote.customer_name ?? quote.customer_email ?? user.email} dit avoir envoyé l'acompte — à vérifier`,
-    url: "/admin/devis",
-  });
+  // after() : notif après la réponse (sinon Vercel peut figer la lambda
+  // avant l'envoi → notification perdue de façon aléatoire).
+  after(() =>
+    notifyAdminPush({
+      title: "Acompte déclaré par le client",
+      body: `${quote.customer_name ?? quote.customer_email ?? user.email} dit avoir envoyé l'acompte — à vérifier`,
+      url: "/admin/devis",
+    })
+  );
 
   console.log(`[acompte] Le client ${user.email} a déclaré avoir envoyé l'acompte du devis ${quoteId}`);
 
@@ -2655,7 +2670,9 @@ export async function declareFacturePayee(formData: FormData) {
 
   // Notification admin : le client dit avoir payé la facture.
   const { notifyAdmin } = await import("@/lib/admin-notify");
-  void notifyAdmin({
+  // after() : notif après la réponse (sinon Vercel peut figer la lambda
+  // avant l'envoi → notification perdue de façon aléatoire).
+  after(() => notifyAdmin({
     title: "Facture déclarée payée par le client",
     body: `${quote.customer_name ?? quote.customer_email ?? user.email} déclare avoir payé la facture ${numero} — à vérifier puis valider.`,
     url: `/admin/devis?focus=${quoteId}`,
@@ -2663,7 +2680,7 @@ export async function declareFacturePayee(formData: FormData) {
       subject: `Facture ${numero} déclarée payée — à vérifier`,
       html: `<p><strong>${quote.customer_name ?? quote.customer_email ?? user.email}</strong> déclare avoir <strong>payé la facture ${numero}</strong>.</p><p>Vérifie la réception sur ton compte bancaire, puis valide le paiement depuis les documents du devis (ou la page Factures) pour le compter dans le CA URSSAF.</p>`,
     },
-  });
+  }));
 
   console.log(`[facture] Le client ${user.email} a déclaré avoir payé la facture ${numero} (devis ${quoteId})`);
 
@@ -3187,7 +3204,9 @@ export async function clientRdvResponse(formData: FormData) {
       })
     : null;
   const { notifyAdmin } = await import("@/lib/admin-notify");
-  await notifyAdmin({
+  // after() : notif après la réponse — le client voit le résultat du clic
+  // immédiatement, et l'envoi reste garanti (waitUntil Vercel).
+  after(() => notifyAdmin({
     title:
       decision === "accepte"
         ? "RDV accepté par le client !"
@@ -3210,7 +3229,7 @@ export async function clientRdvResponse(formData: FormData) {
           : `a <strong>refusé</strong> ${when}.${counterFr ? ` Il contre-propose : <strong>${counterFr}</strong>.` : ""}`
       }</p><p><a href="${SITE_URL}/admin/devis?focus=${rdv.quote_id}">Ouvrir le devis dans l'admin</a></p>`,
     },
-  });
+  }));
 
   // E-mail de confirmation au client quand il accepte (récap du RDV).
   if (decision === "accepte" && quote.customer_email) {
@@ -3560,7 +3579,9 @@ async function notifyAcompteRecu(
       : "?";
     const dateFr = quote?.event_date ?? "date ?";
     const { notifyAdmin } = await import("@/lib/admin-notify");
-    void notifyAdmin({
+    // after() : notif après la réponse (sinon Vercel peut figer la lambda
+    // avant l'envoi → notification perdue de façon aléatoire).
+    after(() => notifyAdmin({
       title: "Acompte réglé — devis confirmé !",
       body: `${name} — ${dateFr} : acompte reçu (total ${total}). La date est verrouillée.`,
       url: `/admin/devis?focus=${quoteId}`,
@@ -3568,7 +3589,7 @@ async function notifyAcompteRecu(
         subject: `Acompte reçu — ${name} (${dateFr}) — devis confirmé`,
         html: `<p><strong>${name}</strong> (soirée du <strong>${dateFr}</strong>, total <strong>${total}</strong>) vient de régler son <strong>acompte</strong>.</p><p>Le devis est désormais <strong>confirmé</strong> : la date est verrouillée.</p><p><a href="${SITE_URL}/admin/devis?focus=${quoteId}">Ouvrir le devis dans l'admin</a></p>`,
       },
-    });
+    }));
   } catch {
     // best effort
   }
@@ -3736,7 +3757,9 @@ export async function chooseSoldeSurPlace(formData: FormData) {
   try {
     const dateFr = quote.event_date ?? "date à définir";
     const { notifyAdmin } = await import("@/lib/admin-notify");
-    void notifyAdmin({
+    // after() : notif après la réponse (sinon Vercel peut figer la lambda
+    // avant l'envoi → notification perdue de façon aléatoire).
+    after(() => notifyAdmin({
       title: "Solde à encaisser sur place",
       body: `${quote.customer_name} paiera le solde ${modes[modeRaw]} le jour de la soirée (${dateFr}).`,
       url: `/admin/devis?focus=${quoteId}`,
@@ -3744,7 +3767,7 @@ export async function chooseSoldeSurPlace(formData: FormData) {
         subject: `Solde sur place — ${quote.customer_name} (${dateFr})`,
         html: `<p><strong>${quote.customer_name}</strong> (soirée du <strong>${dateFr}</strong>) choisit de régler le solde <strong>${modes[modeRaw]}</strong> le jour de la prestation.</p><p>Pense à valider le solde dans le tableau de bord après la soirée pour le compter dans l'URSSAF.</p><p><a href="${SITE_URL}/admin/devis?focus=${quoteId}">Ouvrir le devis dans l'admin</a></p>`,
       },
-    });
+    }));
   } catch {
     // best effort
   }
@@ -3800,7 +3823,9 @@ export async function declareSoldeSent(formData: FormData) {
     const dateFr = quote.event_date ?? "date à définir";
     const solde = soldeRestantDe(quote);
     const { notifyAdmin } = await import("@/lib/admin-notify");
-    void notifyAdmin({
+    // after() : notif après la réponse (sinon Vercel peut figer la lambda
+    // avant l'envoi → notification perdue de façon aléatoire).
+    after(() => notifyAdmin({
       title: "Solde envoyé par le client (virement)",
       body: `${quote.customer_name} déclare avoir envoyé le solde (${(solde / 100).toFixed(2).replace(".", ",")} €) — à confirmer à réception.`,
       url: `/admin?vue=solde`,
@@ -3808,7 +3833,7 @@ export async function declareSoldeSent(formData: FormData) {
         subject: `Solde envoyé — ${quote.customer_name} (${dateFr}) — à confirmer`,
         html: `<p><strong>${quote.customer_name}</strong> (soirée du <strong>${dateFr}</strong>) déclare avoir envoyé le <strong>solde</strong> par virement (${(solde / 100).toFixed(2).replace(".", ",")} €).</p><p>Vérifie ton compte, puis confirme dans le tableau de bord (« Paiements reçus à confirmer ») pour le compter dans l'URSSAF.</p><p><a href="${SITE_URL}/admin?vue=solde">Ouvrir le tableau de bord</a></p>`,
       },
-    });
+    }));
   } catch (err) {
     console.error("[solde] Echec notification admin:", err);
   }
@@ -3949,7 +3974,9 @@ async function notifySoldeRecu(
     const montant = net ? (Number(net[1]) / 100).toFixed(2).replace(".", ",") + " €" : "?";
     const dateFr = quote?.event_date ?? "date ?";
     const { notifyAdmin } = await import("@/lib/admin-notify");
-    void notifyAdmin({
+    // after() : notif après la réponse (sinon Vercel peut figer la lambda
+    // avant l'envoi → notification perdue de façon aléatoire).
+    after(() => notifyAdmin({
       title: "Solde réglé — compté dans l'URSSAF !",
       body: `${name} — ${dateFr} : solde reçu ${source}, net ${montant}.`,
       url: `/admin?vue=urssaf`,
@@ -3957,7 +3984,7 @@ async function notifySoldeRecu(
         subject: `Solde reçu — ${name} (${dateFr})`,
         html: `<p><strong>${name}</strong> (soirée du <strong>${dateFr}</strong>) a réglé son <strong>solde</strong> ${source} — net ${montant}.</p><p>Il est compté automatiquement dans le <strong>CA URSSAF</strong> du mois de réception.</p><p><a href="${SITE_URL}/admin">Ouvrir le tableau de bord</a></p>`,
       },
-    });
+    }));
   } catch {
     // best effort
   }
@@ -4271,11 +4298,15 @@ export async function uploadClientFile(formData: FormData) {
   // Pastille nouveautés côté admin + notification push.
   await supabase.from("quotes").update({ has_unread_updates: true }).eq("id", quoteId);
   const { notifyAdminPush } = await import("@/lib/push");
-  void notifyAdminPush({
-    title: "Nouveau fichier client",
-    body: `${quote.customer_name ?? user.email} a envoyé « ${file.name} »`,
-    url: `/admin/devis?focus=${quoteId}`,
-  });
+  // after() : notif après la réponse (sinon Vercel peut figer la lambda
+  // avant l'envoi → notification perdue de façon aléatoire).
+  after(() =>
+    notifyAdminPush({
+      title: "Nouveau fichier client",
+      body: `${quote.customer_name ?? user.email} a envoyé « ${file.name} »`,
+      url: `/admin/devis?focus=${quoteId}`,
+    })
+  );
 
   revalidatePath(`/mon-espace/devis/${quoteId}`);
   revalidatePath("/admin/devis");

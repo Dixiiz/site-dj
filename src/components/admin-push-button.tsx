@@ -1,13 +1,19 @@
 "use client";
 
 // Bouton d'activation des notifications push de l'admin.
-// États : activé (abonnement existant) / désactivé / non supporté.
-// La clé publique VAPID est passée par le serveur (variable d'environnement).
+// États : activé (abonnement existant) / désactivé / permission refusée /
+// non supporté / clés VAPID absentes. La clé publique VAPID est passée par
+// le serveur (variable d'environnement). Les états bloquants affichent une
+// explication au lieu de masquer le bouton en silence (sinon « les notifs
+// ne marchent pas » sans aucun indice — en particulier iOS, qui n'expose le
+// push qu'aux PWA installées sur l'écran d'accueil).
 import { useEffect, useState } from "react";
 import { urlBase64ToUint8Array } from "@/lib/push-client";
 
 export function AdminPushButton({ vapidPublicKey }: { vapidPublicKey: string }) {
-  const [state, setState] = useState<"loading" | "on" | "off" | "unsupported" | "nokey">("loading");
+  const [state, setState] = useState<
+    "loading" | "on" | "off" | "denied" | "unsupported" | "nokey"
+  >("loading");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -20,6 +26,7 @@ export function AdminPushButton({ vapidPublicKey }: { vapidPublicKey: string }) 
       if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
         return setState("unsupported");
       }
+      if (Notification.permission === "denied") return setState("denied");
       try {
         const registration = await navigator.serviceWorker.ready;
         const existing = await registration.pushManager.getSubscription();
@@ -37,7 +44,10 @@ export function AdminPushButton({ vapidPublicKey }: { vapidPublicKey: string }) 
     setBusy(true);
     try {
       const permission = await Notification.requestPermission();
-      if (permission !== "granted") return;
+      if (permission !== "granted") {
+        if (permission === "denied") setState("denied");
+        return;
+      }
       const registration = await navigator.serviceWorker.ready;
       const existing = await registration.pushManager.getSubscription();
       const sub =
@@ -76,7 +86,35 @@ export function AdminPushButton({ vapidPublicKey }: { vapidPublicKey: string }) 
     }
   }
 
-  if (state === "loading" || state === "unsupported" || state === "nokey") return null;
+  if (state === "loading") return null;
+
+  if (state === "nokey") {
+    return (
+      <p className="text-xs text-muted-foreground">
+        Notifications push non configurées : clés VAPID manquantes côté serveur
+        (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT).
+      </p>
+    );
+  }
+  if (state === "unsupported") {
+    return (
+      <p className="max-w-xs text-xs text-muted-foreground">
+        Notifications non disponibles dans ce navigateur. Sur iPhone/iPad :
+        ouvre l’admin dans Safari puis « Partager → Sur l’écran
+        d’accueil » — iOS n’autorise le push que depuis l’app
+        installée.
+      </p>
+    );
+  }
+  if (state === "denied") {
+    return (
+      <p className="max-w-xs text-xs text-muted-foreground">
+        Notifications bloquées pour ce site. Réactive-les dans les réglages du
+        navigateur (sur iOS : menu « AA » → Réglages du site web →
+        Notifications).
+      </p>
+    );
+  }
 
   return state === "on" ? (
     <button
