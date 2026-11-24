@@ -1,6 +1,11 @@
 "use client";
 
 import { SubmitButton } from "@/components/submit-button";
+// Changer le statut (ou supprimer) fait bouger le devis dans la liste : il
+// quitte le groupe épinglé « nouveau » et se re-positionne selon le tri.
+// On garde la vue vissée sur lui autour du rafraîchissement — voir
+// src/components/keep-view.ts.
+import { garderVue } from "@/components/keep-view";
 
 export function QuickStatusForm({
   statusAction,
@@ -26,7 +31,14 @@ export function QuickStatusForm({
       className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-2"
       onClick={(e) => e.stopPropagation()}
     >
-      <form action={statusAction} className="flex flex-wrap items-center gap-2">
+      <form
+        action={async (fd: FormData) => {
+          await garderVue(quoteId, async () => {
+            await statusAction(fd);
+          });
+        }}
+        className="flex flex-wrap items-center gap-2"
+      >
         <input type="hidden" name="id" value={quoteId} />
         <span className="text-xs text-muted-foreground">Statut rapide :</span>
         {statuses.map(([value, lbl]) => (
@@ -45,7 +57,14 @@ export function QuickStatusForm({
           </SubmitButton>
         ))}
       </form>
-      <form action={deleteAction} className="ml-auto">
+      <form
+        action={async (fd: FormData) => {
+          await garderVue(quoteId, async () => {
+            await deleteAction(fd);
+          });
+        }}
+        className="ml-auto"
+      >
         <input type="hidden" name="id" value={quoteId} />
         <SubmitButton
           pendingLabel="Suppression…"
